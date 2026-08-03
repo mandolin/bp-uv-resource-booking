@@ -39,6 +39,12 @@
       }
     }
   ],
+  "easycom": {
+    "autoscan": false,
+    "custom": {
+      "^u-(.*)": "@/vendor/HIA-uView/HIA-uView-UI/src/components/u-$1/u-$1.vue"
+    }
+  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#ffffff",

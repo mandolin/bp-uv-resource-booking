@@ -27,7 +27,6 @@
 <script setup>
 import { computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import { UButton, UCard, UEmpty, UImage, ULoadingPage, UNotice, UTag } from '@hia-uview/ui';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';

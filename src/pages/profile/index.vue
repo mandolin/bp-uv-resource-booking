@@ -13,7 +13,6 @@
 </template>
 
 <script setup>
-import { UAvatar, UButton, UCard, UNotice } from '@hia-uview/ui';
 
 /**
  * <lang><zh-CN>转到发现 tab。</zh-CN><en>Moves to the Discover tab.</en></lang>

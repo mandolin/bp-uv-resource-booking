@@ -25,7 +25,6 @@
 
 <script setup>
 import { ref } from 'vue';
-import { UButton, UCard, UEmpty, UModal, USwipeAction, UTag } from '@hia-uview/ui';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
 // <lang><zh-CN>预约页只读取共享 state 的卡片结果，并调用其受限 cancellation action。</zh-CN><en>Reservations reads only shared state's card result and invokes its bounded cancellation action.</en></lang>

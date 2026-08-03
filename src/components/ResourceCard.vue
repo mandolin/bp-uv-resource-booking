@@ -21,7 +21,6 @@
 
 <script setup>
 import { computed } from 'vue';
-import { UButton, UCard, UImage, UTag } from '@hia-uview/ui';
 import { getVenueImage } from '../data/asset-map.mjs';
 
 // <lang><zh-CN>组件名保持项目语义，不定义可复用业务 registry 或路由策略。</zh-CN><en>Component name retains project semantics and defines no reusable business registry or route policy.</en></lang>

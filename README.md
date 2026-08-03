@@ -27,12 +27,16 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `308d4a754e658b254fc48ac965b3d50d1786a6a3` | HIA-uView UI 源码与主题 / UI source and theme |
+| `src/vendor/HIA-uView` | `246126457d7edf95bbc115304db1d891219b61c9` | HIA-uView UI 源码、完整样式入口与主题 / UI source, complete style entry, and theme |
 | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Async provider runtime / async-provider runtime |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
 
 For upstream relation, original-image provenance, and licensing notes, see [docs/upstream-and-assets.md](docs/upstream-and-assets.md).
+
+当前 UI pin 已包含微信小程序全局组件样式输出修复；BP 的 `pages.json` 另外以受限 `easycom` 将 `u-*` 模板标签静态解析到该 pin 的叶级 SFC，确保小程序输出拥有对应组件 JS/JSON/WXML/WXSS。更新 pin 或 resolver 必须重跑本仓 test、H5 与 mp-weixin build，再在微信开发工具复核实际视觉，不可只依据 Git link 已更新推断运行成功。
+
+The current UI pin includes the Mini Program global component-style output repair. BP `pages.json` additionally uses bounded `easycom` to statically resolve `u-*` template tags to leaf SFCs in that pin, ensuring the Mini Program output owns the corresponding component JS/JSON/WXML/WXSS. Updating a pin or resolver requires rerunning this repository's tests, H5 and mp-weixin builds, then rechecking actual visuals in WeChat DevTools; a changed Git link alone is not runtime-success evidence.
 
 ## 本地开发与构建 / Local development and builds
 

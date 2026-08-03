@@ -30,7 +30,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
-import { UButton, UEmpty, UImage, ULoadingPage, ULoadmore, UNotice, USearch } from '@hia-uview/ui';
 import SourceBadge from '../../components/SourceBadge.vue';
 import ResourceCard from '../../components/ResourceCard.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';

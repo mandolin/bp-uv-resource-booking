@@ -21,7 +21,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
-import { UButton, UEmpty, ULoadingPage, ULoadmore, UNotice, USearch } from '@hia-uview/ui';
 import ResourceCard from '../../components/ResourceCard.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { useBookingDemo } from '../../state/booking-demo.mjs';

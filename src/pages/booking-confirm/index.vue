@@ -22,7 +22,6 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { UButton, UCard, UEmpty, UNotice } from '@hia-uview/ui';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 

@@ -15,7 +15,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // <lang><zh-CN>所有公开 source 输入均以路径、远端 URL 与精确 commit 三元组显式声明。</zh-CN><en>Every public source input is explicitly declared as a path, remote URL, and exact commit triple.</en></lang>
 const expectedInputs = Object.freeze([
-  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '308d4a754e658b254fc48ac965b3d50d1786a6a3' }),
+  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '246126457d7edf95bbc115304db1d891219b61c9' }),
   Object.freeze({ path: 'src/vendor/HIA-uView-Biz', remote: 'https://github.com/mandolin/HIA-uView-Biz.git', commit: '8ba7fa56c1bcfe29655c37a2ea387237289a570c' })
 ]);
 
@@ -55,6 +55,32 @@ async function verifyInputs() {
     // <lang><zh-CN>比较完整 commit，拒绝 branch、短 SHA 或未锁定 checkout。</zh-CN><en>Compare the full commit and reject a branch, short SHA, or unlocked checkout.</en></lang>
     if (readGitHead(inputPath) !== expectedInput.commit) {
       throw new Error(`Unexpected source commit for ${expectedInput.path}.`);
+    }
+  }
+
+  // <lang><zh-CN>微信小程序组件必须通过受限 easycom 从已锁定的 UI submodule 叶级 SFC 静态解析；这避免公共 barrel 使 compiler 漏掉组件 JS、JSON、WXML 或 WXSS。</zh-CN><en>WeChat Mini Program components must be statically resolved from leaf SFCs in the pinned UI submodule through bounded easycom; this prevents a public barrel from making the compiler miss component JS, JSON, WXML, or WXSS.</en></lang>
+  const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, 'src/pages.json'), 'utf8'));
+  const componentResolver = pagesConfiguration.easycom?.custom?.['^u-(.*)'];
+  if (pagesConfiguration.easycom?.autoscan !== false || componentResolver !== '@/vendor/HIA-uView/HIA-uView-UI/src/components/u-$1/u-$1.vue') {
+    throw new Error('Unexpected Mini Program static UI component resolver.');
+  }
+
+  // <lang><zh-CN>当前所有 BP 页面和通用资源卡片只使用模板 u-* 标签与静态 resolver；它们不能重新导入 UI 公共 runtime entry 破坏小程序产物边界。</zh-CN><en>All current BP pages and the generic resource card use template u-* tags with the static resolver only; they must not reimport the UI public runtime entry and break Mini Program output boundaries.</en></lang>
+  const staticConsumerPaths = Object.freeze([
+    'src/components/ResourceCard.vue',
+    'src/pages/home/index.vue',
+    'src/pages/discover/index.vue',
+    'src/pages/reservations/index.vue',
+    'src/pages/profile/index.vue',
+    'src/pages/resource-detail/index.vue',
+    'src/pages/booking-confirm/index.vue'
+  ]);
+
+  for (const relativePath of staticConsumerPaths) {
+    // <lang><zh-CN>列表为冻结的仓内相对路径，不扫描调用方目录；检查只读取源码文本，不执行 Vue、compiler 或平台 API。</zh-CN><en>The list contains frozen in-repository relative paths and scans no caller directory; the check reads source text only and executes no Vue, compiler, or platform API.</en></lang>
+    const sourceText = await readFile(resolve(projectRoot, relativePath), 'utf8');
+    if (sourceText.includes("from '@hia-uview/ui'")) {
+      throw new Error(`Unexpected public UI runtime import in ${relativePath}.`);
     }
   }
 }
