@@ -20,6 +20,12 @@ The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; 
 
 Booking confirmation writes only process-local mock state and a refresh returns to the initial reservations in `venues.json`. Cancellation uses controlled “reveal Cancel → confirm again → mark cancelled” semantics; there is no remote revocation, refund, inventory release, payment, or membership rule.
 
+## 主题装载边界 / Theme-loading boundary
+
+`src/App.vue` 作为唯一全局样式发射点显式导入 `src/uni.scss`。该文件再显式导入已锁定的 HIA-uView 样式与浅色 token；页面与组件只消费 token，不复制主题值。此入口必须随 H5 与 mp-weixin 构建一同验证，避免组件 CSS 已存在而主题 token 未装载的视觉退化。
+
+`src/App.vue` explicitly imports `src/uni.scss` as the sole global-style emission point. That file explicitly imports the locked HIA-uView styles and light tokens; pages and components consume tokens without copying theme values. This entry must be verified with both H5 and mp-weixin builds, preventing visual degradation where component CSS exists but theme tokens are not loaded.
+
 ## 未来 source selector / Future source selector
 
 当前项目只声明 `local`。`virtual` 和 `remote` 是未来候选，而非承诺、隐藏 fallback 或运行时探测。未来实现必须在需求、产品和 UI 审阅后明确以下内容：

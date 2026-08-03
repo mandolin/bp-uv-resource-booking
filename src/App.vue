@@ -11,4 +11,5 @@ export default {
 
 <style>
 /* <lang><zh-CN>全局主题只由 `uni.scss` 显式导入；此壳不重复注入字体、图标、图片或外部样式。</zh-CN><en>The global theme is explicitly imported only by `uni.scss`; this shell injects no duplicate font, icon, image, or external style.</en></lang> */
+@import './uni.scss';
 </style>

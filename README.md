@@ -52,6 +52,10 @@ mise exec -- pnpm run build:mp-weixin
 
 The WeChat Mini Program build output is `dist/build/mp-weixin/`. Import that directory with WeChat DevTools for development-tool testing. This project configures no remote API, so it does not handle domain allowlists for downstream business projects.
 
+H5 构建产物的静态 base 固定为 `/bp-uv-resource-booking/`，与未来 GitHub Pages 仓路径一致。H5 runtime `@dcloudio/uni-h5` 与 `sass` 均为锁定的明确输入；前者用于 H5 平台运行时，后者只在编译 `uni.scss` 时使用。
+
+The H5 build artifact has the static base `/bp-uv-resource-booking/`, matching the future GitHub Pages repository path. Both the H5 runtime `@dcloudio/uni-h5` and `sass` are pinned explicit inputs; the former serves the H5 platform runtime and the latter is used only to compile `uni.scss`.
+
 ## 数据源演进 / Data-source evolution
 
 当前 source badge 明确显示“本地示例数据”。未来可经单独审阅增加 remote、virtual backend 或 optional public-API enhancement；必须保留 local JSON 作为可运行的主路径，并以明确设置和运行环境选择 source。详细边界见 [docs/architecture.md](docs/architecture.md)。

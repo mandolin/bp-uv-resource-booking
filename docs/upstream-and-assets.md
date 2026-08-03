@@ -28,6 +28,6 @@ Both images are fictional venue images generated for this project on 2026-08-03 
 
 ## 依赖风险披露 / Dependency risk disclosure
 
-UniApp/DCloud 编译链版本固定在 `3.0.0-5010520260709002`，Vue 固定在 `3.4.21`，完整解析结果位于 `pnpm-lock.yaml`。它们用于开发期与构建期；BP runtime 默认不调用远端 API。版本升级时应先审阅官方变更、许可与本项目 H5/mp-weixin 构建，再决定是否降低或接受新的风险。
+UniApp/DCloud 编译链版本固定在 `3.0.0-5010520260709002`，Vue 固定在 `3.4.21`，完整解析结果位于 `pnpm-lock.yaml`。`@dcloudio/uni-h5` 是同版本的明确 H5 runtime 输入；`sass 1.77.8` 只用于编译项目已有的 `uni.scss`。它们用于开发期与构建期；BP runtime 默认不调用远端 API。版本升级时应先审阅官方变更、许可与本项目 H5/mp-weixin 构建，再决定是否降低或接受新的风险。
 
-The UniApp/DCloud compiler chain is pinned at `3.0.0-5010520260709002`, Vue at `3.4.21`, and the complete resolution is in `pnpm-lock.yaml`. They are used for development and build; the BP runtime calls no remote API by default. On upgrades, review official changes, licenses, and this project’s H5/mp-weixin builds before deciding whether to reduce or accept new risk.
+The UniApp/DCloud compiler chain is pinned at `3.0.0-5010520260709002`, Vue at `3.4.21`, and the complete resolution is in `pnpm-lock.yaml`. `@dcloudio/uni-h5` is an explicit same-version H5 runtime input; `sass 1.77.8` compiles only the project’s existing `uni.scss`. They are used for development and build; the BP runtime calls no remote API by default. On upgrades, review official changes, licenses, and this project’s H5/mp-weixin builds before deciding whether to reduce or accept new risk.
