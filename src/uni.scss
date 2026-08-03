@@ -1,0 +1,15 @@
+/**
+ * <lang><zh-CN>BP 的全局样式入口：显式采用已锁定 HIA-uView 默认样式与浅色主题；应用自己的 token 只补充预约示例的非语义布局值。</zh-CN><en>Global-style entry for the BP: explicitly adopts locked HIA-uView default style and light theme; application-owned tokens add only non-semantic booking-demo layout values.</en></lang>
+ * @lang zh-CN 本文件不导入外部字体、图片、URL 或动态 CSS。
+ * @lang en This file imports no external font, image, URL, or dynamic CSS.
+ */
+@import '@hia-uview/ui/style.css';
+@import './vendor/HIA-uView/HIA-uView-UI/src/theme/hia-light.css';
+
+/* <lang><zh-CN>BP 容器 token 不重定义品牌或状态色，保持可迁移页面对 HIA-uView 主题的继承。</zh-CN><en>BP container tokens do not redefine brand or state colors, preserving page portability through inheritance from the HIA-uView theme.</en></lang> */
+:root {
+  --bp-page-inline: 16px;
+  --bp-page-block: 16px;
+  --bp-card-radius: 16px;
+  --bp-card-shadow: 0 10px 28px rgb(0 27 46 / 8%);
+}

@@ -1,0 +1,59 @@
+{
+  "pages": [
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationStyle": "custom",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/discover/index",
+      "style": {
+        "navigationBarTitleText": "发现资源",
+        "enablePullDownRefresh": true
+      }
+    },
+    {
+      "path": "pages/reservations/index",
+      "style": {
+        "navigationBarTitleText": "我的预约"
+      }
+    },
+    {
+      "path": "pages/profile/index",
+      "style": {
+        "navigationBarTitleText": "个人信息"
+      }
+    },
+    {
+      "path": "pages/resource-detail/index",
+      "style": {
+        "navigationBarTitleText": "资源详情"
+      }
+    },
+    {
+      "path": "pages/booking-confirm/index",
+      "style": {
+        "navigationBarTitleText": "确认预约"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarBackgroundColor": "#ffffff",
+    "backgroundColor": "#f7f9fc"
+  },
+  "tabBar": {
+    "color": "#53657a",
+    "selectedColor": "#0047ab",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/home/index", "text": "首页" },
+      { "pagePath": "pages/discover/index", "text": "发现" },
+      { "pagePath": "pages/reservations/index", "text": "我的预约" },
+      { "pagePath": "pages/profile/index", "text": "个人信息" }
+    ]
+  }
+}

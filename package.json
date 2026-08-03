@@ -1,0 +1,32 @@
+{
+  "name": "bp-uv-resource-booking",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first UniApp resource and service booking boilerplate based on HIA-uView.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "check": "node scripts/verify-input-pins.mjs && node scripts/check-rop.mjs",
+    "test": "pnpm run check && node --test test/booking-domain.test.mjs",
+    "build:h5": "uni build -p h5",
+    "build:mp-weixin": "uni build -p mp-weixin"
+  },
+  "dependencies": {
+    "@dcloudio/uni-app": "3.0.0-5010520260709002",
+    "@vue/reactivity": "3.4.21",
+    "@vue/runtime-core": "3.4.21",
+    "@vue/runtime-dom": "3.4.21",
+    "@vue/shared": "3.4.21",
+    "vue": "3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/uni-components": "3.0.0-5010520260709002",
+    "@dcloudio/uni-mp-weixin": "3.0.0-5010520260709002",
+    "@dcloudio/vite-plugin-uni": "3.0.0-5010520260709002",
+    "vite": "5.2.8"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}

@@ -1,0 +1,7 @@
+# <lang><zh-CN>仅忽略可由锁定依赖/构建命令恢复的本地安装、UniApp 产物、编辑器和临时文件；不忽略项目数据、图片来源或声明文件。</zh-CN><en>Ignore only local installs, UniApp artifacts, editor files, and temporary files recoverable from locked dependencies/build commands; do not ignore project data, image provenance, or declarations.</en></lang>
+node_modules/
+dist/
+.pnpm-store/
+.vscode/
+.DS_Store
+*.local

@@ -1,0 +1,5 @@
+# @lang zh-CN BP 的可复现本地工具链：Node/pnpm 由 mise 显式选择，避免依赖系统默认版本或临时下载运行时。
+# @lang en Reproducible local BP toolchain: mise explicitly selects Node/pnpm, avoiding reliance on a system default version or temporary downloaded runtime.
+[tools]
+node = "24.12.0"
+pnpm = "10.27.0"

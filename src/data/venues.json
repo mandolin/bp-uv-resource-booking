@@ -1,0 +1,103 @@
+{
+  "datasetVersion": "1.0",
+  "venues": [
+    {
+      "id": "riverside-sports-hall",
+      "name": {
+        "zh-Hans": "滨河综合运动馆",
+        "en": "Riverside Sports Hall"
+      },
+      "summary": {
+        "zh-Hans": "面向社区活动的多功能木地板运动空间。",
+        "en": "A multi-purpose hardwood activity space for community use."
+      },
+      "district": {
+        "zh-Hans": "滨河片区",
+        "en": "Riverside district"
+      },
+      "imageId": "riverside-sports-hall",
+      "resources": [
+        {
+          "id": "riverside-court-a",
+          "name": {
+            "zh-Hans": "羽毛球场 A",
+            "en": "Badminton Court A"
+          },
+          "type": {
+            "zh-Hans": "运动场地",
+            "en": "Sports court"
+          },
+          "capacity": 4,
+          "availableSlots": ["09:00", "11:00", "14:00", "16:00"]
+        },
+        {
+          "id": "riverside-community-room",
+          "name": {
+            "zh-Hans": "社区活动区",
+            "en": "Community Activity Area"
+          },
+          "type": {
+            "zh-Hans": "共享空间",
+            "en": "Shared space"
+          },
+          "capacity": 16,
+          "availableSlots": ["10:00", "13:00", "15:00"]
+        }
+      ]
+    },
+    {
+      "id": "cloudline-arts-center",
+      "name": {
+        "zh-Hans": "云际艺术与活动中心",
+        "en": "Cloudline Arts Center"
+      },
+      "summary": {
+        "zh-Hans": "可用于分享会、小型演出和社区工作坊的灵活活动空间。",
+        "en": "A flexible venue for talks, small performances, and community workshops."
+      },
+      "district": {
+        "zh-Hans": "新城片区",
+        "en": "New town district"
+      },
+      "imageId": "cloudline-arts-center",
+      "resources": [
+        {
+          "id": "cloudline-workshop-room",
+          "name": {
+            "zh-Hans": "共享工作坊",
+            "en": "Community Workshop Room"
+          },
+          "type": {
+            "zh-Hans": "活动空间",
+            "en": "Activity space"
+          },
+          "capacity": 24,
+          "availableSlots": ["09:30", "13:30", "18:30"]
+        },
+        {
+          "id": "cloudline-small-stage",
+          "name": {
+            "zh-Hans": "小剧场",
+            "en": "Small Performance Room"
+          },
+          "type": {
+            "zh-Hans": "演出空间",
+            "en": "Performance room"
+          },
+          "capacity": 48,
+          "availableSlots": ["10:00", "15:00", "19:00"]
+        }
+      ]
+    }
+  ],
+  "mockReservations": [
+    {
+      "id": "reservation-demo-001",
+      "resourceId": "riverside-court-a",
+      "venueId": "riverside-sports-hall",
+      "date": "2026-08-08",
+      "time": "14:00",
+      "status": "confirmed"
+    }
+  ]
+}

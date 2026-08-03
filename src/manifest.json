@@ -1,0 +1,13 @@
+{
+  "name": "城市公共资源预约示例",
+  "appid": "__UNI__BPRESOURCEBOOKING",
+  "description": "A local-first HIA-uView resource and service booking boilerplate.",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "mp-weixin": {
+    "appid": ""
+  },
+  "h5": {
+    "title": "城市公共资源预约示例"
+  }
+}

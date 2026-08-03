@@ -1,0 +1,65 @@
+# 城市公共资源预约示例 / Resource Booking Demo
+
+`bp-uv-resource-booking` 是一个面向单运营主体、多场馆的 UniApp boilerplate。它演示“目录—查询—详情—本地 mock 预约—二次确认取消”的通用资源与服务预约流，不是羽毛球、票务、会员、支付或真实后端的行业预置项目。
+
+`bp-uv-resource-booking` is a UniApp boilerplate for one operating entity with multiple venues. It demonstrates a general resource-and-service booking flow—catalog, search, detail, local mock booking, and second-confirmation cancellation. It is not an industry preset for badminton, ticketing, membership, payment, or a real backend.
+
+## 当前边界 / Current boundary
+
+- 核心数据来自仓内版本化 JSON；默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
+- The core data comes from versioned in-repository JSON. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
+
+- 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
+- There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
+
+- 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。
+- Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion.
+
+## 可复现输入 / Reproducible inputs
+
+两个 source submodule 位于 `src/vendor/`，以 Git link 锁定，不拷贝或扫描上游代码。初始化或恢复工作树后执行：
+
+Two source submodules live in `src/vendor/` and are locked as Git links; upstream code is neither copied nor scanned. After cloning or restoring the worktree, run:
+
+```powershell
+git submodule update --init --recursive
+```
+
+| 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
+| --- | --- | --- |
+| `src/vendor/HIA-uView` | `308d4a754e658b254fc48ac965b3d50d1786a6a3` | HIA-uView UI 源码与主题 / UI source and theme |
+| `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Async provider runtime / async-provider runtime |
+
+上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
+
+For upstream relation, original-image provenance, and licensing notes, see [docs/upstream-and-assets.md](docs/upstream-and-assets.md).
+
+## 本地开发与构建 / Local development and builds
+
+本项目优先使用 mise，而不是系统默认 Node 或临时下载的运行时。`.mise.toml` 固定 Node `24.12.0` 与 pnpm `10.27.0`。
+
+This project prefers mise rather than a system-default Node or a temporarily downloaded runtime. `.mise.toml` pins Node `24.12.0` and pnpm `10.27.0`.
+
+```powershell
+mise install
+mise exec -- pnpm install
+mise exec -- pnpm test
+mise exec -- pnpm run build:h5
+mise exec -- pnpm run build:mp-weixin
+```
+
+微信小程序构建产物在 `dist/build/mp-weixin/`。用微信开发者工具导入该目录即可进行开发工具测试；本项目没有配置远端接口，因此不会替业务项目处理其域名白名单。
+
+The WeChat Mini Program build output is `dist/build/mp-weixin/`. Import that directory with WeChat DevTools for development-tool testing. This project configures no remote API, so it does not handle domain allowlists for downstream business projects.
+
+## 数据源演进 / Data-source evolution
+
+当前 source badge 明确显示“本地示例数据”。未来可经单独审阅增加 remote、virtual backend 或 optional public-API enhancement；必须保留 local JSON 作为可运行的主路径，并以明确设置和运行环境选择 source。详细边界见 [docs/architecture.md](docs/architecture.md)。
+
+The current source badge explicitly says “local demo data.” A future review may add a remote source, virtual backend, or optional public-API enhancement; local JSON must remain a runnable primary path, and source selection must be explicit and environment-aware. See [docs/architecture.md](docs/architecture.md) for the boundary.
+
+## 许可证 / License
+
+本仓采用 [MIT License](LICENSE)。上游及图片素材说明在 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)；不能把本示例中的 mock 数据、文案或图片当作真实场馆、实时库存或可商用第三方内容。
+
+This repository uses the [MIT License](LICENSE). Upstream and image-asset notices are in [docs/upstream-and-assets.md](docs/upstream-and-assets.md); do not treat its mock data, copy, or images as real venues, live inventory, or third-party commercial content.

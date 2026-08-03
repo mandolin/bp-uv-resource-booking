@@ -1,0 +1,6 @@
+[submodule "hia-uview"]
+	path = src/vendor/HIA-uView
+	url = https://github.com/mandolin/HIA-uView.git
+[submodule "hia-uview-biz"]
+	path = src/vendor/HIA-uView-Biz
+	url = https://github.com/mandolin/HIA-uView-Biz.git

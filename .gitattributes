@@ -1,0 +1,3 @@
+# <lang><zh-CN>项目文本在版本库中统一以 LF 保存，二进制场馆素材不参与文本转换。</zh-CN><en>Project text is stored as LF in Git, while binary venue assets are excluded from text conversion.</en></lang>
+* text=auto eol=lf
+*.png binary
