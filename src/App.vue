@@ -1,11 +1,26 @@
 <!--
-@lang zh-CN BP 全局应用外壳：不声明自动登录、远端初始化、storage 恢复、平台 service 或全局事件监听。
-@lang en Global BP application shell: declares no automatic login, remote initialization, storage recovery, platform service, or global event listener.
+@lang zh-CN BP 全局应用外壳：只在 launch 初始化受限 runtime locale 并投影 tab 文本；不声明自动登录、远端初始化、业务 storage 恢复、网络或身份 service。
+@lang en Global BP application shell: initializes constrained runtime locale and projects tab copy only at launch; it declares no automatic login, remote initialization, business-storage recovery, network, or identity service.
 -->
 <script>
+// <lang><zh-CN>导入 BP 自有 locale 初始化与壳投影；二者不创建业务 provider、写入预约或调用网络。</zh-CN><en>Import BP-owned locale initialization and shell projection; neither creates a business provider, writes bookings, nor calls a network.</en></lang>
+import { initializeRuntimeLocale } from './localization/runtime-locale.mjs';
+import { refreshRuntimeChrome } from './localization/runtime-chrome.mjs';
+
 export default {
-  // <lang><zh-CN>保留空启动钩子以满足 UniApp 应用形状；不读取系统信息、写入 storage 或调用 API。</zh-CN><en>Retain an empty launch hook to satisfy the UniApp application shape; it reads no system information, writes no storage, and calls no API.</en></lang>
-  onLaunch() {}
+  /**
+   * <lang><zh-CN>在应用启动时建立当前会话的 locale 并同步 native tab 标签。</zh-CN><en>Establishes the current-session locale and synchronizes native tab labels at application launch.</en></lang>
+   * @returns {void} <lang><zh-CN>无返回值；可选平台 API 缺失或失败不会阻断应用。</zh-CN><en>No return value; a missing or failed optional platform API never blocks the application.</en></lang>
+   * @lang zh-CN 只读取规格允许的系统 language 和唯一 locale preference；不预取 catalog、执行预约写入或读取身份。
+   * @lang en Reads only the spec-permitted system language and sole locale preference; it prefetches no catalog, performs no booking write, and reads no identity.
+   */
+  onLaunch() {
+    // <lang><zh-CN>先完成固定优先级解析，确保 UI 与随后 tab 投影共享同一 canonical locale。</zh-CN><en>Resolve the fixed priority first, ensuring UI and subsequent tab projection share one canonical locale.</en></lang>
+    initializeRuntimeLocale();
+
+    // <lang><zh-CN>平台壳更新受异常保护；失败时保留 `pages.json` fallback，不修改 locale 选择。</zh-CN><en>Platform-shell update is exception-protected; on failure retain the `pages.json` fallback without changing locale selection.</en></lang>
+    refreshRuntimeChrome();
+  }
 };
 </script>
 
