@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>验证 BP runtime locale 的有限归一化、优先级、storage 失败、领域投影和壳文本；测试不连接 UniApp、网络、账号或真实 storage。</zh-CN><en>Verifies BP runtime locale normalization, priority, storage failure, domain projection, and shell copy; tests connect to no UniApp, network, account, or real storage.</en></lang>
+ * <lang><zh-CN>验证 BP runtime locale 的有限归一化、优先级、storage 失败、领域投影与应用自管壳；测试不连接 UniApp、网络、账号或真实 storage。</zh-CN><en>Verifies BP runtime locale normalization, priority, storage failure, domain projection, and application-owned shell; tests connect to no UniApp, network, account, or real storage.</en></lang>
  * @lang zh-CN 假 facade 只模拟规格允许的返回值与失败，不将测试扩展成平台集成测试。
  * @lang en The fake facade simulates only spec-permitted returns and failures; it does not expand tests into platform integration tests.
  */
@@ -18,7 +18,7 @@ import {
   resolveRuntimeLocale,
   useRuntimeLocale
 } from '../src/localization/runtime-locale.mjs';
-import { applyPageTitle, applyRuntimeTabLabels, scheduleRuntimeChrome } from '../src/localization/runtime-chrome.mjs';
+import { createPrimaryTabItems, navigateBackOrOpenPrimaryPage, openPrimaryPage } from '../src/localization/runtime-chrome.mjs';
 
 /**
  * <lang><zh-CN>创建一个只记录规格允许操作的 fake locale facade。</zh-CN><en>Creates a fake locale facade that records only spec-permitted operations.</en></lang>
@@ -127,40 +127,38 @@ test('domain projection and fixed date labels never produce bilingual concatenat
   assert.equal(formatDemoDate('not-a-date', 'en'), '');
 });
 
-test('runtime chrome projects localized tab and title text through safe platform calls', () => {
-  // <lang><zh-CN>共享 store 切换为英文；平台 stub 只收集固定 API 的文本 payload。</zh-CN><en>Switch shared store to English; platform stub collects copy payloads from fixed APIs only.</en></lang>
+test('application-owned chrome creates localized primary-tab items without native shell APIs', () => {
+  // <lang><zh-CN>共享 store 切换为英文；tab items 直接由 translator 生成，不创建任何平台壳调用。</zh-CN><en>Switch the shared store to English; tab items are created directly from the translator without any platform-shell call.</en></lang>
   useRuntimeLocale().selectLocale('en');
-  const calls = [];
-  const shell = {
-    setTabBarItem: (payload) => calls.push(['tab', payload]),
-    setNavigationBarTitle: (payload) => calls.push(['title', payload])
-  };
-  assert.equal(applyRuntimeTabLabels(shell), 4);
-  assert.equal(applyPageTitle('title.profile', shell), true);
-  assert.deepEqual(calls, [
-    ['tab', { index: 0, text: 'Home' }],
-    ['tab', { index: 1, text: 'Discover' }],
-    ['tab', { index: 2, text: 'My bookings' }],
-    ['tab', { index: 3, text: 'Profile' }],
-    ['title', { title: 'Profile' }]
+  const runtimeLocale = useRuntimeLocale();
+  assert.deepEqual(createPrimaryTabItems((messageKey) => runtimeLocale.t(messageKey)), [
+    { value: 'home', label: 'Home' },
+    { value: 'discover', label: 'Discover' },
+    { value: 'reservations', label: 'My bookings' },
+    { value: 'profile', label: 'Profile' }
   ]);
 });
 
-test('scheduled runtime chrome waits for the native render turn before projecting tab and title copy', async () => {
-  // <lang><zh-CN>使用有限等待覆盖一次性 lifecycle delay，确保延后路径仍投影同一英文 tab 与当前标题。</zh-CN><en>Use a bounded wait to cover the one-shot lifecycle delay, ensuring the deferred path still projects the same English tabs and current title.</en></lang>
-  useRuntimeLocale().selectLocale('en');
+test('application-owned chrome allows only fixed primary routes and provides a bounded back fallback', () => {
+  // <lang><zh-CN>平台替身只记录本地导航；未知 tab 必须零调用，返回失败只能进入固定发现页。</zh-CN><en>The platform double records local navigation only; an unknown tab must cause zero calls, and a failed back can enter only the fixed Discover page.</en></lang>
   const calls = [];
   const shell = {
-    setTabBarItem: (payload) => calls.push(['tab', payload]),
-    setNavigationBarTitle: (payload) => calls.push(['title', payload])
+    reLaunch: (payload) => calls.push(['reLaunch', payload]),
+    navigateBack: (payload) => {
+      calls.push(['navigateBack', { delta: payload.delta }]);
+      payload.fail();
+    }
   };
-  scheduleRuntimeChrome('title.profile', shell);
-  await new Promise((resolve) => setTimeout(resolve, 80));
+
+  // <lang><zh-CN>直接主页面导航只解析冻结 value；任意字符串不会变成 URL。</zh-CN><en>Direct primary-page navigation resolves only a frozen value; an arbitrary string never becomes a URL.</en></lang>
+  assert.equal(openPrimaryPage('home', shell), true);
+  assert.equal(openPrimaryPage('https://example.invalid', shell), false);
+
+  // <lang><zh-CN>返回 API 的 fail callback 复用同一固定路由 helper。</zh-CN><en>The back API fail callback reuses the same fixed-route helper.</en></lang>
+  assert.equal(navigateBackOrOpenPrimaryPage('discover', shell), true);
   assert.deepEqual(calls, [
-    ['tab', { index: 0, text: 'Home' }],
-    ['tab', { index: 1, text: 'Discover' }],
-    ['tab', { index: 2, text: 'My bookings' }],
-    ['tab', { index: 3, text: 'Profile' }],
-    ['title', { title: 'Profile' }]
+    ['reLaunch', { url: '/pages/home/index' }],
+    ['navigateBack', { delta: 1 }],
+    ['reLaunch', { url: '/pages/discover/index' }]
   ]);
 });

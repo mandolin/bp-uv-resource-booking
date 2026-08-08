@@ -5,7 +5,9 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住确认表单，让 UI component locale 与所有 BP 文案/领域值投影一致。</zh-CN><en>The provider directly wraps the confirmation form, aligning UI component locale with all BP copy and domain-value projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <view class="booking-confirm-page">
+    <!-- <lang><zh-CN>确认页使用带本地化返回文字的应用自管 navbar，并保持表单内业务状态由页面拥有。</zh-CN><en>Confirmation uses the application-owned navbar with localized back copy while retaining page ownership of form business state.</en></lang> -->
+    <runtime-page-shell title-key="title.confirm" show-back>
+      <view class="booking-confirm-page">
       <!-- <lang><zh-CN>页面只在已有 detail 时开放确认；无 detail 时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with an existing detail; without it, explicit recovery prevents a hidden state or URL from creating a reservation directly.</en></lang> -->
       <view v-if="detail.kind === 'detail'" class="booking-confirm-page__content">
         <source-badge :source="detail.source" />
@@ -30,15 +32,16 @@
         <u-button :label="runtimeLocale.t('booking.confirmLocal')" block :loading="demo.bookingPhase.value === 'submitting'" @click="confirmBooking" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('booking.emptyTitle')" :description="runtimeLocale.t('booking.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
-    </view>
+      </view>
+    </runtime-page-shell>
   </u-config-provider>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
-import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -104,17 +107,14 @@ function confirmBooking() {
  * @lang en Returning does not clear other visible local state.
  */
 function backToDiscover() {
-  // <lang><zh-CN>仅执行本地 tab 导航。</zh-CN><en>Perform only local tab navigation.</en></lang>
-  uni.switchTab({ url: '/pages/discover/index' });
+  // <lang><zh-CN>只进入应用壳固定声明的发现主页面。</zh-CN><en>Enter only the Discover primary page fixed by the application shell.</en></lang>
+  openPrimaryPage('discover');
 }
-
-// <lang><zh-CN>每次显示在 native chrome 初始化后投影本地化标题与 tab；不从资源名称或查询参数拼接标题。</zh-CN><en>Every show projects localized title and tabs after native chrome initializes and concatenates no title from resource name or query parameter.</en></lang>
-onShow(() => scheduleRuntimeChrome('title.confirm'));
 </script>
 
 <style scoped>
 /* <lang><zh-CN>确认页以清晰的表单分组和主题卡片组织 local flow，不模拟支付或会员视觉。</zh-CN><en>Confirmation uses clear form grouping and theme cards to organize local flow without simulating payment or membership visuals.</en></lang> */
-.booking-confirm-page { min-height: 100vh; padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
+.booking-confirm-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
 .booking-confirm-page__content { display: flex; gap: 16px; flex-direction: column; }
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .booking-confirm-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }

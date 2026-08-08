@@ -26,7 +26,7 @@ const props = defineProps({
   }
 });
 
-// <lang><zh-CN>读取唯一共享 locale store，保证 badge 与页面/原生壳不会出现混排语言。</zh-CN><en>Read the sole shared locale store, keeping the badge aligned with pages and native shell without mixed languages.</en></lang>
+// <lang><zh-CN>读取唯一共享 locale store，保证 badge 与页面正文、应用自管标题和 tab 不会出现混排语言。</zh-CN><en>Read the sole shared locale store, keeping the badge aligned with page body copy, application-owned titles, and tabs without mixed languages.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
 // <lang><zh-CN>未知 authority 不被猜测为远端或在线；以 local-safe 呈现避免错误承诺。</zh-CN><en>An unknown authority is not guessed as remote or online and is rendered local-safe to avoid a false claim.</en></lang>

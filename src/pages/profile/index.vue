@@ -5,7 +5,9 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住页面组件树，使 HIA-uView 的受限 locale context 与 BP 显示语言保持同一 canonical 值。</zh-CN><en>The provider directly wraps the page component tree so HIA-uView's constrained locale context shares the BP display language's canonical value.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <view class="profile-page">
+    <!-- <lang><zh-CN>个人信息页壳与语言 radio 共用同一 store，选择变化会在同一渲染周期更新当前标题与全部 tab labels。</zh-CN><en>The Profile shell and language radios share one store, so a selection change updates the current title and every tab label in the same render cycle.</en></lang> -->
+    <runtime-page-shell title-key="title.profile" active-tab="profile">
+      <view class="profile-page">
       <!-- <lang><zh-CN>示例身份仅为页面展示，不成为可编辑账户表单或身份绑定入口。</zh-CN><en>Demo identity is presentation only and is neither an editable account form nor an identity-binding entry.</en></lang> -->
       <u-card :title="runtimeLocale.t('profile.visitor')" :sub-title="runtimeLocale.t('profile.subtitle')">
         <view class="profile-page__identity">
@@ -47,14 +49,15 @@
         <u-cell :label="runtimeLocale.t('profile.images')" />
       </u-card>
       <u-button :label="runtimeLocale.t('profile.browse')" block @click="goDiscover" />
-    </view>
+      </view>
+    </runtime-page-shell>
   </u-config-provider>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
-import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import RuntimePageShell from '../../components/RuntimePageShell.vue';
+import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 
 // <lang><zh-CN>个人信息页读取唯一共享 locale surface，不创建页面私有语言 store 或平行 UI locale global。</zh-CN><en>Profile reads the sole shared locale surface and creates neither a page-private language store nor a parallel UI locale global.</en></lang>
@@ -68,8 +71,7 @@ const languageChoice = computed({
     if (nextChoice === 'system') runtimeLocale.followSystem();
     else runtimeLocale.selectLocale(nextChoice);
 
-    // <lang><zh-CN>语言切换后等待原生 tabbar/标题可被安全覆盖的生命周期点，再更新四项 tab 与当前页标题；平台失败不阻断选择。</zh-CN><en>After a language change, wait for the lifecycle point at which native tabbar and title can be safely overridden, then update all four tabs and the current title; a platform failure does not block the choice.</en></lang>
-    scheduleRuntimeChrome('title.profile');
+    // <lang><zh-CN>无需额外平台调用；应用自管壳的 computed 文案直接响应共享 locale。</zh-CN><en>No extra platform call is needed; computed copy in the application-owned shell reacts directly to the shared locale.</en></lang>
   }
 });
 
@@ -85,17 +87,14 @@ const followSystemLabel = computed(() => runtimeLocale.t('profile.followSystem',
  * @lang en Profile does not prefetch catalog, modify data other than language preference, or attempt identity login.
  */
 function goDiscover() {
-  // <lang><zh-CN>只执行 UniApp 本地 tab 路由。</zh-CN><en>Perform only UniApp local tab routing.</en></lang>
-  uni.switchTab({ url: '/pages/discover/index' });
+  // <lang><zh-CN>只进入应用壳固定声明的发现主页面。</zh-CN><en>Enter only the Discover primary page fixed by the application shell.</en></lang>
+  openPrimaryPage('discover');
 }
-
-// <lang><zh-CN>每次页面显示都在 native chrome 初始化后投影 tab 与当前 locale 标题，覆盖 `pages.json` 的静态 fallback。</zh-CN><en>Every page show projects tabs and the current-locale title after native chrome initializes, overriding the static fallback in `pages.json`.</en></lang>
-onShow(() => scheduleRuntimeChrome('title.profile'));
 </script>
 
 <style scoped>
 /* <lang><zh-CN>个人页使用 token 化卡片层级与非颜色单选标识，不模拟账号、会员或可编辑档案视觉。</zh-CN><en>Profile uses tokenized card hierarchy and non-color radio markers without simulating an account, membership, or editable-profile appearance.</en></lang> */
-.profile-page { display: flex; gap: 16px; flex-direction: column; min-height: 100vh; padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
+.profile-page { display: flex; gap: 16px; flex-direction: column; padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
 .profile-page__identity { display: flex; gap: 14px; align-items: center; }
 .profile-page__name { display: block; color: var(--u-sys-color-text); font-size: 19px; font-weight: 700; }
 .profile-page__detail { display: block; margin-top: 4px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.5; }

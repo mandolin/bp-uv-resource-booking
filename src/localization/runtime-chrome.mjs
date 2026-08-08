@@ -1,39 +1,76 @@
 /**
- * <lang><zh-CN>BP 的受限原生壳文本投影：同步 runtime locale 到 tab 和当前页面标题；不修改路由、全局配置、网络或业务状态。</zh-CN><en>Constrained native-shell copy projection for the BP: synchronizes runtime locale to tabs and current page title; it modifies no route, global configuration, network, or business state.</en></lang>
- * @lang zh-CN `pages.json` 中的中文只保留为原生 fallback，运行期可见文本必须经本模块更新。
- * @lang en Chinese in `pages.json` remains only as a native fallback; runtime-visible copy must be updated through this module.
+ * <lang><zh-CN>BP 的应用自管运行时壳模型：声明四个主页面、生成本地化 tab 项，并把有限导航意图投影到 UniApp；不依赖原生 tabbar、原生标题、网络、身份或业务状态。</zh-CN><en>Application-owned runtime-shell model for the BP: declares four primary pages, creates localized tab items, and projects bounded navigation intents to UniApp; it depends on no native tabbar, native title, network, identity, or business state.</en></lang>
+ * @lang zh-CN 小程序不支持 `pages.json` 文案国际化，因此可见 title/tab 由 Vue 壳和 HIA-uView 组件直接消费 runtime locale；本模块只拥有固定路由，不接受动态 URL。
+ * @lang en Mini Programs do not support `pages.json` copy internationalization, so visible titles/tabs are rendered by the Vue shell and HIA-uView components directly from runtime locale; this module owns fixed routes only and accepts no dynamic URL.
  */
 
-import { resolveRuntimeUniApi, useRuntimeLocale } from './runtime-locale.mjs';
-
-/**
- * <lang><zh-CN>将固定 tab index 映射到第一方 locale resource key。</zh-CN><en>Maps fixed tab indices to first-party locale-resource keys.</en></lang>
- * @lang zh-CN 顺序与 `pages.json` 中的四个 tab 固定对应；不读取或枚举平台 tab 配置。
- * @lang en Order fixedly corresponds to the four tabs in `pages.json`; it reads or enumerates no platform tab configuration.
- */
-const TAB_LABEL_KEYS = Object.freeze(['nav.home', 'nav.discover', 'nav.reservations', 'nav.profile']);
+// <lang><zh-CN>复用唯一受限 UniApp API 解析入口；不在模块加载时捕获平台对象。</zh-CN><en>Reuse the sole bounded UniApp-API resolver and do not capture the platform object at module load.</en></lang>
+import { resolveRuntimeUniApi } from './runtime-locale.mjs';
 
 /**
- * <lang><zh-CN>等待 UniApp 完成当前页面与 native tabbar 初始化的最小壳投影延迟。</zh-CN><en>The minimum shell-projection delay that lets UniApp finish initializing the current page and native tabbar.</en></lang>
- * @lang zh-CN 这是一次性的生命周期协调，不是轮询、重试、网络等待或业务计时器。
- * @lang en This is one-shot lifecycle coordination, not polling, retrying, network waiting, or a business timer.
+ * <lang><zh-CN>四个主页面的冻结应用壳声明。</zh-CN><en>Frozen application-shell declarations for the four primary pages.</en></lang>
+ * @lang zh-CN value、message key 和本地 URL 都由第一方源码固定，不能由 manifest、query、远端数据或用户输入扩展。
+ * @lang en Values, message keys, and local URLs are fixed by first-party source and cannot be extended by a manifest, query, remote data, or user input.
  */
-const NATIVE_CHROME_DELAY_MS = 48;
+export const PRIMARY_PAGE_SPECS = Object.freeze([
+  Object.freeze({ value: 'home', labelKey: 'nav.home', url: '/pages/home/index' }),
+  Object.freeze({ value: 'discover', labelKey: 'nav.discover', url: '/pages/discover/index' }),
+  Object.freeze({ value: 'reservations', labelKey: 'nav.reservations', url: '/pages/reservations/index' }),
+  Object.freeze({ value: 'profile', labelKey: 'nav.profile', url: '/pages/profile/index' })
+]);
 
 /**
- * <lang><zh-CN>安全调用一个可选 UniApp 壳 API。</zh-CN><en>Safely calls one optional UniApp shell API.</en></lang>
- * @param {unknown} uniApi <lang><zh-CN>可选 UniApp API 对象。</zh-CN><en>Optional UniApp API object.</en></lang>
- * @param {'setTabBarItem'|'setNavigationBarTitle'} methodName <lang><zh-CN>allowlisted 平台方法名。</zh-CN><en>Allowlisted platform method name.</en></lang>
- * @param {object} payload <lang><zh-CN>固定结构的壳文本 payload。</zh-CN><en>Fixed-shape shell-copy payload.</en></lang>
- * @returns {boolean} <lang><zh-CN>调用是否没有同步异常；缺失或异常时为 `false`。</zh-CN><en>Whether the call had no synchronous exception; `false` when missing or exceptional.</en></lang>
- * @lang zh-CN 调用失败不能阻断页面渲染或改写 runtime locale；平台回退标题仍可使用。
- * @lang en A failed call cannot block page rendering or rewrite runtime locale; platform fallback titles remain usable.
+ * <lang><zh-CN>按主页面 value 建立的只读有限查找表。</zh-CN><en>Readonly finite lookup table keyed by primary-page value.</en></lang>
+ * @lang zh-CN 查找表只从同文件冻结声明生成，避免调用方提供 URL 或将未知 tab 当成页面。
+ * @lang en The lookup is created only from frozen declarations in this file, preventing callers from supplying URLs or treating an unknown tab as a page.
  */
-function callShellApi(uniApi, methodName, payload) {
-  // <lang><zh-CN>只调用两个固定 API 之一，禁止方法名由页面、路由或用户输入提供。</zh-CN><en>Call only one of the two fixed APIs; method names cannot come from a page, route, or user input.</en></lang>
+const PRIMARY_PAGE_BY_VALUE = Object.freeze(Object.fromEntries(PRIMARY_PAGE_SPECS.map((pageSpec) => [pageSpec.value, pageSpec])));
+
+/**
+ * <lang><zh-CN>判断一个未知值是否为应用声明的主页面。</zh-CN><en>Determines whether an unknown value is an application-declared primary page.</en></lang>
+ * @param {unknown} value <lang><zh-CN>待验证的 tab/page value。</zh-CN><en>Tab/page value to validate.</en></lang>
+ * @returns {boolean} <lang><zh-CN>仅在有限声明中存在时为 true。</zh-CN><en>True only when present in the finite declaration.</en></lang>
+ * @lang zh-CN 本函数不规范化、拼接或猜测未知值。
+ * @lang en This function does not normalize, concatenate, or guess an unknown value.
+ */
+export function isPrimaryPage(value) {
+  // <lang><zh-CN>只有 string 且为查找表自有键时才通过，拒绝原型链与隐式类型转换。</zh-CN><en>Pass only a string that is an own lookup key, rejecting prototype-chain and implicit type coercion.</en></lang>
+  return typeof value === 'string' && Object.hasOwn(PRIMARY_PAGE_BY_VALUE, value);
+}
+
+/**
+ * <lang><zh-CN>从当前 runtime translator 生成 HIA-uView `u-tabbar` 的单语言 items。</zh-CN><en>Creates single-language HIA-uView `u-tabbar` items from the current runtime translator.</en></lang>
+ * @param {(messageKey: string) => string} translate <lang><zh-CN>唯一 runtime locale store 的静态资源翻译函数。</zh-CN><en>Static-resource translator from the sole runtime locale store.</en></lang>
+ * @returns {ReadonlyArray<{value: string, label: string}>} <lang><zh-CN>固定顺序的冻结 tab 项。</zh-CN><en>Frozen tab items in fixed order.</en></lang>
+ * @lang zh-CN label key 来自第一方声明；translate 不接收路由、query、领域对象或远端数据。
+ * @lang en Label keys come from first-party declarations; translate receives no route, query, domain object, or remote data.
+ */
+export function createPrimaryTabItems(translate) {
+  // <lang><zh-CN>缺少 translator 时返回空冻结列表，使展示层安全不呈现未知或默认混排文案。</zh-CN><en>Return an empty frozen list when the translator is absent so the presentation layer safely renders no unknown or mixed default copy.</en></lang>
+  if (typeof translate !== 'function') return Object.freeze([]);
+
+  // <lang><zh-CN>逐项只投影稳定 value 与当前 locale label，不暴露内部 URL 给 UI 组件。</zh-CN><en>Project only stable values and current-locale labels, exposing no internal URL to the UI component.</en></lang>
+  return Object.freeze(PRIMARY_PAGE_SPECS.map((pageSpec) => Object.freeze({
+    value: pageSpec.value,
+    label: translate(pageSpec.labelKey)
+  })));
+}
+
+/**
+ * <lang><zh-CN>以接近原生 tab 的语义打开一个固定主页面。</zh-CN><en>Opens a fixed primary page with semantics close to a native tab.</en></lang>
+ * @param {unknown} pageValue <lang><zh-CN>来自受控 `u-tabbar` 或第一方页面 action 的候选 value。</zh-CN><en>Candidate value from the controlled `u-tabbar` or a first-party page action.</en></lang>
+ * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象，用于运行时调用或测试替身。</zh-CN><en>Optional UniApp API object for runtime calls or a test double.</en></lang>
+ * @returns {boolean} <lang><zh-CN>导航是否被同步接受。</zh-CN><en>Whether navigation was accepted synchronously.</en></lang>
+ * @lang zh-CN `reLaunch` 清理详情页栈，模拟 tab 切换的顶层边界；共享 demo state 仍由应用级 module store 持有。
+ * @lang en `reLaunch` clears the detail-page stack to model a top-level tab boundary; shared demo state remains owned by the application-level module store.
+ */
+export function openPrimaryPage(pageValue, uniApi = resolveRuntimeUniApi()) {
+  // <lang><zh-CN>先验证有限 value，再读取固定 URL；未知输入绝不进入平台 API。</zh-CN><en>Validate the finite value before reading its fixed URL; unknown input never reaches the platform API.</en></lang>
+  if (!isPrimaryPage(pageValue) || typeof uniApi?.reLaunch !== 'function') return false;
+
+  // <lang><zh-CN>平台同步异常只使本次导航失败，不改写 locale、业务状态或其他路由。</zh-CN><en>A synchronous platform exception only fails this navigation and rewrites no locale, business state, or other route.</en></lang>
   try {
-    if (typeof uniApi?.[methodName] !== 'function') return false;
-    uniApi[methodName](payload);
+    uniApi.reLaunch({ url: PRIMARY_PAGE_BY_VALUE[pageValue].url });
     return true;
   } catch {
     return false;
@@ -41,61 +78,25 @@ function callShellApi(uniApi, methodName, payload) {
 }
 
 /**
- * <lang><zh-CN>投影四项 tab 文本到当前平台壳。</zh-CN><en>Projects four tab labels to the current platform shell.</en></lang>
- * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象。</zh-CN><en>Optional UniApp API object.</en></lang>
- * @returns {number} <lang><zh-CN>未同步异常的调用数量。</zh-CN><en>Number of calls without a synchronous exception.</en></lang>
- * @lang zh-CN 该函数只更新文字，不设置图标、颜色、路由或 tab 可见性。
- * @lang en This function updates only text and sets no icon, color, route, or tab visibility.
+ * <lang><zh-CN>尝试返回上一页，并在页面栈不可返回时打开固定主页面。</zh-CN><en>Attempts to return to the previous page and opens a fixed primary page when the stack cannot go back.</en></lang>
+ * @param {unknown} fallbackPageValue <lang><zh-CN>页面源码声明的有限 fallback 主页面 value。</zh-CN><en>Finite fallback primary-page value declared by page source.</en></lang>
+ * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象，用于运行时调用或测试替身。</zh-CN><en>Optional UniApp API object for runtime calls or a test double.</en></lang>
+ * @returns {boolean} <lang><zh-CN>返回或 fallback 是否被同步接受。</zh-CN><en>Whether back or fallback was accepted synchronously.</en></lang>
+ * @lang zh-CN 回退始终为 delta=1；异步 fail 回调只能进入同一固定主页面 allowlist。
+ * @lang en Back is always delta=1; the asynchronous fail callback can enter only the same fixed primary-page allowlist.
  */
-export function applyRuntimeTabLabels(uniApi = resolveRuntimeUniApi()) {
-  // <lang><zh-CN>读取唯一共享 locale store，保证 UI 内容与原生 tab 使用同一语言。</zh-CN><en>Read the sole shared locale store, ensuring UI content and native tabs use one language.</en></lang>
-  const runtimeLocale = useRuntimeLocale();
+export function navigateBackOrOpenPrimaryPage(fallbackPageValue, uniApi = resolveRuntimeUniApi()) {
+  // <lang><zh-CN>无 navigateBack 时直接执行受限 fallback，适配从分享/刷新直接进入的页面。</zh-CN><en>When navigateBack is unavailable, run the bounded fallback directly, accommodating pages entered from a share or refresh.</en></lang>
+  if (typeof uniApi?.navigateBack !== 'function') return openPrimaryPage(fallbackPageValue, uniApi);
 
-  // <lang><zh-CN>在固定四项上累加成功结果，既不依赖数组外内容也不抛出页面错误。</zh-CN><en>Accumulate success results over the fixed four items, depending on no outside array content and throwing no page error.</en></lang>
-  return TAB_LABEL_KEYS.reduce((appliedCount, key, index) => appliedCount + Number(callShellApi(uniApi, 'setTabBarItem', { index, text: runtimeLocale.t(key) })), 0);
-}
-
-/**
- * <lang><zh-CN>投影一个页面的本地化导航栏标题。</zh-CN><en>Projects one page's localized navigation-bar title.</en></lang>
- * @param {string} titleKey <lang><zh-CN>第一方声明的标题 resource key。</zh-CN><en>Title resource key declared by first party.</en></lang>
- * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象。</zh-CN><en>Optional UniApp API object.</en></lang>
- * @returns {boolean} <lang><zh-CN>调用是否没有同步异常。</zh-CN><en>Whether the call had no synchronous exception.</en></lang>
- * @lang zh-CN 标题 key 必须来自页面源码；本函数不读取 URL、路由参数或业务对象作为标题。
- * @lang en The title key must come from page source; this function reads no URL, route parameter, or business object as title.
- */
-export function applyPageTitle(titleKey, uniApi = resolveRuntimeUniApi()) {
-  // <lang><zh-CN>只传入当前 locale 的静态资源结果，避免将内部 key 或未知对象暴露到原生壳。</zh-CN><en>Pass only the current-locale static-resource result, avoiding exposure of an internal key or unknown object to the native shell.</en></lang>
-  return callShellApi(uniApi, 'setNavigationBarTitle', { title: useRuntimeLocale().t(titleKey) });
-}
-
-/**
- * <lang><zh-CN>在 launch 或语言变更后同步应用的 tab 文本。</zh-CN><en>Synchronizes application tab text after launch or a language change.</en></lang>
- * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象。</zh-CN><en>Optional UniApp API object.</en></lang>
- * @returns {number} <lang><zh-CN>未同步异常的 tab 调用数量。</zh-CN><en>Number of tab calls without a synchronous exception.</en></lang>
- * @lang zh-CN 页面标题由各页面 `onShow` 调用 `applyPageTitle`，避免壳模块猜测当前 route。
- * @lang en Page titles call `applyPageTitle` from each page's `onShow`, preventing this shell module from guessing the current route.
- */
-export function refreshRuntimeChrome(uniApi = resolveRuntimeUniApi()) {
-  // <lang><zh-CN>当前壳只拥有四项 tab 投影，返回结果供测试验证而不用于业务流程。</zh-CN><en>The current shell owns only four-tab projection; return result supports tests and is unused by business flow.</en></lang>
-  return applyRuntimeTabLabels(uniApi);
-}
-
-/**
- * <lang><zh-CN>在当前页面与 tabbar 完成初始渲染后投影 tab 文本和可选页面标题。</zh-CN><en>Projects tab copy and an optional page title after the current page and tabbar finish initial rendering.</en></lang>
- * @param {string|undefined} [titleKey] <lang><zh-CN>当前页面声明的 title resource key；缺失时只更新 tab。</zh-CN><en>Title resource key declared by the current page; when absent, updates tabs only.</en></lang>
- * @param {unknown} [uniApi] <lang><zh-CN>可选的已解析 UniApp 平台对象。</zh-CN><en>Optional resolved UniApp platform object.</en></lang>
- * @returns {void} <lang><zh-CN>无返回值；投影失败保留原生 fallback，不阻断页面。</zh-CN><en>No return value; a failed projection retains native fallback and never blocks the page.</en></lang>
- * @lang zh-CN DCloud 要求在 native tabbar 已渲染后更新 tab，且 `onShow` 更新标题需稍后执行以免被框架覆盖；本函数把这两个固定规则收敛在唯一受控位置。
- * @lang en DCloud requires updating native tabs after they render and delaying an `onShow` title update so the framework does not overwrite it; this function centralizes both fixed rules in one controlled location.
- */
-export function scheduleRuntimeChrome(titleKey, uniApi = resolveRuntimeUniApi()) {
-  // <lang><zh-CN>title key 只能是页面源码传入的 string；未知形状不传给 native shell。</zh-CN><en>A title key may only be a string supplied by page source; an unknown shape is never passed to the native shell.</en></lang>
-  const safeTitleKey = typeof titleKey === 'string' ? titleKey : undefined;
-
-  // <lang><zh-CN>只排入一次固定短延迟；回调只调用 allowlisted 壳 API，不读取路由、网络或业务数据。</zh-CN><en>Schedule one fixed short delay only; the callback calls allowlisted shell APIs and reads no route, network, or business data.</en></lang>
-  setTimeout(() => {
-    // <lang><zh-CN>tab 与标题使用调用时的同一 locale store，避免页面内容和 native chrome 在切换后分属不同语言。</zh-CN><en>Tabs and title use the same locale store at call time, preventing page content and native chrome from belonging to different languages after a switch.</en></lang>
-    refreshRuntimeChrome(uniApi);
-    if (safeTitleKey) applyPageTitle(safeTitleKey, uniApi);
-  }, NATIVE_CHROME_DELAY_MS);
+  // <lang><zh-CN>把异步失败处理收敛为同一 allowlisted helper，且同步异常同样进入该 fallback。</zh-CN><en>Constrain asynchronous failure handling to the same allowlisted helper, and route a synchronous exception to that fallback as well.</en></lang>
+  try {
+    uniApi.navigateBack({
+      delta: 1,
+      fail: () => openPrimaryPage(fallbackPageValue, uniApi)
+    });
+    return true;
+  } catch {
+    return openPrimaryPage(fallbackPageValue, uniApi);
+  }
 }

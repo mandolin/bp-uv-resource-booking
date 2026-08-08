@@ -12,6 +12,9 @@
 - 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
 - There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
 
+- 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 响应式呈现；“个人信息”可选择跟随系统、简体中文或 English。小程序使用 HIA-uView `u-navbar`/`u-tabbar` 组成的应用自管壳，不依赖 `pages.json` 静态标题、原生 tabbar 或运行时原生改名 API。
+- Page body copy, titles, and all four tabs render reactively from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. The Mini Program uses an application-owned shell composed from HIA-uView `u-navbar`/`u-tabbar`, with no dependence on static `pages.json` titles, a native tabbar, or runtime native relabeling APIs.
+
 - 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。
 - Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion.
 

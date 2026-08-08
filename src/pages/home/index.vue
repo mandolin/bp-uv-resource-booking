@@ -5,7 +5,9 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView 的 locale context 与 BP runtime 文案/领域投影保持一致。</zh-CN><en>The provider directly wraps the page, keeping HIA-uView locale context aligned with BP runtime copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <view class="home-page">
+    <!-- <lang><zh-CN>应用自管壳使用同一 locale 呈现标题和四项主导航，不调用小程序原生 tab/title 文案 API。</zh-CN><en>The application-owned shell renders the title and four primary navigation items with the same locale and calls no Mini Program native tab/title copy API.</en></lang> -->
+    <runtime-page-shell title-key="title.home" active-tab="home">
+      <view class="home-page">
       <!-- <lang><zh-CN>hero 使用原创项目内场馆图，不使用外部照片或地图服务。</zh-CN><en>Hero uses an original in-project venue image and no external photograph or map service.</en></lang> -->
       <view class="home-page__hero">
         <u-image :src="heroImage" :alt="runtimeLocale.t('app.brand')" size="large" shape="rounded" />
@@ -52,7 +54,8 @@
           <u-loadmore :status="footerStatus" :more-text="runtimeLocale.t('load.more')" :loading-text="runtimeLocale.t('load.loading')" :nomore-text="runtimeLocale.t('load.nomore')" :error-text="runtimeLocale.t('load.error')" @loadmore="handleLoadMore" />
         </view>
       </view>
-    </view>
+      </view>
+    </runtime-page-shell>
   </u-config-provider>
 </template>
 
@@ -60,9 +63,10 @@
 import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
+import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
-import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -167,15 +171,15 @@ function openDetail(resourceId) {
  * @lang en In P57, the date entry only reuses the catalog entry and creates no real calendar selection or write flow.
  */
 function browseResources() {
-  // <lang><zh-CN>使用本地 tab 路由，保留共享 catalog 的当前可见状态。</zh-CN><en>Use local tab routing and retain the shared catalog's currently visible state.</en></lang>
-  uni.switchTab({ url: '/pages/discover/index' });
+  // <lang><zh-CN>使用应用壳固定主页面路由，保留 module store 中共享 catalog 的当前可见状态。</zh-CN><en>Use the application shell's fixed primary-page route and retain the shared catalog's currently visible module-store state.</en></lang>
+  openPrimaryPage('discover');
 }
 
 // <lang><zh-CN>首次挂载调用幂等 ensure helper，保证加载只由页面显式启动。</zh-CN><en>First mount calls the idempotent ensure helper, ensuring loading starts only explicitly from the page.</en></lang>
 onMounted(ensureInitialCatalog);
 
-// <lang><zh-CN>每次 tab show 在 native chrome 完成初始化后投影四项 tab 与当前标题，并复用相同 ensure helper；不会重复刷新 ready catalog。</zh-CN><en>Every tab show projects all native tabs and the current title after native chrome initializes, then reuses the same ensure helper; it does not refresh a ready catalog repeatedly.</en></lang>
-onShow(() => { scheduleRuntimeChrome('title.home'); return ensureInitialCatalog(); });
+// <lang><zh-CN>每次主页面显示只复用相同幂等 helper；响应式应用壳会直接随 locale 重绘标题和 tab，不需生命周期投影。</zh-CN><en>Every primary-page show only reuses the same idempotent helper; the reactive application shell redraws title and tabs directly with locale and needs no lifecycle projection.</en></lang>
+onShow(ensureInitialCatalog);
 
 // <lang><zh-CN>下拉刷新显式替换 page=1，结束平台 loading 只是 UI 清理，不代表远端网络状态。</zh-CN><en>Pull refresh explicitly replaces page one; ending platform loading is UI cleanup only and represents no remote network state.</en></lang>
 onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });
@@ -186,7 +190,7 @@ onReachBottom(handleLoadMore);
 
 <style scoped>
 /* <lang><zh-CN>首页复用 theme token，保持 H5 与小程序内的可读边距、表面和主色层级。</zh-CN><en>Home reuses theme tokens, retaining readable spacing, surfaces, and primary-color hierarchy on H5 and Mini Program.</en></lang> */
-.home-page { min-height: 100vh; padding: var(--bp-page-block) var(--bp-page-inline) 28px; background: var(--u-sys-color-surface-subtle); }
+.home-page { padding: var(--bp-page-block) var(--bp-page-inline) 28px; background: var(--u-sys-color-surface-subtle); }
 .home-page__hero { position: relative; overflow: hidden; margin-bottom: 14px; border-radius: var(--bp-card-radius); box-shadow: var(--bp-card-shadow); }
 .home-page__hero :deep(.u-image) { width: 100%; height: 236px; }
 .home-page__hero-copy { position: absolute; inset: auto 0 0; display: flex; gap: 6px; flex-direction: column; padding: 42px 18px 18px; color: #fff; background: linear-gradient(180deg, transparent, rgb(0 27 46 / 82%)); }

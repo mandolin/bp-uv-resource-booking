@@ -5,7 +5,9 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住 detail 页面，令 UI 的受限 locale context 与领域值投影一致。</zh-CN><en>The provider directly wraps the detail page, aligning UI constrained locale context with domain-value projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <view class="resource-detail-page">
+    <!-- <lang><zh-CN>详情页使用带本地化返回文字的应用自管 navbar，不显示主页面 tabbar。</zh-CN><en>Detail uses the application-owned navbar with localized back copy and displays no primary-page tabbar.</en></lang> -->
+    <runtime-page-shell title-key="title.detail" show-back>
+      <view class="resource-detail-page">
       <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
       <u-loading-page v-if="demo.detailPhase.value === 'loading'" :message="runtimeLocale.t('detail.loading')" />
       <view v-else-if="demo.detailPhase.value === 'failure'" class="resource-detail-page__state">
@@ -26,16 +28,18 @@
         <u-button :label="runtimeLocale.t('detail.continueBooking')" block @click="continueBooking" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('detail.emptyTitle')" :description="runtimeLocale.t('detail.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
-    </view>
+      </view>
+    </runtime-page-shell>
   </u-config-provider>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { onLoad } from '@dcloudio/uni-app';
+import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
-import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -88,20 +92,18 @@ function continueBooking() {
  * @lang en Tab navigation does not clear shared local catalog, allowing return to existing explicit pagination position.
  */
 function backToDiscover() {
-  // <lang><zh-CN>使用 tab 级导航而非浏览器 history 或外部 URL。</zh-CN><en>Use tab-level navigation rather than browser history or an external URL.</en></lang>
-  uni.switchTab({ url: '/pages/discover/index' });
+  // <lang><zh-CN>使用应用壳固定主页面导航，而非浏览器 history、query 或外部 URL。</zh-CN><en>Use the application shell's fixed primary-page navigation rather than browser history, a query, or an external URL.</en></lang>
+  openPrimaryPage('discover');
 }
 
 // <lang><zh-CN>onLoad 是唯一详情读取入口，页面不在 render、computed 或 watch 中自行发起读取。</zh-CN><en>onLoad is the sole detail-read entry; the page starts no read from render, computed, or watch.</en></lang>
 onLoad(readRouteResource);
 
-// <lang><zh-CN>每次显示在 native chrome 初始化后投影本地化标题与 tab；不从资源名称生成动态 title。</zh-CN><en>Every show projects localized title and tabs after native chrome initializes and does not generate a dynamic title from resource name.</en></lang>
-onShow(() => scheduleRuntimeChrome('title.detail'));
 </script>
 
 <style scoped>
 /* <lang><zh-CN>详情页以主题表面、可读行距和 token 化圆角组织内容，不编码实时或行业状态色。</zh-CN><en>Detail uses theme surfaces, readable line height, and tokenized radius to organize content without encoding live or industry-state colors.</en></lang> */
-.resource-detail-page { min-height: 100vh; padding: 16px; background: var(--u-sys-color-surface-subtle); }
+.resource-detail-page { padding: 16px; background: var(--u-sys-color-surface-subtle); }
 .resource-detail-page__content { display: flex; gap: 16px; flex-direction: column; }
 .resource-detail-page__image { width: 100%; height: 252px; }
 .resource-detail-page__source { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: var(--u-sys-color-text-secondary); font-size: 12px; }

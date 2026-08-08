@@ -65,9 +65,10 @@ async function verifyInputs() {
     throw new Error('Unexpected Mini Program static UI component resolver.');
   }
 
-  // <lang><zh-CN>当前所有 BP 页面和通用资源卡片只使用模板 u-* 标签与静态 resolver；它们不能重新导入 UI 公共 runtime entry 破坏小程序产物边界。</zh-CN><en>All current BP pages and the generic resource card use template u-* tags with the static resolver only; they must not reimport the UI public runtime entry and break Mini Program output boundaries.</en></lang>
+  // <lang><zh-CN>当前所有 BP 页面、通用资源卡片与应用自管页面壳只使用模板 u-* 标签与静态 resolver；它们不能重新导入 UI 公共 runtime entry 破坏小程序产物边界。</zh-CN><en>All current BP pages, the generic resource card, and the application-owned page shell use template u-* tags with the static resolver only; they must not reimport the UI public runtime entry and break Mini Program output boundaries.</en></lang>
   const staticConsumerPaths = Object.freeze([
     'src/components/ResourceCard.vue',
+    'src/components/RuntimePageShell.vue',
     'src/pages/home/index.vue',
     'src/pages/discover/index.vue',
     'src/pages/reservations/index.vue',

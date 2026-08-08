@@ -25,6 +25,7 @@ const pagePaths = Object.freeze([
 // <lang><zh-CN>共用展示组件同样受模板直取/裸文案 gate 约束，但不要求各自拥有页面级 provider。</zh-CN><en>Shared presentation components are also subject to template direct-access/unbound-copy gates, but are not required to own a page-level provider.</en></lang>
 const componentPaths = Object.freeze([
   'src/components/ResourceCard.vue',
+  'src/components/RuntimePageShell.vue',
   'src/components/SourceBadge.vue'
 ]);
 
@@ -73,6 +74,7 @@ async function verifySfc(relativePath, requireProvider) {
   // <lang><zh-CN>页面必须显式持有 runtime locale 和 provider；共用组件只需使用 runtime locale，以便由页面 provider 提供 UI context。</zh-CN><en>Pages must explicitly hold runtime locale and provider; shared components need only use runtime locale so page provider supplies UI context.</en></lang>
   if (!sourceText.includes('useRuntimeLocale')) throw new Error(`Missing runtime locale consumer in ${relativePath}.`);
   if (requireProvider && !templateText.includes('<u-config-provider')) throw new Error(`Missing UConfigProvider in ${relativePath}.`);
+  if (requireProvider && !templateText.includes('<runtime-page-shell')) throw new Error(`Missing runtime page shell in ${relativePath}.`);
 }
 
 /**
@@ -82,9 +84,26 @@ async function verifySfc(relativePath, requireProvider) {
  * @lang en Order is fixed; failure messages contain only repository-relative paths and output no source, user data, or environment information.
  */
 async function verifyRuntimeI18n() {
-  // <lang><zh-CN>先检查六个页面，再检查两个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check six pages first then two shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
+  // <lang><zh-CN>先检查六个页面，再检查三个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check six pages first then three shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
   for (const relativePath of pagePaths) await verifySfc(relativePath, true);
   for (const relativePath of componentPaths) await verifySfc(relativePath, false);
+
+  // <lang><zh-CN>读取声明式页面配置，确保小程序不再生成带静态语言的原生 title/tabbar。</zh-CN><en>Read declarative page configuration to ensure the Mini Program no longer generates native titles/tabbar with a static language.</en></lang>
+  const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, 'src/pages.json'), 'utf8'));
+
+  // <lang><zh-CN>六页都必须关闭原生导航栏，避免应用自管标题与原生静态标题同时显示。</zh-CN><en>All six pages must disable the native navigation bar, preventing an application-owned title and a native static title from appearing together.</en></lang>
+  if (!Array.isArray(pagesConfiguration.pages) || pagesConfiguration.pages.length !== pagePaths.length || pagesConfiguration.pages.some((page) => page.style?.navigationStyle !== 'custom')) {
+    throw new Error('Every page must use application-owned custom navigation.');
+  }
+
+  // <lang><zh-CN>根配置不得重新引入 native tabBar；主导航只能由 runtime page shell 的 `u-tabbar` 呈现。</zh-CN><en>The root configuration must not reintroduce native tabBar; primary navigation may be rendered only by the runtime page shell's `u-tabbar`.</en></lang>
+  if (Object.hasOwn(pagesConfiguration, 'tabBar')) throw new Error('Native tabBar is incompatible with runtime-localized application chrome.');
+
+  // <lang><zh-CN>壳必须实际组合锁定 HIA-uView 的两个公开组件，不能退化为裸 view 或平台壳 API。</zh-CN><en>The shell must actually compose the two public components from pinned HIA-uView and cannot regress to bare views or platform-shell APIs.</en></lang>
+  const runtimeShellSource = await readFile(resolve(projectRoot, 'src/components/RuntimePageShell.vue'), 'utf8');
+  if (!runtimeShellSource.includes('<u-navbar') || !runtimeShellSource.includes('<u-tabbar')) {
+    throw new Error('Runtime page shell must use HIA-uView navbar and tabbar components.');
+  }
 }
 
 // <lang><zh-CN>以顶层 await 运行唯一 gate；异常保留非零退出码给 pnpm，不做局部容错掩盖失败。</zh-CN><en>Run the sole gate with top-level await; an exception retains nonzero exit for pnpm and no local recovery hides failure.</en></lang>

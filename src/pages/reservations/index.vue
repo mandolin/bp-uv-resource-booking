@@ -5,7 +5,9 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住本页，使 UI components、状态标签和领域字段投影使用同一 runtime locale。</zh-CN><en>The provider directly wraps this page so UI components, state labels, and domain-field projection use one runtime locale.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <view class="reservations-page">
+    <!-- <lang><zh-CN>应用自管壳用 HIA-uView 呈现当前单语言标题和主导航，预约筛选 tab 仍由页面单独拥有。</zh-CN><en>The application-owned shell uses HIA-uView for the current single-language title and primary navigation, while the page continues to own its booking-filter tabs separately.</en></lang> -->
+    <runtime-page-shell title-key="title.reservations" active-tab="reservations">
+      <view class="reservations-page">
       <view class="reservations-page__heading">
         <text class="reservations-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
         <text class="reservations-page__title">{{ runtimeLocale.t('reservation.title') }}</text>
@@ -36,14 +38,15 @@
         </u-swipe-action>
       </u-list>
       <u-modal :visible="Boolean(pendingReservationId)" :title="runtimeLocale.t('reservation.cancelTitle')" :cancel-text="runtimeLocale.t('common.keep')" :confirm-text="runtimeLocale.t('reservation.cancelConfirm')" @cancel="closeCancelModal" @confirm="confirmCancellation"><text>{{ runtimeLocale.t('reservation.cancelNotice') }}</text></u-modal>
-    </view>
+      </view>
+    </runtime-page-shell>
   </u-config-provider>
 </template>
 
 <script setup>
 import { computed, ref } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
-import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import RuntimePageShell from '../../components/RuntimePageShell.vue';
+import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -184,17 +187,14 @@ function confirmCancellation() {
  * @lang en Navigation generates or preloads no data.
  */
 function goDiscover() {
-  // <lang><zh-CN>使用 UniApp 本地 tab 路由。</zh-CN><en>Use UniApp local tab routing.</en></lang>
-  uni.switchTab({ url: '/pages/discover/index' });
+  // <lang><zh-CN>只进入应用壳固定声明的发现主页面。</zh-CN><en>Enter only the Discover primary page fixed by the application shell.</en></lang>
+  openPrimaryPage('discover');
 }
-
-// <lang><zh-CN>每次显示在 native chrome 初始化后投影 tab 和当前 locale 标题，保留 `pages.json` 文本仅作为平台 fallback。</zh-CN><en>Every show projects tabs and the current-locale title after native chrome initializes, retaining `pages.json` copy only as platform fallback.</en></lang>
-onShow(() => scheduleRuntimeChrome('title.reservations'));
 </script>
 
 <style scoped>
 /* <lang><zh-CN>预约页使用中性信息卡、明显状态步骤和受限操作，不将取消危险色覆盖正文内容。</zh-CN><en>Reservations uses neutral information cards, visible state steps, and constrained actions without overlaying body content in destructive color.</en></lang> */
-.reservations-page { min-height: 100vh; padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
+.reservations-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
 .reservations-page__heading { display: flex; gap: 6px; flex-direction: column; margin-bottom: 18px; }
 .reservations-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .reservations-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }

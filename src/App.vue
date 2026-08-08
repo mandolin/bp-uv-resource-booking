@@ -1,25 +1,21 @@
 <!--
-@lang zh-CN BP 全局应用外壳：只在 launch 初始化受限 runtime locale 并投影 tab 文本；不声明自动登录、远端初始化、业务 storage 恢复、网络或身份 service。
-@lang en Global BP application shell: initializes constrained runtime locale and projects tab copy only at launch; it declares no automatic login, remote initialization, business-storage recovery, network, or identity service.
+@lang zh-CN BP 全局应用入口：只在 launch 初始化受限 runtime locale；可见 title/tab 由各页面的应用自管 HIA-uView 壳响应式呈现，不声明自动登录、远端初始化、业务 storage 恢复、网络或身份 service。
+@lang en Global BP application entry: initializes only the constrained runtime locale at launch; visible titles/tabs are rendered reactively by each page's application-owned HIA-uView shell, and it declares no automatic login, remote initialization, business-storage recovery, network, or identity service.
 -->
 <script>
-// <lang><zh-CN>导入 BP 自有 locale 初始化与壳投影；二者不创建业务 provider、写入预约或调用网络。</zh-CN><en>Import BP-owned locale initialization and shell projection; neither creates a business provider, writes bookings, nor calls a network.</en></lang>
+// <lang><zh-CN>只导入 BP 自有 locale 初始化；页面壳直接消费其响应式 surface，不需要 launch-time 原生壳调用。</zh-CN><en>Import only BP-owned locale initialization; page shells consume its reactive surface directly and need no launch-time native-shell call.</en></lang>
 import { initializeRuntimeLocale } from './localization/runtime-locale.mjs';
-import { scheduleRuntimeChrome } from './localization/runtime-chrome.mjs';
 
 export default {
   /**
-   * <lang><zh-CN>在应用启动时建立当前会话的 locale 并同步 native tab 标签。</zh-CN><en>Establishes the current-session locale and synchronizes native tab labels at application launch.</en></lang>
+   * <lang><zh-CN>在应用启动时建立当前会话的 locale。</zh-CN><en>Establishes the current-session locale at application launch.</en></lang>
    * @returns {void} <lang><zh-CN>无返回值；可选平台 API 缺失或失败不会阻断应用。</zh-CN><en>No return value; a missing or failed optional platform API never blocks the application.</en></lang>
    * @lang zh-CN 只读取规格允许的系统 language 和唯一 locale preference；不预取 catalog、执行预约写入或读取身份。
    * @lang en Reads only the spec-permitted system language and sole locale preference; it prefetches no catalog, performs no booking write, and reads no identity.
    */
   onLaunch() {
-    // <lang><zh-CN>先完成固定优先级解析，确保 UI 与随后 tab 投影共享同一 canonical locale。</zh-CN><en>Resolve the fixed priority first, ensuring UI and subsequent tab projection share one canonical locale.</en></lang>
+    // <lang><zh-CN>完成固定优先级解析，使正文、HIA-uView provider、页面标题与 tab labels 共享同一 canonical locale。</zh-CN><en>Resolve the fixed priority so body copy, HIA-uView provider, page titles, and tab labels share one canonical locale.</en></lang>
     initializeRuntimeLocale();
-
-    // <lang><zh-CN>等待原生 tabbar 初始化后再投影文本；页面自身在 show 时补投影 title。</zh-CN><en>Wait for native tabbar initialization before projecting copy; each page projects its title again when shown.</en></lang>
-    scheduleRuntimeChrome();
   }
 };
 </script>
