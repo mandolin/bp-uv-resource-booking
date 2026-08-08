@@ -46,6 +46,12 @@ async function readOutputJson(relativePath) {
  * @lang en Errors contain only stable build-relative paths or contract names and output no user data, environment variable, or source body.
  */
 async function verifyGeneratedRuntimeShell() {
+  // <lang><zh-CN>开发者工具不得启用会误排除 RuntimePageShell 的开发期无依赖文件过滤。</zh-CN><en>Developer Tools must not enable the development-time dependency-free-file filter that can wrongly exclude RuntimePageShell.</en></lang>
+  const privateProjectConfiguration = await readOutputJson('project.private.config.json');
+  if (privateProjectConfiguration.setting?.ignoreDevUnusedFiles !== false) {
+    throw new Error('Generated Developer Tools project still filters dependency-free files.');
+  }
+
   // <lang><zh-CN>根产物不得恢复 native tabBar；可见 tab 只能来自 HIA-uView 页面壳。</zh-CN><en>The root artifact must not restore native tabBar; visible tabs may come only from the HIA-uView page shell.</en></lang>
   const appConfiguration = await readOutputJson('app.json');
   if (Object.prototype.hasOwnProperty.call(appConfiguration, 'tabBar')) {

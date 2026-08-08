@@ -9,7 +9,7 @@
     "check": "node scripts/verify-input-pins.mjs && node scripts/check-rop.mjs && node scripts/verify-runtime-i18n.mjs",
     "test": "pnpm run check && node --test test/*.test.mjs",
     "build:h5": "uni build -p h5",
-    "build:mp-weixin": "uni build -p mp-weixin && node scripts/verify-mp-runtime-shell.mjs"
+    "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs"
   },
   "dependencies": {
     "@hia-uview/biz-async-provider-runtime": "file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime",
