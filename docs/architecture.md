@@ -2,12 +2,20 @@
 
 ## 已实现的本地路径 / Implemented local path
 
-页面只调用 `src/state/booking-demo.mjs` 的有限 action。状态层调用 `src/services/local-project-provider.mjs`；provider 通过 Biz 的 async-provider runtime 将已经导入的 `src/data/venues.json` 映射为受限的目录或详情 outcome。页面不会持有 request handle、dataset、provider host、URL 或 token。
+页面只调用 `src/state/booking-demo.mjs` 的有限 action。状态层调用 `src/services/local-project-provider.mjs`；provider 通过 Biz 的 async-provider runtime 将共享的静态 `src/data/local-dataset.mjs` 映射为受限的目录或详情 outcome。页面不会持有 request handle、dataset、provider host、URL 或 token。
 
-Pages call only finite actions from `src/state/booking-demo.mjs`. The state layer calls `src/services/local-project-provider.mjs`; the provider uses Biz’s async-provider runtime to map the already imported `src/data/venues.json` into bounded catalog or detail outcomes. Pages hold no request handle, dataset, provider host, URL, or token.
+Pages call only finite actions from `src/state/booking-demo.mjs`. The state layer calls `src/services/local-project-provider.mjs`; the provider uses Biz’s async-provider runtime to map shared static `src/data/local-dataset.mjs` into bounded catalog or detail outcomes. Pages hold no request handle, dataset, provider host, URL, or token.
 
 ```text
 page → booking-demo state → local-project-provider → async-provider runtime → local JSON
+```
+
+预约创建、取消和改期则走独立但同样锁定的 write adapter。write authority 在开始前固定为 `local`，不会自动 retry 或 fallback；state 只会在 adapter 返回确定的完整 snapshot 后替换其可见预约列表。
+
+Booking creation, cancellation, and reschedule use a separate but equally locked write adapter. Write authority is fixed to `local` before it starts and never automatically retries or falls back; state replaces its visible reservation list only after adapter returns a definite complete snapshot.
+
+```text
+page → booking-demo state → local-reservation-write-provider → async-provider runtime → local mock transaction → local JSON seed
 ```
 
 目录使用 `page` / `pageSize`。下拉刷新或搜索替换第一页；触底才追加下一页；页脚显示“已加载 / 总数 / 当前页”，并在追加失败时保留已显示内容和重试入口。
@@ -16,9 +24,9 @@ The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; 
 
 ## 预约边界 / Booking boundary
 
-确认预约仅写入进程内 mock 状态，刷新即回到 `venues.json` 中的初始预约。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；没有远端撤销、退款、库存释放、支付或会员规则。
+确认预约、取消与改期都经 `local-reservation-write-provider` 的 Biz async-provider write lifecycle 到达进程内 mock transaction，刷新即回到 `venues.json` 中的初始预约。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；改期采用“取消旧预约 + 创建新预约”，若新时段冲突则旧预约保持确认状态。没有远端撤销、退款、库存释放、支付或会员规则。
 
-Booking confirmation writes only process-local mock state and a refresh returns to the initial reservations in `venues.json`. Cancellation uses controlled “reveal Cancel → confirm again → mark cancelled” semantics; there is no remote revocation, refund, inventory release, payment, or membership rule.
+Booking creation, cancellation, and reschedule all reach an in-process mock transaction through the Biz async-provider write lifecycle in `local-reservation-write-provider`; a refresh returns to initial reservations in `venues.json`. Cancellation uses controlled “reveal Cancel → confirm again → mark cancelled” semantics. Reschedule uses “cancel old reservation + create new reservation”; if new slot conflicts, old reservation stays confirmed. There is no remote revocation, refund, inventory release, payment, or membership rule.
 
 ## 主题装载边界 / Theme-loading boundary
 

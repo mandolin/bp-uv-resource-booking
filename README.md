@@ -6,8 +6,8 @@
 
 ## 当前边界 / Current boundary
 
-- 核心数据来自仓内版本化 JSON；默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
-- The core data comes from versioned in-repository JSON. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
+- 核心数据来自仓内版本化 JSON；目录/详情读取以及预约创建、取消都经锁定的 HIA-uView-Biz async provider contract 到达唯一 local authority。默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
+- The core data comes from versioned in-repository JSON. Catalog/detail reads plus booking creation and cancellation reach the sole local authority through the locked HIA-uView-Biz async-provider contract. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
 
 - 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
 - There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
@@ -15,8 +15,8 @@
 - 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 呈现；“个人信息”可选择跟随系统、简体中文或 English。标题继续使用 HIA-uView `u-navbar`，微信主导航通过 official custom tabBar 与 `switchTab` 保持跨页面常驻，并以受控 adapter 对齐 HIA-uView `u-tabbar` 的浅色视觉契约。
 - Page body copy, titles, and all four tabs render from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. Titles continue to use HIA-uView `u-navbar`; WeChat primary navigation remains persistent across pages through the official custom tab bar and `switchTab`, with a controlled adapter aligned to HIA-uView `u-tabbar`'s light visual contract.
 
-- 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。
-- Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion.
+- 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。写入 adapter 同时定义了受控改期语义：保留已取消的旧预约，并创建一条新预约；当前首版页面尚未开放改期入口。
+- Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion. The write adapter also defines controlled reschedule semantics: it retains a cancelled old reservation and creates a new one; the initial page set does not yet expose a reschedule entry.
 
 ## 可复现输入 / Reproducible inputs
 
@@ -31,7 +31,7 @@ git submodule update --init --recursive
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
 | `src/vendor/HIA-uView` | `cd448f568471e5c0c4ebb7990e855c9490b7ae6e` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge 与小程序条件编译回退 / UI source, complete style entry, default theme, locale-provider bridge, and Mini Program conditional fallbacks |
-| `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Async provider runtime / async-provider runtime |
+| `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Catalog/detail read and reservation write async-provider runtime / 目录/详情读取与预约写入 async-provider runtime |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
 

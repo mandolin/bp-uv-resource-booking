@@ -13,6 +13,8 @@
         <text class="reservations-page__title">{{ runtimeLocale.t('reservation.title') }}</text>
         <text class="reservations-page__description">{{ runtimeLocale.t('reservation.description') }}</text>
       </view>
+      <!-- <lang><zh-CN>取消写入失败始终由 state 的受限 outcome 显式展示；页面不猜测其是否已经提交或回退。</zh-CN><en>A cancellation write failure is always explicitly displayed from state bounded outcome; page does not guess whether it submitted or rolled back.</en></lang> -->
+      <u-notice v-if="demo.bookingWriteFailure.value" visible tone="error" :message="runtimeLocale.localize(demo.bookingWriteFailure.value.message) || runtimeLocale.t('common.notAvailable')" />
       <u-tabs v-model="activeTab" :items="reservationTabs" />
       <u-empty
         v-if="visibleReservations.length === 0"
@@ -168,17 +170,17 @@ function closeCancelModal() {
 
 /**
  * <lang><zh-CN>执行已二次确认的 local mock 取消。</zh-CN><en>Executes a twice-confirmed local mock cancellation.</en></lang>
- * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN P57 保留既有 state action；P58 才评估其向 Biz write contract 的迁移。
- * @lang en P57 retains existing state action; P58 alone evaluates its migration to a Biz write contract.
+ * @returns {Promise<void>} <lang><zh-CN>取消 write 的 terminal outcome 已被 state 采用或显示后 resolve。</zh-CN><en>Resolves after state adopts or displays terminal outcome of cancellation write.</en></lang>
+ * @lang zh-CN 已二次确认的取消只走 Biz write contract；页面不直接改写预约 status。
+ * @lang en A twice-confirmed cancellation goes only through Biz write contract; page does not directly mutate reservation status.
  */
-function confirmCancellation() {
+async function confirmCancellation() {
   // <lang><zh-CN>保存有限 ID 后先关闭 modal，防止 state 更新重渲染时重复确认。</zh-CN><en>Retain finite ID then close modal first, preventing repeated confirmation during state-update rerender.</en></lang>
   const reservationId = pendingReservationId.value;
   pendingReservationId.value = '';
 
-  // <lang><zh-CN>只有非空 pending ID 才调用受限 action。</zh-CN><en>Call the bounded action only for a non-empty pending ID.</en></lang>
-  if (reservationId) demo.cancelLocalReservation(reservationId);
+  // <lang><zh-CN>只有非空 pending ID 才等待受限 action；failure 由 state 保存并在页面 notice 显示。</zh-CN><en>Await bounded action only for non-empty pending ID; state retains a failure for page notice display.</en></lang>
+  if (reservationId) await demo.cancelLocalReservation(reservationId);
 }
 
 /**

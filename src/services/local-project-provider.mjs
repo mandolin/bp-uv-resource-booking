@@ -11,8 +11,8 @@ import {
   createAsyncProviderHost
 } from '@hia-uview/biz-async-provider-runtime';
 
-// <lang><zh-CN>导入仓内版本化 local JSON 与纯 domain 投影；二者均不含外部 endpoint、账户或生产记录。</zh-CN><en>Import versioned in-repository local JSON and pure domain projections; neither contains external endpoint, account, or production record.</en></lang>
-import localDataset from '../data/venues.json';
+// <lang><zh-CN>导入唯一共享 local dataset 入口与纯 domain 投影；二者均不含外部 endpoint、账户或生产记录。</zh-CN><en>Import the sole shared local-dataset entry and pure domain projections; neither contains external endpoint, account, or production record.</en></lang>
+import { localDataset } from '../data/local-dataset.mjs';
 import {
   BOOKING_DOMAIN_VERSION,
   createLocalCatalogPage,

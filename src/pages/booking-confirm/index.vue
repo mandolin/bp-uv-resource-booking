@@ -28,7 +28,7 @@
         </u-form>
         <u-notice v-if="resultMessage" visible :tone="resultTone" :message="resultMessage" />
         <u-notice visible tone="info" :message="runtimeLocale.t('booking.localNotice')" />
-        <!-- <lang><zh-CN>此按钮仍调用 P57 之前已存在的 local mock action；P58 才评估 Biz write adoption。</zh-CN><en>This button still calls the local mock action that existed before P57; P58 alone evaluates Biz write adoption.</en></lang> -->
+        <!-- <lang><zh-CN>此按钮只调用已锁定 Biz write adapter 的 state action；页面不直接改写预约、调用 domain 或模拟后端。</zh-CN><en>This button calls only the state action backed by locked Biz write adapter; page directly mutates no reservation, calls no domain, and simulates no backend.</en></lang> -->
         <u-button :label="runtimeLocale.t('booking.confirmLocal')" block :loading="demo.bookingPhase.value === 'submitting'" @click="confirmBooking" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('booking.emptyTitle')" :description="runtimeLocale.t('booking.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
@@ -45,7 +45,7 @@ import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
-// <lang><zh-CN>确认页只消费 shared state 的 detail、booking phase 与既有显式 local mock write action。</zh-CN><en>Confirmation consumes only shared state's detail, booking phase, and existing explicit local-mock write action.</en></lang>
+// <lang><zh-CN>确认页只消费 shared state 的 detail、booking phase 与已接入 Biz runtime 的显式 local write action。</zh-CN><en>Confirmation consumes only shared state's detail, booking phase, and explicit local write action integrated with Biz runtime.</en></lang>
 const demo = useBookingDemo();
 
 // <lang><zh-CN>所有文本使用同一 runtime locale；页面不创建平行语言选择或临时词典。</zh-CN><en>All copy uses the same runtime locale; the page creates no parallel language choice or temporary dictionary.</en></lang>
@@ -77,13 +77,13 @@ const resultTone = ref('info');
 
 /**
  * <lang><zh-CN>执行本地 mock 预约确认。</zh-CN><en>Executes local mock booking confirmation.</en></lang>
- * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN action 不处理远端 transaction；成功与冲突均保持当前页面可见、可恢复。
- * @lang en The action handles no remote transaction; both success and conflict remain visible and recoverable on the current page.
+ * @returns {Promise<void>} <lang><zh-CN>Biz write terminal outcome 已投影到当前页面后 resolve。</zh-CN><en>Resolves after Biz write terminal outcome is projected onto current page.</en></lang>
+ * @lang zh-CN action 不处理远端 transaction；成功、冲突和不确定失败均保持当前页面可见、可恢复。
+ * @lang en The action handles no remote transaction; success, conflict, and uncertain failure all remain visible and recoverable on current page.
  */
-function confirmBooking() {
-  // <lang><zh-CN>调用既有 state local mock write；参数都来自有限页面选择，P57 不迁移该 write surface。</zh-CN><en>Call the existing state local-mock write; every parameter comes from finite page selection, and P57 does not migrate this write surface.</en></lang>
-  const outcome = demo.confirmLocalReservation(selectedDate.value, selectedTime.value);
+async function confirmBooking() {
+  // <lang><zh-CN>等待 state 经 Biz write runtime 返回 canonical outcome；参数都来自有限页面选择。</zh-CN><en>Await canonical outcome returned by state through Biz write runtime; every argument comes from finite page selection.</en></lang>
+  const outcome = await demo.confirmLocalReservation(selectedDate.value, selectedTime.value);
 
   // <lang><zh-CN>失败只呈现 domain 已受限的双语字段经统一 helper 投影后的单语言文本。</zh-CN><en>On failure, present only the single-language text projected by the shared helper from domain-bounded bilingual fields.</en></lang>
   if (outcome.kind === 'failure') {
