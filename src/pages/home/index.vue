@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView 的 locale context 与 BP runtime 文案/领域投影保持一致。</zh-CN><en>The provider directly wraps the page, keeping HIA-uView locale context aligned with BP runtime copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>应用自管壳使用同一 locale 呈现标题和四项主导航，不调用小程序原生 tab/title 文案 API。</zh-CN><en>The application-owned shell renders the title and four primary navigation items with the same locale and calls no Mini Program native tab/title copy API.</en></lang> -->
-    <runtime-page-shell title-key="title.home" active-tab="home">
+    <runtime-page-shell :title="runtimeLocale.t('title.home')" tab="home">
       <view class="home-page">
       <!-- <lang><zh-CN>hero 使用原创项目内场馆图，不使用外部照片或地图服务。</zh-CN><en>Hero uses an original in-project venue image and no external photograph or map service.</en></lang> -->
       <view class="home-page__hero">

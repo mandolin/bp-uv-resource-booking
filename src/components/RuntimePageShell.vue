@@ -8,7 +8,7 @@
     <!-- <lang><zh-CN>sticky header 先占用 UniApp 状态栏变量，再由 `u-navbar` 显示响应式单语言标题和可选返回文字。</zh-CN><en>The sticky header first reserves UniApp's status-bar variable, then `u-navbar` displays the reactive single-language title and optional back copy.</en></lang> -->
     <view class="runtime-page-shell__header">
       <view class="runtime-page-shell__status-bar" />
-      <u-navbar :title="pageTitle" :left-text="backText" @left-click="handleBack" />
+      <u-navbar visible :title="title" :left-text="backText" @left-click="handleBack" />
     </view>
 
     <!-- <lang><zh-CN>页面内容保持调用方所有权；壳不读取目录、预约、身份或数据 source。</zh-CN><en>Page content remains caller-owned; the shell reads no catalog, booking, identity, or data source.</en></lang> -->
@@ -19,7 +19,7 @@
 
     <!-- <lang><zh-CN>底栏只消费固定本地化 items，并把 change intent 交给受限路由 helper。</zh-CN><en>The bottom bar consumes only fixed localized items and returns change intent to the bounded routing helper.</en></lang> -->
     <view v-if="hasPrimaryTab" class="runtime-page-shell__tabbar">
-      <u-tabbar :model-value="activeTab" :items="tabItems" @change="handleTabChange" />
+      <u-tabbar visible :model-value="tab" :items="tabItems" @change="handleTabChange" />
     </view>
   </view>
 </template>
@@ -37,29 +37,26 @@ defineOptions({ name: 'RuntimePageShell' });
 
 /**
  * <lang><zh-CN>页面壳的第一方受控输入。</zh-CN><en>First-party controlled inputs for the page shell.</en></lang>
- * @lang zh-CN title key、active tab 和返回开关都由六个静态页面源码提供；不接受业务对象、远端 manifest 或 route query。
- * @lang en The title key, active tab, and back switch are supplied by six static page sources; no business object, remote manifest, or route query is accepted.
+ * @lang zh-CN 已本地化 title、active tab 和返回开关都由六个静态页面源码提供；不接受业务对象、远端 manifest 或 route query。
+ * @lang en The localized title, active tab, and back switch are supplied by six static page sources; no business object, remote manifest, or route query is accepted.
  */
 const props = defineProps({
-  // <lang><zh-CN>静态 message key 决定可见页面标题，组件不从 route 或内容猜测标题。</zh-CN><en>A static message key determines the visible page title; the component infers no title from route or content.</en></lang>
-  titleKey: { type: String, required: true },
+  // <lang><zh-CN>页面直接提供当前 locale 的 title，壳不再依赖跨自定义组件的复合 key 属性桥接。</zh-CN><en>The page supplies the current-locale title directly, so the shell no longer depends on bridging a compound key prop across custom components.</en></lang>
+  title: { type: String, required: true },
   // <lang><zh-CN>主页面使用固定 tab value；空值表示当前页没有底部主导航。</zh-CN><en>Primary pages use a fixed tab value; an empty value means the current page has no bottom primary navigation.</en></lang>
-  activeTab: { type: String, default: '' },
+  tab: { type: String, default: '' },
   // <lang><zh-CN>只有详情与确认等栈内页面显式开放返回 control。</zh-CN><en>Only stack-internal pages such as details and confirmation explicitly enable the back control.</en></lang>
-  showBack: { type: Boolean, default: false }
+  back: { type: Boolean, default: false }
 });
 
 // <lang><zh-CN>读取应用级 locale surface，使个人信息页的选择可即时重绘所有壳文案。</zh-CN><en>Read the application-level locale surface so a Profile choice immediately redraws every shell label.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
-// <lang><zh-CN>页面标题始终是当前 locale 的一个静态资源结果，不经过平台 native API。</zh-CN><en>The page title is always one static-resource result in the current locale and never passes through a native platform API.</en></lang>
-const pageTitle = computed(() => runtimeLocale.t(props.titleKey));
-
 // <lang><zh-CN>返回文字仅在页面声明返回 control 时存在，避免主页面出现无意义空按钮。</zh-CN><en>Back copy exists only when the page declares a back control, preventing meaningless empty controls on primary pages.</en></lang>
-const backText = computed(() => props.showBack ? runtimeLocale.t('common.back') : '');
+const backText = computed(() => props.back ? runtimeLocale.t('common.back') : '');
 
-// <lang><zh-CN>未知/空 activeTab 不渲染底栏，从而详情页不会误选或猜测主页面。</zh-CN><en>An unknown or empty activeTab renders no bottom bar, so a detail page never guesses or falsely selects a primary page.</en></lang>
-const hasPrimaryTab = computed(() => isPrimaryPage(props.activeTab));
+// <lang><zh-CN>未知/空 tab 不渲染底栏，从而详情页不会误选或猜测主页面。</zh-CN><en>An unknown or empty tab renders no bottom bar, so a detail page never guesses or falsely selects a primary page.</en></lang>
+const hasPrimaryTab = computed(() => isPrimaryPage(props.tab));
 
 // <lang><zh-CN>四项 label 随共享 locale 响应式重算，顺序和 value 仍由固定壳声明拥有。</zh-CN><en>All four labels recompute reactively with the shared locale while order and values remain owned by the fixed shell declaration.</en></lang>
 const tabItems = computed(() => createPrimaryTabItems((messageKey) => runtimeLocale.t(messageKey)));

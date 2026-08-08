@@ -101,8 +101,8 @@ async function verifyRuntimeI18n() {
 
   // <lang><zh-CN>壳必须实际组合锁定 HIA-uView 的两个公开组件，不能退化为裸 view 或平台壳 API。</zh-CN><en>The shell must actually compose the two public components from pinned HIA-uView and cannot regress to bare views or platform-shell APIs.</en></lang>
   const runtimeShellSource = await readFile(resolve(projectRoot, 'src/components/RuntimePageShell.vue'), 'utf8');
-  if (!runtimeShellSource.includes('<u-navbar') || !runtimeShellSource.includes('<u-tabbar')) {
-    throw new Error('Runtime page shell must use HIA-uView navbar and tabbar components.');
+  if (!runtimeShellSource.includes('<u-navbar visible') || !runtimeShellSource.includes('<u-tabbar visible')) {
+    throw new Error('Runtime page shell must explicitly render visible HIA-uView navbar and tabbar components.');
   }
 }
 

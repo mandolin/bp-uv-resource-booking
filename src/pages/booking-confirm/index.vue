@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住确认表单，让 UI component locale 与所有 BP 文案/领域值投影一致。</zh-CN><en>The provider directly wraps the confirmation form, aligning UI component locale with all BP copy and domain-value projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>确认页使用带本地化返回文字的应用自管 navbar，并保持表单内业务状态由页面拥有。</zh-CN><en>Confirmation uses the application-owned navbar with localized back copy while retaining page ownership of form business state.</en></lang> -->
-    <runtime-page-shell title-key="title.confirm" show-back>
+    <runtime-page-shell :title="runtimeLocale.t('title.confirm')" back>
       <view class="booking-confirm-page">
       <!-- <lang><zh-CN>页面只在已有 detail 时开放确认；无 detail 时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with an existing detail; without it, explicit recovery prevents a hidden state or URL from creating a reservation directly.</en></lang> -->
       <view v-if="detail.kind === 'detail'" class="booking-confirm-page__content">

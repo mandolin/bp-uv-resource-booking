@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 让本页的 UI component locale 与 BP 文案/领域投影共享同一 runtime 值。</zh-CN><en>The provider makes this page's UI component locale share one runtime value with BP copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>应用自管壳用 HIA-uView title/tab 直接呈现当前 locale，避免原生小程序壳的静态语言限制。</zh-CN><en>The application-owned shell renders the current locale directly through HIA-uView title/tab surfaces, avoiding the native Mini Program shell's static-language constraint.</en></lang> -->
-    <runtime-page-shell title-key="title.discover" active-tab="discover">
+    <runtime-page-shell :title="runtimeLocale.t('title.discover')" tab="discover">
       <view class="discover-page">
       <view class="discover-page__heading">
         <text class="discover-page__eyebrow">{{ runtimeLocale.t('discover.eyebrow') }}</text>

@@ -14,6 +14,12 @@ importers:
       '@dcloudio/uni-h5':
         specifier: 3.0.0-5010520260709002
         version: 3.0.0-5010520260709002(postcss@8.5.25)(rollup@4.62.4)(vite@5.2.8(sass@1.77.8)(terser@5.49.0))(vue@3.4.21)
+      '@hia-uview/biz-async-provider-runtime':
+        specifier: file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
+        version: file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
+      '@hia-uview/ui':
+        specifier: file:src/vendor/HIA-uView/HIA-uView-UI
+        version: file:src/vendor/HIA-uView/HIA-uView-UI
       '@vue/reactivity':
         specifier: 3.4.21
         version: 3.4.21
@@ -802,6 +808,14 @@ packages:
     engines: {node: '>=12'}
     cpu: [x64]
     os: [win32]
+
+  '@hia-uview/biz-async-provider-runtime@file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime':
+    resolution: {directory: src/vendor/HIA-uView-Biz/packages/async-provider-runtime, type: directory}
+    engines: {node: '>=22.0.0'}
+
+  '@hia-uview/ui@file:src/vendor/HIA-uView/HIA-uView-UI':
+    resolution: {directory: src/vendor/HIA-uView/HIA-uView-UI, type: directory}
+    engines: {node: '>=22.0.0'}
 
   '@intlify/core-base@9.1.9':
     resolution: {integrity: sha512-x5T0p/Ja0S8hs5xs+ImKyYckVkL4CzcEXykVYYV6rcbXxJTe2o58IquSqX9bdncVKbRZP7GlBU1EcRaQEEJ+vw==}
@@ -3588,6 +3602,10 @@ snapshots:
 
   '@esbuild/win32-x64@0.20.2':
     optional: true
+
+  '@hia-uview/biz-async-provider-runtime@file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime': {}
+
+  '@hia-uview/ui@file:src/vendor/HIA-uView/HIA-uView-UI': {}
 
   '@intlify/core-base@9.1.9':
     dependencies:

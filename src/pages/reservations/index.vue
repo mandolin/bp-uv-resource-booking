@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住本页，使 UI components、状态标签和领域字段投影使用同一 runtime locale。</zh-CN><en>The provider directly wraps this page so UI components, state labels, and domain-field projection use one runtime locale.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>应用自管壳用 HIA-uView 呈现当前单语言标题和主导航，预约筛选 tab 仍由页面单独拥有。</zh-CN><en>The application-owned shell uses HIA-uView for the current single-language title and primary navigation, while the page continues to own its booking-filter tabs separately.</en></lang> -->
-    <runtime-page-shell title-key="title.reservations" active-tab="reservations">
+    <runtime-page-shell :title="runtimeLocale.t('title.reservations')" tab="reservations">
       <view class="reservations-page">
       <view class="reservations-page__heading">
         <text class="reservations-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>

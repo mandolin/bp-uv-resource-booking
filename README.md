@@ -20,9 +20,9 @@
 
 ## 可复现输入 / Reproducible inputs
 
-两个 source submodule 位于 `src/vendor/`，以 Git link 锁定，不拷贝或扫描上游代码。初始化或恢复工作树后执行：
+两个 source submodule 位于 `src/vendor/`，以 Git link 锁定，不拷贝或扫描上游代码；BP 还在 `package.json` 以仓内 `file:` specifier 显式声明所消费的 UI 与 Biz runtime package。初始化或恢复工作树后执行：
 
-Two source submodules live in `src/vendor/` and are locked as Git links; upstream code is neither copied nor scanned. After cloning or restoring the worktree, run:
+Two source submodules live in `src/vendor/` and are locked as Git links; upstream code is neither copied nor scanned. BP also explicitly declares the consumed UI and Biz runtime packages through in-repository `file:` specifiers in `package.json`. After cloning or restoring the worktree, run:
 
 ```powershell
 git submodule update --init --recursive

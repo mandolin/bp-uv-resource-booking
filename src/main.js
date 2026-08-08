@@ -1,7 +1,7 @@
 /**
  * <lang><zh-CN>BP 的 UniApp Vue 3 入口：仅创建当前 App，不注册全局 UI plugin、router、store、身份、网络或平台 service。</zh-CN><en>UniApp Vue 3 entry for the BP: creates only the current App and registers no global UI plugin, router, store, identity, network, or platform service.</en></lang>
- * @lang zh-CN 页面以 `script setup` 显式导入 HIA-uView named components；主题由 `uni.scss` 显式引入。
- * @lang en Pages explicitly import named HIA-uView components through `script setup`; the theme is explicitly included by `uni.scss`.
+ * @lang zh-CN HIA-uView UI 与 Biz runtime 由 `package.json` 显式声明为锁定本地 package；小程序 UI 叶级 SFC 通过受控 easycom 映射静态解析，主题由 `uni.scss` 显式引入。
+ * @lang en HIA-uView UI and Biz runtime are explicitly declared as pinned local packages in `package.json`; controlled easycom mapping statically resolves Mini Program leaf SFCs, and `uni.scss` explicitly includes the theme.
  */
 
 // <lang><zh-CN>使用官方 UniApp Vue 3 app factory，不引入额外 runtime wrapper。</zh-CN><en>Use the official UniApp Vue 3 app factory and introduce no additional runtime wrapper.</en></lang>

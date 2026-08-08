@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住 detail 页面，令 UI 的受限 locale context 与领域值投影一致。</zh-CN><en>The provider directly wraps the detail page, aligning UI constrained locale context with domain-value projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>详情页使用带本地化返回文字的应用自管 navbar，不显示主页面 tabbar。</zh-CN><en>Detail uses the application-owned navbar with localized back copy and displays no primary-page tabbar.</en></lang> -->
-    <runtime-page-shell title-key="title.detail" show-back>
+    <runtime-page-shell :title="runtimeLocale.t('title.detail')" back>
       <view class="resource-detail-page">
       <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
       <u-loading-page v-if="demo.detailPhase.value === 'loading'" :message="runtimeLocale.t('detail.loading')" />

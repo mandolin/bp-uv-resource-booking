@@ -65,6 +65,20 @@ async function verifyInputs() {
     throw new Error('Unexpected Mini Program static UI component resolver.');
   }
 
+  // <lang><zh-CN>公开 source link 还必须作为本地 package dependency 明确声明；alias/easycom 负责平台编译，不能替代 package graph。</zh-CN><en>Public source links must also be declared as explicit local package dependencies; aliases/easycom serve platform compilation and cannot replace the package graph.</en></lang>
+  const packageManifest = JSON.parse(await readFile(resolve(projectRoot, 'package.json'), 'utf8'));
+  const expectedLocalDependencies = Object.freeze({
+    '@hia-uview/ui': 'file:src/vendor/HIA-uView/HIA-uView-UI',
+    '@hia-uview/biz-async-provider-runtime': 'file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime'
+  });
+
+  // <lang><zh-CN>逐项比较固定 file specifier，拒绝未声明 alias、registry 漂移或越出仓库的本机路径。</zh-CN><en>Compare each fixed file specifier, rejecting undeclared aliases, registry drift, or machine paths outside the repository.</en></lang>
+  for (const [packageName, expectedSpecifier] of Object.entries(expectedLocalDependencies)) {
+    if (packageManifest.dependencies?.[packageName] !== expectedSpecifier) {
+      throw new Error(`Unexpected local package dependency for ${packageName}.`);
+    }
+  }
+
   // <lang><zh-CN>当前所有 BP 页面、通用资源卡片与应用自管页面壳只使用模板 u-* 标签与静态 resolver；它们不能重新导入 UI 公共 runtime entry 破坏小程序产物边界。</zh-CN><en>All current BP pages, the generic resource card, and the application-owned page shell use template u-* tags with the static resolver only; they must not reimport the UI public runtime entry and break Mini Program output boundaries.</en></lang>
   const staticConsumerPaths = Object.freeze([
     'src/components/ResourceCard.vue',
