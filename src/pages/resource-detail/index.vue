@@ -35,7 +35,7 @@ import { computed } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
-import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -95,8 +95,8 @@ function backToDiscover() {
 // <lang><zh-CN>onLoad 是唯一详情读取入口，页面不在 render、computed 或 watch 中自行发起读取。</zh-CN><en>onLoad is the sole detail-read entry; the page starts no read from render, computed, or watch.</en></lang>
 onLoad(readRouteResource);
 
-// <lang><zh-CN>每次显示都投影本地化 native 标题；不从资源名称生成动态 title。</zh-CN><en>Every show projects the localized native title and does not generate a dynamic title from resource name.</en></lang>
-onShow(() => applyPageTitle('title.detail'));
+// <lang><zh-CN>每次显示在 native chrome 初始化后投影本地化标题与 tab；不从资源名称生成动态 title。</zh-CN><en>Every show projects localized title and tabs after native chrome initializes and does not generate a dynamic title from resource name.</en></lang>
+onShow(() => scheduleRuntimeChrome('title.detail'));
 </script>
 
 <style scoped>

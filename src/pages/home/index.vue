@@ -62,7 +62,7 @@ import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
-import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -174,8 +174,8 @@ function browseResources() {
 // <lang><zh-CN>首次挂载调用幂等 ensure helper，保证加载只由页面显式启动。</zh-CN><en>First mount calls the idempotent ensure helper, ensuring loading starts only explicitly from the page.</en></lang>
 onMounted(ensureInitialCatalog);
 
-// <lang><zh-CN>每次 tab show 重投影标题并复用相同 ensure helper；不会重复刷新 ready catalog。</zh-CN><en>Every tab show reprojects title and reuses the same ensure helper; it does not refresh a ready catalog repeatedly.</en></lang>
-onShow(() => { applyPageTitle('title.home'); return ensureInitialCatalog(); });
+// <lang><zh-CN>每次 tab show 在 native chrome 完成初始化后投影四项 tab 与当前标题，并复用相同 ensure helper；不会重复刷新 ready catalog。</zh-CN><en>Every tab show projects all native tabs and the current title after native chrome initializes, then reuses the same ensure helper; it does not refresh a ready catalog repeatedly.</en></lang>
+onShow(() => { scheduleRuntimeChrome('title.home'); return ensureInitialCatalog(); });
 
 // <lang><zh-CN>下拉刷新显式替换 page=1，结束平台 loading 只是 UI 清理，不代表远端网络状态。</zh-CN><en>Pull refresh explicitly replaces page one; ending platform loading is UI cleanup only and represents no remote network state.</en></lang>
 onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });

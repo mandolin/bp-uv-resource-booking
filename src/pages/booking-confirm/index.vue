@@ -38,7 +38,7 @@
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import SourceBadge from '../../components/SourceBadge.vue';
-import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -108,8 +108,8 @@ function backToDiscover() {
   uni.switchTab({ url: '/pages/discover/index' });
 }
 
-// <lang><zh-CN>每次显示都投影本地化 native 标题；不从资源名称或查询参数拼接标题。</zh-CN><en>Every show projects the localized native title and concatenates no title from resource name or query parameter.</en></lang>
-onShow(() => applyPageTitle('title.confirm'));
+// <lang><zh-CN>每次显示在 native chrome 初始化后投影本地化标题与 tab；不从资源名称或查询参数拼接标题。</zh-CN><en>Every show projects localized title and tabs after native chrome initializes and concatenates no title from resource name or query parameter.</en></lang>
+onShow(() => scheduleRuntimeChrome('title.confirm'));
 </script>
 
 <style scoped>

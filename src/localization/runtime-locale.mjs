@@ -16,6 +16,20 @@ import { BP_MESSAGES, BP_SUPPORTED_LOCALES } from '../locales/messages.mjs';
 export const BP_LOCALE_PREFERENCE_KEY = 'bp-uv-resource-booking.locale-preference.v1';
 
 /**
+ * <lang><zh-CN>解析当前 UniApp 编译目标实际暴露的平台 API 对象。</zh-CN><en>Resolves the platform API object actually exposed by the current UniApp compilation target.</en></lang>
+ * @returns {unknown} <lang><zh-CN>模块级 `uni` 优先、兼容 `globalThis.uni` 的平台对象；两者都不可用时为 `undefined`。</zh-CN><en>The module-level `uni` first, a compatible `globalThis.uni` second, or `undefined` when neither is available.</en></lang>
+ * @lang zh-CN 微信小程序模块可访问编译器注入的 `uni`，但不保证将它挂到 `globalThis`；本函数不读取任何平台数据或执行 API。
+ * @lang en WeChat Mini Program modules can access compiler-injected `uni` but do not guarantee it is attached to `globalThis`; this function reads no platform data and invokes no API.
+ */
+export function resolveRuntimeUniApi() {
+  // <lang><zh-CN>先读取模块级 binding，保证小程序运行时不会因 `globalThis` 缺少映射而失去 locale/storage/native-chrome 能力。</zh-CN><en>Read the module-level binding first, so Mini Program runtime does not lose locale, storage, or native-chrome capabilities when `globalThis` lacks a mapping.</en></lang>
+  if (typeof uni !== 'undefined') return uni;
+
+  // <lang><zh-CN>H5、测试替身或其他兼容宿主可显式挂载 global fallback；未挂载时保持 `undefined` 交由窄 facade 安全降级。</zh-CN><en>H5, test doubles, or another compatible host may explicitly attach the global fallback; when absent, retain `undefined` for safe degradation by the narrow facade.</en></lang>
+  return globalThis.uni;
+}
+
+/**
  * <lang><zh-CN>将候选值严格收敛到 BP 已支持的 locale，未知值返回 `null` 而不猜测语言。</zh-CN><en>Strictly narrows a candidate to a BP-supported locale; an unknown value returns `null` without guessing a language.</en></lang>
  * @param {unknown} locale <lang><zh-CN>待验证的候选 locale。</zh-CN><en>Candidate locale to validate.</en></lang>
  * @returns {'zh-Hans'|'en'|null} <lang><zh-CN>受支持 locale 或 `null`。</zh-CN><en>A supported locale or `null`.</en></lang>
@@ -118,7 +132,7 @@ export function formatDemoDate(isoDate, locale) {
  * @lang zh-CN facade 不公开原始平台对象，且绝不因可选 API 缺失而抛出到页面。
  * @lang en The facade exposes no raw platform object and never throws to pages when an optional API is absent.
  */
-export function createUniLocalePlatform(uniApi = globalThis.uni) {
+export function createUniLocalePlatform(uniApi = resolveRuntimeUniApi()) {
   /**
    * <lang><zh-CN>受限读取系统 language 字段。</zh-CN><en>Constrained read of the system `language` field.</en></lang>
    * @returns {unknown} <lang><zh-CN>原始语言值；不可用或失败时为 `undefined`。</zh-CN><en>Raw language value; `undefined` when unavailable or failed.</en></lang>

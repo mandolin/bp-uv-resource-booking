@@ -5,7 +5,7 @@
 <script>
 // <lang><zh-CN>导入 BP 自有 locale 初始化与壳投影；二者不创建业务 provider、写入预约或调用网络。</zh-CN><en>Import BP-owned locale initialization and shell projection; neither creates a business provider, writes bookings, nor calls a network.</en></lang>
 import { initializeRuntimeLocale } from './localization/runtime-locale.mjs';
-import { refreshRuntimeChrome } from './localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from './localization/runtime-chrome.mjs';
 
 export default {
   /**
@@ -18,8 +18,8 @@ export default {
     // <lang><zh-CN>先完成固定优先级解析，确保 UI 与随后 tab 投影共享同一 canonical locale。</zh-CN><en>Resolve the fixed priority first, ensuring UI and subsequent tab projection share one canonical locale.</en></lang>
     initializeRuntimeLocale();
 
-    // <lang><zh-CN>平台壳更新受异常保护；失败时保留 `pages.json` fallback，不修改 locale 选择。</zh-CN><en>Platform-shell update is exception-protected; on failure retain the `pages.json` fallback without changing locale selection.</en></lang>
-    refreshRuntimeChrome();
+    // <lang><zh-CN>等待原生 tabbar 初始化后再投影文本；页面自身在 show 时补投影 title。</zh-CN><en>Wait for native tabbar initialization before projecting copy; each page projects its title again when shown.</en></lang>
+    scheduleRuntimeChrome();
   }
 };
 </script>

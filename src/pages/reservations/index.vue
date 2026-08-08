@@ -43,7 +43,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -188,8 +188,8 @@ function goDiscover() {
   uni.switchTab({ url: '/pages/discover/index' });
 }
 
-// <lang><zh-CN>每次显示投影当前 locale 标题，保留 `pages.json` 文本仅作为平台 fallback。</zh-CN><en>Every show projects the current-locale title, retaining `pages.json` copy only as platform fallback.</en></lang>
-onShow(() => applyPageTitle('title.reservations'));
+// <lang><zh-CN>每次显示在 native chrome 初始化后投影 tab 和当前 locale 标题，保留 `pages.json` 文本仅作为平台 fallback。</zh-CN><en>Every show projects tabs and the current-locale title after native chrome initializes, retaining `pages.json` copy only as platform fallback.</en></lang>
+onShow(() => scheduleRuntimeChrome('title.reservations'));
 </script>
 
 <style scoped>

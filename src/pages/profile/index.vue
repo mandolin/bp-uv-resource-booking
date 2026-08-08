@@ -54,7 +54,7 @@
 <script setup>
 import { computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import { applyPageTitle, refreshRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 
 // <lang><zh-CN>个人信息页读取唯一共享 locale surface，不创建页面私有语言 store 或平行 UI locale global。</zh-CN><en>Profile reads the sole shared locale surface and creates neither a page-private language store nor a parallel UI locale global.</en></lang>
@@ -68,9 +68,8 @@ const languageChoice = computed({
     if (nextChoice === 'system') runtimeLocale.followSystem();
     else runtimeLocale.selectLocale(nextChoice);
 
-    // <lang><zh-CN>语言切换后更新四项 native tab；当前页标题在 onShow 重新投影，平台失败不阻断选择。</zh-CN><en>After a language change, update four native tabs; current-page title is reprojected at onShow and a platform failure does not block selection.</en></lang>
-    refreshRuntimeChrome();
-    applyPageTitle('title.profile');
+    // <lang><zh-CN>语言切换后等待原生 tabbar/标题可被安全覆盖的生命周期点，再更新四项 tab 与当前页标题；平台失败不阻断选择。</zh-CN><en>After a language change, wait for the lifecycle point at which native tabbar and title can be safely overridden, then update all four tabs and the current title; a platform failure does not block the choice.</en></lang>
+    scheduleRuntimeChrome('title.profile');
   }
 });
 
@@ -90,8 +89,8 @@ function goDiscover() {
   uni.switchTab({ url: '/pages/discover/index' });
 }
 
-// <lang><zh-CN>每次页面显示都投影当前 locale 标题，覆盖 `pages.json` 的静态 fallback。</zh-CN><en>Every page show projects the current-locale title, overriding the static fallback in `pages.json`.</en></lang>
-onShow(() => applyPageTitle('title.profile'));
+// <lang><zh-CN>每次页面显示都在 native chrome 初始化后投影 tab 与当前 locale 标题，覆盖 `pages.json` 的静态 fallback。</zh-CN><en>Every page show projects tabs and the current-locale title after native chrome initializes, overriding the static fallback in `pages.json`.</en></lang>
+onShow(() => scheduleRuntimeChrome('title.profile'));
 </script>
 
 <style scoped>

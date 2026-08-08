@@ -14,10 +14,11 @@ import {
   formatDemoDate,
   localize,
   normalizeSystemLanguage,
+  resolveRuntimeUniApi,
   resolveRuntimeLocale,
   useRuntimeLocale
 } from '../src/localization/runtime-locale.mjs';
-import { applyPageTitle, applyRuntimeTabLabels } from '../src/localization/runtime-chrome.mjs';
+import { applyPageTitle, applyRuntimeTabLabels, scheduleRuntimeChrome } from '../src/localization/runtime-chrome.mjs';
 
 /**
  * <lang><zh-CN>创建一个只记录规格允许操作的 fake locale facade。</zh-CN><en>Creates a fake locale facade that records only spec-permitted operations.</en></lang>
@@ -93,6 +94,30 @@ test('UniApp locale facade limits storage operations to its fixed key and catche
   assert.equal(createUniLocalePlatform({ getSystemInfoSync: () => { throw new Error('blocked'); } }).readSystemLanguage(), undefined);
 });
 
+test('runtime UniApp resolver uses an explicit global compatibility fallback for default platform calls', () => {
+  // <lang><zh-CN>Node 没有小程序模块级 `uni` binding，故只验证 H5/测试可用的 global fallback 与默认 facade，而不伪造小程序运行时。</zh-CN><en>Node has no Mini Program module-level `uni` binding, so verify only the H5/test global fallback and default facade without faking Mini Program runtime.</en></lang>
+  const previousUni = globalThis.uni;
+  const calls = [];
+  const fallbackUni = {
+    getSystemInfoSync: () => ({ language: 'en-US' }),
+    getStorageSync: (key) => { calls.push(['get', key]); return undefined; },
+    setStorageSync: (key, value) => calls.push(['set', key, value]),
+    removeStorageSync: (key) => calls.push(['remove', key])
+  };
+  globalThis.uni = fallbackUni;
+  try {
+    assert.equal(resolveRuntimeUniApi(), fallbackUni);
+    const platform = createUniLocalePlatform();
+    assert.equal(platform.readSystemLanguage(), 'en-US');
+    assert.equal(platform.writePreference('en'), true);
+    assert.deepEqual(calls, [['set', BP_LOCALE_PREFERENCE_KEY, 'en']]);
+  } finally {
+    // <lang><zh-CN>无论断言是否失败都恢复 Node 全局，避免影响同文件之后的共享 locale 测试。</zh-CN><en>Restore the Node global whether assertions fail or pass, preventing impact on later shared-locale tests in this file.</en></lang>
+    if (previousUni === undefined) delete globalThis.uni;
+    else globalThis.uni = previousUni;
+  }
+});
+
 test('domain projection and fixed date labels never produce bilingual concatenation', () => {
   // <lang><zh-CN>领域投影只选择一个语言值，日期标签也由当前 locale 单独生成。</zh-CN><en>Domain projection selects one language value only, and date labels are likewise generated per current locale.</en></lang>
   assert.equal(localize({ 'zh-Hans': '场地', en: 'Court' }, 'en'), 'Court');
@@ -112,6 +137,25 @@ test('runtime chrome projects localized tab and title text through safe platform
   };
   assert.equal(applyRuntimeTabLabels(shell), 4);
   assert.equal(applyPageTitle('title.profile', shell), true);
+  assert.deepEqual(calls, [
+    ['tab', { index: 0, text: 'Home' }],
+    ['tab', { index: 1, text: 'Discover' }],
+    ['tab', { index: 2, text: 'My bookings' }],
+    ['tab', { index: 3, text: 'Profile' }],
+    ['title', { title: 'Profile' }]
+  ]);
+});
+
+test('scheduled runtime chrome waits for the native render turn before projecting tab and title copy', async () => {
+  // <lang><zh-CN>使用有限等待覆盖一次性 lifecycle delay，确保延后路径仍投影同一英文 tab 与当前标题。</zh-CN><en>Use a bounded wait to cover the one-shot lifecycle delay, ensuring the deferred path still projects the same English tabs and current title.</en></lang>
+  useRuntimeLocale().selectLocale('en');
+  const calls = [];
+  const shell = {
+    setTabBarItem: (payload) => calls.push(['tab', payload]),
+    setNavigationBarTitle: (payload) => calls.push(['title', payload])
+  };
+  scheduleRuntimeChrome('title.profile', shell);
+  await new Promise((resolve) => setTimeout(resolve, 80));
   assert.deepEqual(calls, [
     ['tab', { index: 0, text: 'Home' }],
     ['tab', { index: 1, text: 'Discover' }],

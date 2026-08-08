@@ -43,7 +43,7 @@ import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
-import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { scheduleRuntimeChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -127,9 +127,9 @@ function openDetail(resourceId) {
   uni.navigateTo({ url: `/pages/resource-detail/index?resourceId=${encodeURIComponent(resourceId)}` });
 }
 
-// <lang><zh-CN>首次挂载与 tab show 都使用同一幂等 helper，前者加载目录、后者另投影 native 标题。</zh-CN><en>First mount and tab show use one idempotent helper; the former loads catalog while the latter additionally projects native title.</en></lang>
+// <lang><zh-CN>首次挂载与 tab show 都使用同一幂等 helper，前者加载目录、后者在 native chrome 初始化后投影 tab 与标题。</zh-CN><en>First mount and tab show use one idempotent helper; the former loads catalog while the latter projects tabs and title after native chrome initializes.</en></lang>
 onMounted(ensureInitialCatalog);
-onShow(() => { applyPageTitle('title.discover'); return ensureInitialCatalog(); });
+onShow(() => { scheduleRuntimeChrome('title.discover'); return ensureInitialCatalog(); });
 
 // <lang><zh-CN>下拉刷新只替换 page=1 并结束平台 UI loading，不代表网络请求完成。</zh-CN><en>Pull refresh only replaces page one and ends platform UI loading; it represents no network request completion.</en></lang>
 onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });
