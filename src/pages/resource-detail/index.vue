@@ -3,39 +3,57 @@
 @lang en Resource Detail presents a resource, venue, and bookable slots already bounded by the local provider and emits only local page navigation to continue booking; it promises no live inventory, location, map, price, payment, or remote read.
 -->
 <template>
-  <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
-  <view class="resource-detail-page">
-    <u-loading-page v-if="demo.detailPhase.value === 'loading'" message="正在读取本地示例资源 / Reading local demo resource" />
-    <view v-else-if="demo.detailPhase.value === 'failure'" class="resource-detail-page__state"><u-notice visible tone="error" :message="demo.detailFailure.value?.message?.['zh-Hans'] || '未能读取资源 / Resource unavailable'" /><u-button label="返回发现页 / Back to Discover" block @click="backToDiscover" /></view>
-    <view v-else-if="demo.detailPhase.value === 'ready' && demo.selectedDetail.value?.kind === 'detail'" class="resource-detail-page__content">
-      <u-image class="resource-detail-page__image" :src="venueImage || ''" :alt="detail.venue.name['zh-Hans']" size="large" shape="rounded" />
-      <view class="resource-detail-page__source"><source-badge :source="detail.source" /><text>本地 JSON 可离线演示 / Local JSON works offline</text></view>
-      <u-tag :text="detail.resource.type['zh-Hans']" tone="primary" />
-      <text class="resource-detail-page__title">{{ detail.resource.name['zh-Hans'] }}</text>
-      <text class="resource-detail-page__venue">{{ detail.venue.name['zh-Hans'] }} · {{ detail.venue.district['zh-Hans'] }}</text>
-      <text class="resource-detail-page__summary">{{ detail.venue.summary['zh-Hans'] }}</text>
-      <u-card title="可预约时段 / Bookable slots" sub-title="均为本地示例数据，不代表实时库存 / Local demo data, not live inventory">
-        <view class="resource-detail-page__slots"><u-tag v-for="slot in detail.resource.availableSlots" :key="slot" :text="slot" tone="accent" shape="pill" /></view>
-      </u-card>
-      <u-notice visible tone="info" message="预约将先选择日期与时段；本示例不接入支付、会员或真实身份。 / Booking selects date and slot first; this demo has no payment, membership, or real identity." />
-      <u-button label="选择时段并预约 / Choose a slot" block @click="continueBooking" />
+  <!-- <lang><zh-CN>provider 直接包住 detail 页面，令 UI 的受限 locale context 与领域值投影一致。</zh-CN><en>The provider directly wraps the detail page, aligning UI constrained locale context with domain-value projection.</en></lang> -->
+  <u-config-provider :locale="runtimeLocale.locale.value">
+    <view class="resource-detail-page">
+      <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
+      <u-loading-page v-if="demo.detailPhase.value === 'loading'" :message="runtimeLocale.t('detail.loading')" />
+      <view v-else-if="demo.detailPhase.value === 'failure'" class="resource-detail-page__state">
+        <u-notice visible tone="error" :message="runtimeLocale.localize(demo.detailFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
+        <u-button :label="runtimeLocale.t('common.goDiscover')" block @click="backToDiscover" />
+      </view>
+      <view v-else-if="demo.detailPhase.value === 'ready' && detail.kind === 'detail'" class="resource-detail-page__content">
+        <u-image class="resource-detail-page__image" :src="venueImage || ''" :alt="venueName" size="large" shape="rounded" />
+        <view class="resource-detail-page__source"><source-badge :source="detail.source" /><text>{{ runtimeLocale.t('detail.offline') }}</text></view>
+        <u-tag :text="resourceType" tone="primary" />
+        <text class="resource-detail-page__title">{{ resourceName }}</text>
+        <text class="resource-detail-page__venue">{{ venueName }} · {{ districtName }}</text>
+        <text class="resource-detail-page__summary">{{ venueSummary }}</text>
+        <u-card :title="runtimeLocale.t('detail.availableSlots')" :sub-title="runtimeLocale.t('detail.localSchedule')">
+          <view class="resource-detail-page__slots"><u-tag v-for="slot in detail.resource.availableSlots" :key="slot" :text="slot" tone="accent" shape="pill" /></view>
+        </u-card>
+        <u-notice visible tone="info" :message="runtimeLocale.t('detail.bookingNotice')" />
+        <u-button :label="runtimeLocale.t('detail.continueBooking')" block @click="continueBooking" />
+      </view>
+      <u-empty v-else :title="runtimeLocale.t('detail.emptyTitle')" :description="runtimeLocale.t('detail.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
     </view>
-    <u-empty v-else title="请选择一个资源 / Choose a resource" description="从发现页进入资源详情 / Enter Resource Detail from Discover" action-text="前往发现页 / Go to Discover" @action="backToDiscover" />
-  </view>
+  </u-config-provider>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { onLoad } from '@dcloudio/uni-app';
+import { onLoad, onShow } from '@dcloudio/uni-app';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
+import { applyPageTitle } from '../../localization/runtime-chrome.mjs';
+import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
 // <lang><zh-CN>详情页只读取共享 demo 的有限 detail surface 与 action。</zh-CN><en>Detail reads only the shared demo's finite detail surface and action.</en></lang>
 const demo = useBookingDemo();
 
-// <lang><zh-CN>模板在 ready branch 内消费此 detail；缺失时使用空对象以保持 computed 无副作用。</zh-CN><en>The template consumes this detail inside the ready branch; an empty object when missing keeps the computed side-effect-free.</en></lang>
+// <lang><zh-CN>读取唯一共享 locale，禁止 detail 模板直接从多语言 domain object 取固定语言字段。</zh-CN><en>Read the sole shared locale, prohibiting detail template from taking a fixed-language field directly from a multilingual domain object.</en></lang>
+const runtimeLocale = useRuntimeLocale();
+
+// <lang><zh-CN>模板只在 ready branch 消费此 detail；缺失时空对象保持 computed 无副作用。</zh-CN><en>The template consumes this detail only in the ready branch; an empty object on absence keeps computed values side-effect-free.</en></lang>
 const detail = computed(() => demo.selectedDetail.value ?? {});
+
+// <lang><zh-CN>所有可见领域字段经同一 `localize` helper 选择语言与 fallback。</zh-CN><en>Every visible domain field selects language and fallback through the same `localize` helper.</en></lang>
+const resourceName = computed(() => runtimeLocale.localize(detail.value.resource?.name));
+const resourceType = computed(() => runtimeLocale.localize(detail.value.resource?.type));
+const venueName = computed(() => runtimeLocale.localize(detail.value.venue?.name));
+const districtName = computed(() => runtimeLocale.localize(detail.value.venue?.district));
+const venueSummary = computed(() => runtimeLocale.localize(detail.value.venue?.summary));
 
 // <lang><zh-CN>图片只经已登记 asset map 读取，未知 ID 不会变成网络或文件路径。</zh-CN><en>The image is read only through the registered asset map; an unknown ID cannot become a network or file path.</en></lang>
 const venueImage = computed(() => detail.value.venue ? getVenueImage(detail.value.venue.imageId) : null);
@@ -67,15 +85,18 @@ function continueBooking() {
  * <lang><zh-CN>回到发现 tab。</zh-CN><en>Returns to the Discover tab.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
  * @lang zh-CN tab 导航不清除共享 local catalog，用户可回到原有显式分页位置。
- * @lang en Tab navigation does not clear shared local catalog, allowing return to the existing explicit pagination position.
+ * @lang en Tab navigation does not clear shared local catalog, allowing return to existing explicit pagination position.
  */
 function backToDiscover() {
   // <lang><zh-CN>使用 tab 级导航而非浏览器 history 或外部 URL。</zh-CN><en>Use tab-level navigation rather than browser history or an external URL.</en></lang>
   uni.switchTab({ url: '/pages/discover/index' });
 }
 
-// <lang><zh-CN>onLoad 是唯一详情读取入口，页面不在渲染、computed 或 watch 中自行发起读取。</zh-CN><en>onLoad is the sole detail-read entry; the page starts no read from render, computed, or watch.</en></lang>
+// <lang><zh-CN>onLoad 是唯一详情读取入口，页面不在 render、computed 或 watch 中自行发起读取。</zh-CN><en>onLoad is the sole detail-read entry; the page starts no read from render, computed, or watch.</en></lang>
 onLoad(readRouteResource);
+
+// <lang><zh-CN>每次显示都投影本地化 native 标题；不从资源名称生成动态 title。</zh-CN><en>Every show projects the localized native title and does not generate a dynamic title from resource name.</en></lang>
+onShow(() => applyPageTitle('title.detail'));
 </script>
 
 <style scoped>

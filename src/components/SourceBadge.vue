@@ -1,18 +1,19 @@
 <!--
 @component SourceBadge
-@lang zh-CN 呈现项目 adapter 已允许公开的 source authority 与降级事实；不读取 provider、URL、HTTP、token、请求或用户数据。
-@lang en Presents source authority and degradation facts already allowed by project adapter; it reads no provider, URL, HTTP, token, request, or user data.
+@lang zh-CN 呈现项目 adapter 已允许公开的 source authority 与降级事实，并从共享 runtime locale 获取展示文本；不读取 provider、URL、HTTP、token、请求或用户数据。
+@lang en Presents source authority and degradation facts already allowed by project adapter and obtains display copy from shared runtime locale; it reads no provider, URL, HTTP, token, request, or user data.
 -->
 <template>
-  <!-- <lang><zh-CN>badge 只显示有限 authority 文案；降级时追加本地明确提示，不隐藏 source 状态。</zh-CN><en>Badge displays only finite authority copy and adds explicit local notice on degradation rather than hiding source state.</en></lang> -->
+  <!-- <lang><zh-CN>badge 只显示有限 authority 文案；降级时追加明确提示，不隐藏 source 状态。</zh-CN><en>Badge displays only finite authority copy and adds an explicit notice when degraded rather than hiding source state.</en></lang> -->
   <view class="source-badge" :class="`source-badge--${safeAuthority}`">
     <text class="source-badge__label">{{ label }}</text>
-    <text v-if="props.source.degradedReason" class="source-badge__detail">已降级</text>
+    <text v-if="props.source.degradedReason" class="source-badge__detail">{{ runtimeLocale.t('source.degraded') }}</text>
   </view>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { useRuntimeLocale } from '../localization/runtime-locale.mjs';
 
 // <lang><zh-CN>组件名只表示展示型 source badge，不表示 source selector 或 network status service。</zh-CN><en>Component name denotes a presentational source badge only and not a source selector or network-status service.</en></lang>
 defineOptions({ name: 'source-badge' });
@@ -25,15 +26,14 @@ const props = defineProps({
   }
 });
 
+// <lang><zh-CN>读取唯一共享 locale store，保证 badge 与页面/原生壳不会出现混排语言。</zh-CN><en>Read the sole shared locale store, keeping the badge aligned with pages and native shell without mixed languages.</en></lang>
+const runtimeLocale = useRuntimeLocale();
+
 // <lang><zh-CN>未知 authority 不被猜测为远端或在线；以 local-safe 呈现避免错误承诺。</zh-CN><en>An unknown authority is not guessed as remote or online and is rendered local-safe to avoid a false claim.</en></lang>
 const safeAuthority = computed(() => ['local', 'virtual', 'remote'].includes(props.source.authority) ? props.source.authority : 'local');
 
-// <lang><zh-CN>文字由有限 authority allowlist 生成，未转发 source ID、URL 或内部原因。</zh-CN><en>Text derives from finite authority allowlist and forwards no source ID, URL, or internal reason.</en></lang>
-const label = computed(() => ({
-  local: '本地示例数据',
-  virtual: '虚拟示例数据',
-  remote: '远端示例数据'
-}[safeAuthority.value]));
+// <lang><zh-CN>文字由有限 authority allowlist 对应的资源 key 生成，未转发 source ID、URL 或内部原因。</zh-CN><en>Copy derives from resource keys corresponding to a finite authority allowlist and forwards no source ID, URL, or internal reason.</en></lang>
+const label = computed(() => runtimeLocale.t(`source.${safeAuthority.value}`));
 </script>
 
 <style scoped>

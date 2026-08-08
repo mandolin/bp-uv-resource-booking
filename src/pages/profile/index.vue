@@ -1,36 +1,103 @@
 <!--
-@lang zh-CN 个人信息页仅呈现明确标识为 mock 的非敏感个人资料占位与数据边界说明；它不采集、编辑、上传、存储或传输真实身份、联系方式、头像或偏好。
-@lang en Profile presents only clearly marked mock non-sensitive profile placeholders and data-boundary notes; it collects, edits, uploads, stores, or transmits no real identity, contact, avatar, or preference.
+@lang zh-CN 个人信息页展示无敏感身份的 demo 资料与设备本机语言选择；不收集、编辑、上传或传输真实身份、联系方式、头像、账号或业务偏好。
+@lang en Profile shows non-sensitive demo details and device-local language selection; it collects, edits, uploads, or transmits no real identity, contact, avatar, account, or business preference.
 -->
 <template>
-  <!-- <lang><zh-CN>页面是静态 demo 边界说明，不使用表单控件来暗示可保存的个人资料能力。</zh-CN><en>The page is a static demo boundary statement and uses no form control that would imply a saveable profile capability.</en></lang> -->
-  <view class="profile-page">
-    <u-card title="示例访客 / Demo visitor" sub-title="Mock profile · 本地展示 / Local presentation"><view class="profile-page__identity"><u-avatar text="DV" size="large" /><view><text class="profile-page__name">示例访客 / Demo visitor</text><text class="profile-page__detail">未绑定身份、手机号或账号 / No identity, phone, or account is bound</text></view></view></u-card>
-    <u-notice visible tone="info" message="这是个人信息页面的展示骨架。当前版本不保存偏好，也不接入微信、企业或其他身份提供方。 / This is a presentation skeleton for Profile. The current version saves no preference and connects to no WeChat, enterprise, or other identity provider." />
-    <u-card title="数据边界 / Data boundary"><view class="profile-page__list"><text>• 预约记录：仅当前运行时 mock 数据 / Bookings: current-runtime mock only</text><text>• 场馆数据：仓内 local JSON / Venue data: in-repository local JSON</text><text>• 图像资产：仓内原创 AI 生成素材 / Images: in-repository original AI-generated assets</text></view></u-card>
-    <u-button label="浏览资源 / Browse resources" block @click="goDiscover" />
-  </view>
+  <!-- <lang><zh-CN>provider 直接包住页面组件树，使 HIA-uView 的受限 locale context 与 BP 显示语言保持同一 canonical 值。</zh-CN><en>The provider directly wraps the page component tree so HIA-uView's constrained locale context shares the BP display language's canonical value.</en></lang> -->
+  <u-config-provider :locale="runtimeLocale.locale.value">
+    <view class="profile-page">
+      <!-- <lang><zh-CN>示例身份仅为页面展示，不成为可编辑账户表单或身份绑定入口。</zh-CN><en>Demo identity is presentation only and is neither an editable account form nor an identity-binding entry.</en></lang> -->
+      <u-card :title="runtimeLocale.t('profile.visitor')" :sub-title="runtimeLocale.t('profile.subtitle')">
+        <view class="profile-page__identity">
+          <u-avatar :text="runtimeLocale.t('profile.avatar')" size="large" />
+          <view>
+            <text class="profile-page__name">{{ runtimeLocale.t('profile.visitor') }}</text>
+            <text class="profile-page__detail">{{ runtimeLocale.t('profile.noIdentity') }}</text>
+          </view>
+        </view>
+      </u-card>
+
+      <!-- <lang><zh-CN>语言选择使用非颜色 radio 标记；每次 change 只改变 locale preference，不影响业务数据或预约。</zh-CN><en>Language selection uses non-color radio markers; each change alters only locale preference and affects no business data or booking.</en></lang> -->
+      <u-card :title="runtimeLocale.t('profile.language')">
+        <u-radio-group v-model="languageChoice">
+          <u-radio value="system" :label="followSystemLabel" />
+          <u-radio value="zh-Hans" :label="runtimeLocale.t('profile.simplifiedChinese')" />
+          <u-radio value="en" :label="runtimeLocale.t('profile.english')" />
+        </u-radio-group>
+      </u-card>
+
+      <!-- <lang><zh-CN>storage 失败只提示本机可恢复状态，不隐藏当前已生效的内存选择。</zh-CN><en>A storage failure only reports a recoverable local state and does not hide the already-effective in-memory choice.</en></lang> -->
+      <u-notice
+        v-if="runtimeLocale.persistenceFailed.value"
+        visible
+        tone="warning"
+        :message="runtimeLocale.t('profile.preferenceUnsaved')"
+      />
+      <u-notice
+        v-else
+        visible
+        tone="info"
+        :message="runtimeLocale.t('profile.preferenceSaved')"
+      />
+
+      <!-- <lang><zh-CN>数据边界用只读 cell 展示，不把示例资料伪装为可保存的个人档案。</zh-CN><en>Data boundaries use read-only cells and do not present demo details as a saveable personal profile.</en></lang> -->
+      <u-card :title="runtimeLocale.t('profile.dataBoundary')">
+        <u-cell :label="runtimeLocale.t('profile.bookings')" />
+        <u-cell :label="runtimeLocale.t('profile.venues')" />
+        <u-cell :label="runtimeLocale.t('profile.images')" />
+      </u-card>
+      <u-button :label="runtimeLocale.t('profile.browse')" block @click="goDiscover" />
+    </view>
+  </u-config-provider>
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
+import { applyPageTitle, refreshRuntimeChrome } from '../../localization/runtime-chrome.mjs';
+import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
+
+// <lang><zh-CN>个人信息页读取唯一共享 locale surface，不创建页面私有语言 store 或平行 UI locale global。</zh-CN><en>Profile reads the sole shared locale surface and creates neither a page-private language store nor a parallel UI locale global.</en></lang>
+const runtimeLocale = useRuntimeLocale();
+
+// <lang><zh-CN>radio 以 `system` 显式表示无 stored preference；其余值只能是规格允许的 canonical locale。</zh-CN><en>Radio uses `system` explicitly to represent no stored preference; all other values can only be spec-permitted canonical locales.</en></lang>
+const languageChoice = computed({
+  get: () => runtimeLocale.followsSystem.value ? 'system' : runtimeLocale.locale.value,
+  set: (nextChoice) => {
+    // <lang><zh-CN>跟随系统先在内存恢复系统值；否则只接受 store 的有限 locale allowlist。</zh-CN><en>Follow-system first restores the system value in memory; otherwise accept only the store's finite locale allowlist.</en></lang>
+    if (nextChoice === 'system') runtimeLocale.followSystem();
+    else runtimeLocale.selectLocale(nextChoice);
+
+    // <lang><zh-CN>语言切换后更新四项 native tab；当前页标题在 onShow 重新投影，平台失败不阻断选择。</zh-CN><en>After a language change, update four native tabs; current-page title is reprojected at onShow and a platform failure does not block selection.</en></lang>
+    refreshRuntimeChrome();
+    applyPageTitle('title.profile');
+  }
+});
+
+// <lang><zh-CN>跟随系统行同时说明当前归一化语言，避免用户把状态误认为第三种可持久语言。</zh-CN><en>The follow-system row also states the current normalized language, preventing users from mistaking it for a third persistable language.</en></lang>
+const followSystemLabel = computed(() => runtimeLocale.t('profile.followSystem', {
+  locale: runtimeLocale.t(runtimeLocale.systemLocale.value === 'en' ? 'locale.enName' : 'locale.zhName')
+}));
 
 /**
  * <lang><zh-CN>转到发现 tab。</zh-CN><en>Moves to the Discover tab.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN 个人信息页不预取 catalog、写入偏好或尝试身份登录。
- * @lang en Profile does not prefetch catalog, write preferences, or attempt identity sign-in.
+ * @lang zh-CN 个人信息页不预取 catalog、修改 preference 以外的数据或尝试身份登录。
+ * @lang en Profile does not prefetch catalog, modify data other than language preference, or attempt identity login.
  */
 function goDiscover() {
   // <lang><zh-CN>只执行 UniApp 本地 tab 路由。</zh-CN><en>Perform only UniApp local tab routing.</en></lang>
   uni.switchTab({ url: '/pages/discover/index' });
 }
+
+// <lang><zh-CN>每次页面显示都投影当前 locale 标题，覆盖 `pages.json` 的静态 fallback。</zh-CN><en>Every page show projects the current-locale title, overriding the static fallback in `pages.json`.</en></lang>
+onShow(() => applyPageTitle('title.profile'));
 </script>
 
 <style scoped>
-/* <lang><zh-CN>个人页保持展示性卡片和细字体层级，不冒充账号设置或可编辑身份表单。</zh-CN><en>Profile keeps presentational cards and a light type hierarchy, without impersonating account settings or an editable identity form.</en></lang> */
+/* <lang><zh-CN>个人页使用 token 化卡片层级与非颜色单选标识，不模拟账号、会员或可编辑档案视觉。</zh-CN><en>Profile uses tokenized card hierarchy and non-color radio markers without simulating an account, membership, or editable-profile appearance.</en></lang> */
 .profile-page { display: flex; gap: 16px; flex-direction: column; min-height: 100vh; padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
 .profile-page__identity { display: flex; gap: 14px; align-items: center; }
 .profile-page__name { display: block; color: var(--u-sys-color-text); font-size: 19px; font-weight: 700; }
 .profile-page__detail { display: block; margin-top: 4px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.5; }
-.profile-page__list { display: flex; gap: 10px; flex-direction: column; color: var(--u-sys-color-text); font-size: 14px; line-height: 1.6; }
 </style>
