@@ -1,7 +1,7 @@
 /**
- * <lang><zh-CN>BP 的应用自管运行时壳模型：声明四个主页面、生成本地化 tab 项，并把有限导航意图投影到 UniApp；不依赖原生 tabbar、原生标题、网络、身份或业务状态。</zh-CN><en>Application-owned runtime-shell model for the BP: declares four primary pages, creates localized tab items, and projects bounded navigation intents to UniApp; it depends on no native tabbar, native title, network, identity, or business state.</en></lang>
- * @lang zh-CN 小程序不支持 `pages.json` 文案国际化，因此可见 title/tab 由 Vue 壳和 HIA-uView 组件直接消费 runtime locale；本模块只拥有固定路由，不接受动态 URL。
- * @lang en Mini Programs do not support `pages.json` copy internationalization, so visible titles/tabs are rendered by the Vue shell and HIA-uView components directly from runtime locale; this module owns fixed routes only and accepts no dynamic URL.
+ * <lang><zh-CN>BP 的应用自管运行时壳模型：声明四个主页面、生成本地化 tab 项，并把有限导航意图投影到 UniApp；不依赖原生标题、网络、身份或业务状态。</zh-CN><en>Application-owned runtime-shell model for the BP: declares four primary pages, creates localized tab items, and projects bounded navigation intents to UniApp; it depends on no native title, network, identity, or business state.</en></lang>
+ * @lang zh-CN 微信端使用官方 custom tabBar 容器保持切换期间常驻，其他支持宿主可使用平台 tabBar；本模块只拥有固定路由和受限文案同步，不接受动态 URL。
+ * @lang en WeChat uses the official custom-tabBar container to remain mounted during switches, while other supporting hosts may use platform tabBar; this module owns only fixed routes and bounded copy synchronization and accepts no dynamic URL.
  */
 
 // <lang><zh-CN>复用唯一受限 UniApp API 解析入口；不在模块加载时捕获平台对象。</zh-CN><en>Reuse the sole bounded UniApp-API resolver and do not capture the platform object at module load.</en></lang>
@@ -39,7 +39,7 @@ export function isPrimaryPage(value) {
 }
 
 /**
- * <lang><zh-CN>从当前 runtime translator 生成 HIA-uView `u-tabbar` 的单语言 items。</zh-CN><en>Creates single-language HIA-uView `u-tabbar` items from the current runtime translator.</en></lang>
+ * <lang><zh-CN>从当前 runtime translator 生成平台/HIA-uView tab chrome 共用的单语言 items。</zh-CN><en>Creates single-language items shared by platform and HIA-uView tab chrome from the current runtime translator.</en></lang>
  * @param {(messageKey: string) => string} translate <lang><zh-CN>唯一 runtime locale store 的静态资源翻译函数。</zh-CN><en>Static-resource translator from the sole runtime locale store.</en></lang>
  * @returns {ReadonlyArray<{value: string, label: string}>} <lang><zh-CN>固定顺序的冻结 tab 项。</zh-CN><en>Frozen tab items in fixed order.</en></lang>
  * @lang zh-CN label key 来自第一方声明；translate 不接收路由、query、领域对象或远端数据。
@@ -57,20 +57,82 @@ export function createPrimaryTabItems(translate) {
 }
 
 /**
+ * <lang><zh-CN>读取当前微信页面栈，供 custom tabBar 的页面实例同步使用。</zh-CN><en>Reads the current WeChat page stack for custom-tabBar page-instance synchronization.</en></lang>
+ * @returns {unknown[]} <lang><zh-CN>可用页面数组；宿主缺失或读取失败时为空数组。</zh-CN><en>Available page array, or an empty array when the host is absent or reading fails.</en></lang>
+ * @lang zh-CN 本函数只调用无参数 `getCurrentPages`，不读取页面 data、query、referrer 或用户内容。
+ * @lang en This function calls only zero-argument `getCurrentPages` and reads no page data, query, referrer, or user content.
+ */
+function readCurrentPageStack() {
+  try {
+    // <lang><zh-CN>优先使用小程序模块级全局函数；兼容测试或 H5 显式提供的 global fallback。</zh-CN><en>Prefer the Mini Program module-level global and support an explicit global fallback for tests or H5.</en></lang>
+    const readPages = typeof getCurrentPages === 'function' ? getCurrentPages : globalThis.getCurrentPages;
+    const pages = typeof readPages === 'function' ? readPages() : [];
+    return Array.isArray(pages) ? pages : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * <lang><zh-CN>同步当前主页面、locale 与四项单语言 label 到平台管理的 tab chrome。</zh-CN><en>Synchronizes the current primary page, locale, and four single-language labels into platform-managed tab chrome.</en></lang>
+ * @param {unknown} pageValue <lang><zh-CN>第一方主页面 value。</zh-CN><en>First-party primary-page value.</en></lang>
+ * @param {unknown} locale <lang><zh-CN>共享 runtime locale 的候选值。</zh-CN><en>Candidate value from the shared runtime locale.</en></lang>
+ * @param {(messageKey: string) => string} translate <lang><zh-CN>共享 runtime translator。</zh-CN><en>Shared runtime translator.</en></lang>
+ * @param {{ pages?: unknown[], uniApi?: unknown, weChat?: boolean }} [adapters] <lang><zh-CN>测试可注入的受限宿主替身。</zh-CN><en>Bounded host doubles injectable by tests.</en></lang>
+ * @returns {boolean} <lang><zh-CN>custom 或 native tab chrome 是否同步接受。</zh-CN><en>Whether custom or native tab chrome accepted synchronization.</en></lang>
+ * @lang zh-CN 微信优先调用当前 tab 页的 `getTabBar().setData`，不调用受 tourist appid 限制的 native label API；非微信宿主才逐项尝试 `setTabBarItem`。
+ * @lang en WeChat first calls the current tab page's `getTabBar().setData` and avoids native label APIs constrained by tourist appid; only non-WeChat hosts try `setTabBarItem` item by item.
+ */
+export function syncPrimaryTabChrome(pageValue, locale, translate, adapters = {}) {
+  // <lang><zh-CN>主页面与 translator 必须同时通过有限 gate，未知输入不得触达平台。</zh-CN><en>The primary page and translator must both pass finite gates; unknown input never reaches the platform.</en></lang>
+  if (!isPrimaryPage(pageValue) || typeof translate !== 'function') return false;
+
+  // <lang><zh-CN>custom tabBar 只区分当前支持的两个 canonical locale，其他值确定性回退简体中文。</zh-CN><en>The custom tabBar distinguishes only the two currently supported canonical locales and deterministically falls back to Simplified Chinese.</en></lang>
+  const canonicalLocale = locale === 'en' ? 'en' : 'zh-Hans';
+  const pages = Array.isArray(adapters.pages) ? adapters.pages : readCurrentPageStack();
+
+  // <lang><zh-CN>微信每个 tab 页拥有自己的 custom-tab-bar 实例；在 onShow 更新当前实例可保持常驻并校正选中态。</zh-CN><en>Each WeChat tab page owns a custom-tab-bar instance; updating the current instance on show retains the chrome and corrects selection.</en></lang>
+  try {
+    const currentPage = pages.at(-1);
+    const customTabBar = typeof currentPage?.getTabBar === 'function' ? currentPage.getTabBar() : null;
+    if (typeof customTabBar?.setData === 'function') {
+      customTabBar.setData({ selected: pageValue, locale: canonicalLocale });
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  // <lang><zh-CN>微信 custom 实例尚未就绪时保持安全无操作，避免退回会被 tourist appid 拒绝的 native API。</zh-CN><en>Remain a safe no-op while a WeChat custom instance is not ready, avoiding fallback to native APIs rejected by tourist appid.</en></lang>
+  const isWeChat = typeof adapters.weChat === 'boolean' ? adapters.weChat : typeof wx !== 'undefined';
+  if (isWeChat) return false;
+
+  // <lang><zh-CN>H5 等非微信宿主使用已声明 tabBar 的公开 API 更新四项文案；任何一项异常都返回失败但不影响正文 locale。</zh-CN><en>Non-WeChat hosts such as H5 update all four labels through the declared tabBar's public API; an exception returns failure without affecting body locale.</en></lang>
+  const uniApi = adapters.uniApi ?? resolveRuntimeUniApi();
+  if (typeof uniApi?.setTabBarItem !== 'function') return false;
+  try {
+    createPrimaryTabItems(translate).forEach((item, index) => uniApi.setTabBarItem({ index, text: item.label }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * <lang><zh-CN>以接近原生 tab 的语义打开一个固定主页面。</zh-CN><en>Opens a fixed primary page with semantics close to a native tab.</en></lang>
- * @param {unknown} pageValue <lang><zh-CN>来自受控 `u-tabbar` 或第一方页面 action 的候选 value。</zh-CN><en>Candidate value from the controlled `u-tabbar` or a first-party page action.</en></lang>
+ * @param {unknown} pageValue <lang><zh-CN>来自受控 tab chrome 或第一方页面 action 的候选 value。</zh-CN><en>Candidate value from controlled tab chrome or a first-party page action.</en></lang>
  * @param {unknown} [uniApi] <lang><zh-CN>可选 UniApp API 对象，用于运行时调用或测试替身。</zh-CN><en>Optional UniApp API object for runtime calls or a test double.</en></lang>
  * @returns {boolean} <lang><zh-CN>导航是否被同步接受。</zh-CN><en>Whether navigation was accepted synchronously.</en></lang>
- * @lang zh-CN `reLaunch` 清理详情页栈，模拟 tab 切换的顶层边界；共享 demo state 仍由应用级 module store 持有。
- * @lang en `reLaunch` clears the detail-page stack to model a top-level tab boundary; shared demo state remains owned by the application-level module store.
+ * @lang zh-CN `switchTab` 委托平台保持底栏与已访问主页面实例；共享 demo state 仍由应用级 module store 持有。
+ * @lang en `switchTab` delegates retention of the tabbar and visited primary-page instances to the platform; shared demo state remains owned by the application-level module store.
  */
 export function openPrimaryPage(pageValue, uniApi = resolveRuntimeUniApi()) {
   // <lang><zh-CN>先验证有限 value，再读取固定 URL；未知输入绝不进入平台 API。</zh-CN><en>Validate the finite value before reading its fixed URL; unknown input never reaches the platform API.</en></lang>
-  if (!isPrimaryPage(pageValue) || typeof uniApi?.reLaunch !== 'function') return false;
+  if (!isPrimaryPage(pageValue) || typeof uniApi?.switchTab !== 'function') return false;
 
   // <lang><zh-CN>平台同步异常只使本次导航失败，不改写 locale、业务状态或其他路由。</zh-CN><en>A synchronous platform exception only fails this navigation and rewrites no locale, business state, or other route.</en></lang>
   try {
-    uniApi.reLaunch({ url: PRIMARY_PAGE_BY_VALUE[pageValue].url });
+    uniApi.switchTab({ url: PRIMARY_PAGE_BY_VALUE[pageValue].url });
     return true;
   } catch {
     return false;

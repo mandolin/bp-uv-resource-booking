@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>验证 BP runtime locale 的有限归一化、优先级、storage 失败、领域投影与应用自管壳；测试不连接 UniApp、网络、账号或真实 storage。</zh-CN><en>Verifies BP runtime locale normalization, priority, storage failure, domain projection, and application-owned shell; tests connect to no UniApp, network, account, or real storage.</en></lang>
+ * <lang><zh-CN>验证 BP runtime locale 的有限归一化、优先级、storage 失败、领域投影与平台管理 tab bridge；测试不连接 UniApp、网络、账号或真实 storage。</zh-CN><en>Verifies BP runtime locale normalization, priority, storage failure, domain projection, and the platform-managed tab bridge; tests connect to no UniApp, network, account, or real storage.</en></lang>
  * @lang zh-CN 假 facade 只模拟规格允许的返回值与失败，不将测试扩展成平台集成测试。
  * @lang en The fake facade simulates only spec-permitted returns and failures; it does not expand tests into platform integration tests.
  */
@@ -18,7 +18,7 @@ import {
   resolveRuntimeLocale,
   useRuntimeLocale
 } from '../src/localization/runtime-locale.mjs';
-import { createPrimaryTabItems, navigateBackOrOpenPrimaryPage, openPrimaryPage } from '../src/localization/runtime-chrome.mjs';
+import { createPrimaryTabItems, navigateBackOrOpenPrimaryPage, openPrimaryPage, syncPrimaryTabChrome } from '../src/localization/runtime-chrome.mjs';
 
 /**
  * <lang><zh-CN>创建一个只记录规格允许操作的 fake locale facade。</zh-CN><en>Creates a fake locale facade that records only spec-permitted operations.</en></lang>
@@ -127,7 +127,7 @@ test('domain projection and fixed date labels never produce bilingual concatenat
   assert.equal(formatDemoDate('not-a-date', 'en'), '');
 });
 
-test('application-owned chrome creates localized primary-tab items without native shell APIs', () => {
+test('runtime chrome creates localized primary-tab items without dynamic input', () => {
   // <lang><zh-CN>共享 store 切换为英文；tab items 直接由 translator 生成，不创建任何平台壳调用。</zh-CN><en>Switch the shared store to English; tab items are created directly from the translator without any platform-shell call.</en></lang>
   useRuntimeLocale().selectLocale('en');
   const runtimeLocale = useRuntimeLocale();
@@ -139,11 +139,11 @@ test('application-owned chrome creates localized primary-tab items without nativ
   ]);
 });
 
-test('application-owned chrome allows only fixed primary routes and provides a bounded back fallback', () => {
+test('platform-managed chrome allows only fixed primary routes and provides a bounded back fallback', () => {
   // <lang><zh-CN>平台替身只记录本地导航；未知 tab 必须零调用，返回失败只能进入固定发现页。</zh-CN><en>The platform double records local navigation only; an unknown tab must cause zero calls, and a failed back can enter only the fixed Discover page.</en></lang>
   const calls = [];
   const shell = {
-    reLaunch: (payload) => calls.push(['reLaunch', payload]),
+    switchTab: (payload) => calls.push(['switchTab', payload]),
     navigateBack: (payload) => {
       calls.push(['navigateBack', { delta: payload.delta }]);
       payload.fail();
@@ -157,8 +157,43 @@ test('application-owned chrome allows only fixed primary routes and provides a b
   // <lang><zh-CN>返回 API 的 fail callback 复用同一固定路由 helper。</zh-CN><en>The back API fail callback reuses the same fixed-route helper.</en></lang>
   assert.equal(navigateBackOrOpenPrimaryPage('discover', shell), true);
   assert.deepEqual(calls, [
-    ['reLaunch', { url: '/pages/home/index' }],
+    ['switchTab', { url: '/pages/home/index' }],
     ['navigateBack', { delta: 1 }],
-    ['reLaunch', { url: '/pages/discover/index' }]
+    ['switchTab', { url: '/pages/discover/index' }]
+  ]);
+});
+
+test('primary tab chrome synchronizes WeChat custom state before native host labels', () => {
+  // <lang><zh-CN>custom tab 实例只记录当前 value/locale；存在该实例时绝不触发 native tab API。</zh-CN><en>The custom-tab instance records only current value/locale; while it exists, no native-tab API may run.</en></lang>
+  const customUpdates = [];
+  const nativeCalls = [];
+  const translate = (messageKey) => ({
+    'nav.home': 'Home',
+    'nav.discover': 'Discover',
+    'nav.reservations': 'My bookings',
+    'nav.profile': 'Profile'
+  })[messageKey];
+  const currentPage = { getTabBar: () => ({ setData: (payload) => customUpdates.push(payload) }) };
+
+  // <lang><zh-CN>微信路径同步当前实例后立即返回，不调用作为测试替身提供的 setTabBarItem。</zh-CN><en>The WeChat path returns immediately after synchronizing the current instance and does not call the test-double setTabBarItem.</en></lang>
+  assert.equal(syncPrimaryTabChrome('profile', 'en', translate, {
+    pages: [currentPage],
+    weChat: true,
+    uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
+  }), true);
+  assert.deepEqual(customUpdates, [{ selected: 'profile', locale: 'en' }]);
+  assert.deepEqual(nativeCalls, []);
+
+  // <lang><zh-CN>非微信宿主没有 custom 实例时只更新四个固定 index/text，仍不接收调用方 URL。</zh-CN><en>A non-WeChat host without a custom instance updates only four fixed index/text pairs and still accepts no caller URL.</en></lang>
+  assert.equal(syncPrimaryTabChrome('home', 'en', translate, {
+    pages: [],
+    weChat: false,
+    uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
+  }), true);
+  assert.deepEqual(nativeCalls, [
+    { index: 0, text: 'Home' },
+    { index: 1, text: 'Discover' },
+    { index: 2, text: 'My bookings' },
+    { index: 3, text: 'Profile' }
   ]);
 });

@@ -88,7 +88,7 @@ async function verifyRuntimeI18n() {
   for (const relativePath of pagePaths) await verifySfc(relativePath, true);
   for (const relativePath of componentPaths) await verifySfc(relativePath, false);
 
-  // <lang><zh-CN>读取声明式页面配置，确保小程序不再生成带静态语言的原生 title/tabbar。</zh-CN><en>Read declarative page configuration to ensure the Mini Program no longer generates native titles/tabbar with a static language.</en></lang>
+  // <lang><zh-CN>读取声明式页面配置，确保标题保持应用自管，同时主页面进入平台管理的 custom tab 生命周期。</zh-CN><en>Read declarative page configuration to ensure titles remain application-owned while primary pages enter the platform-managed custom-tab lifecycle.</en></lang>
   const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, 'src/pages.json'), 'utf8'));
 
   // <lang><zh-CN>六页都必须关闭原生导航栏，避免应用自管标题与原生静态标题同时显示。</zh-CN><en>All six pages must disable the native navigation bar, preventing an application-owned title and a native static title from appearing together.</en></lang>
@@ -96,13 +96,31 @@ async function verifyRuntimeI18n() {
     throw new Error('Every page must use application-owned custom navigation.');
   }
 
-  // <lang><zh-CN>根配置不得重新引入 native tabBar；主导航只能由 runtime page shell 的 `u-tabbar` 呈现。</zh-CN><en>The root configuration must not reintroduce native tabBar; primary navigation may be rendered only by the runtime page shell's `u-tabbar`.</en></lang>
-  if (Object.hasOwn(pagesConfiguration, 'tabBar')) throw new Error('Native tabBar is incompatible with runtime-localized application chrome.');
+  // <lang><zh-CN>平台 tab 声明必须固定为四个已审阅主页面并开启 custom；静态 text 只作为微信载入前的中文 fallback。</zh-CN><en>The platform-tab declaration must be fixed to four reviewed primary pages with custom enabled; static text serves only as a Chinese fallback before WeChat loads.</en></lang>
+  const expectedPrimaryPaths = Object.freeze(['pages/home/index', 'pages/discover/index', 'pages/reservations/index', 'pages/profile/index']);
+  const declaredPrimaryPaths = pagesConfiguration.tabBar?.list?.map((item) => item.pagePath);
+  if (pagesConfiguration.tabBar?.custom !== true || JSON.stringify(declaredPrimaryPaths) !== JSON.stringify(expectedPrimaryPaths)) {
+    throw new Error('Platform-managed custom tabBar must declare the four fixed primary pages.');
+  }
 
-  // <lang><zh-CN>壳必须实际组合锁定 HIA-uView 的两个公开组件，不能退化为裸 view 或平台壳 API。</zh-CN><en>The shell must actually compose the two public components from pinned HIA-uView and cannot regress to bare views or platform-shell APIs.</en></lang>
+  // <lang><zh-CN>页面壳仍必须组合锁定 HIA-uView navbar，但不得再在每个页面内重复创建 u-tabbar。</zh-CN><en>The page shell must still compose the pinned HIA-uView navbar but must no longer recreate u-tabbar inside every page.</en></lang>
   const runtimeShellSource = await readFile(resolve(projectRoot, 'src/components/RuntimePageShell.vue'), 'utf8');
-  if (!runtimeShellSource.includes('<u-navbar visible') || !runtimeShellSource.includes('<u-tabbar visible')) {
-    throw new Error('Runtime page shell must explicitly render visible HIA-uView navbar and tabbar components.');
+  if (!runtimeShellSource.includes('<u-navbar visible') || runtimeShellSource.includes('<u-tabbar')) {
+    throw new Error('Runtime page shell must render HIA-uView navbar without a page-local tabbar.');
+  }
+
+  // <lang><zh-CN>四个主页面必须在 onShow 通过受限 bridge 同步当前 custom tab 实例，避免首次进入时选中态或语言漂移。</zh-CN><en>All four primary pages must synchronize their current custom-tab instance through the bounded bridge on show, avoiding selection or locale drift on first entry.</en></lang>
+  for (const relativePath of pagePaths.slice(0, 4)) {
+    const sourceText = await readFile(resolve(projectRoot, relativePath), 'utf8');
+    if (!sourceText.includes('syncPrimaryTabChrome')) throw new Error(`Missing persistent tab chrome synchronization in ${relativePath}.`);
+  }
+
+  // <lang><zh-CN>微信 raw custom-tab-bar 必须保持静态 allowlist、双语选择、无业务输入和固定 switchTab；样式根必须常驻 fixed。</zh-CN><en>The raw WeChat custom tab bar must retain a static allowlist, bilingual selection, no business input, and fixed switchTab; its style root must remain fixed.</en></lang>
+  const customTabRuntime = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.js'), 'utf8');
+  const customTabTemplate = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxml'), 'utf8');
+  const customTabStyle = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxss'), 'utf8');
+  if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
+    throw new Error('WeChat custom tabBar does not satisfy persistent bilingual chrome contract.');
   }
 }
 

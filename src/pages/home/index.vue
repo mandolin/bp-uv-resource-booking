@@ -5,8 +5,8 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView 的 locale context 与 BP runtime 文案/领域投影保持一致。</zh-CN><en>The provider directly wraps the page, keeping HIA-uView locale context aligned with BP runtime copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <!-- <lang><zh-CN>应用自管壳使用同一 locale 呈现标题和四项主导航，不调用小程序原生 tab/title 文案 API。</zh-CN><en>The application-owned shell renders the title and four primary navigation items with the same locale and calls no Mini Program native tab/title copy API.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.home')" tab="home">
+    <!-- <lang><zh-CN>页面壳用 HIA-uView 呈现同一 locale 的标题；四项主导航由平台管理 custom tabBar 常驻呈现。</zh-CN><en>The page shell uses HIA-uView to render the same-locale title; platform-managed custom tabBar persistently renders the four primary navigation items.</en></lang> -->
+    <runtime-page-shell :title="runtimeLocale.t('title.home')">
       <view class="home-page">
       <!-- <lang><zh-CN>hero 使用原创项目内场馆图，不使用外部照片或地图服务。</zh-CN><en>Hero uses an original in-project venue image and no external photograph or map service.</en></lang> -->
       <view class="home-page__hero">
@@ -66,7 +66,7 @@ import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
 import { getVenueImage } from '../../data/asset-map.mjs';
-import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -178,8 +178,21 @@ function browseResources() {
 // <lang><zh-CN>首次挂载调用幂等 ensure helper，保证加载只由页面显式启动。</zh-CN><en>First mount calls the idempotent ensure helper, ensuring loading starts only explicitly from the page.</en></lang>
 onMounted(ensureInitialCatalog);
 
-// <lang><zh-CN>每次主页面显示只复用相同幂等 helper；响应式应用壳会直接随 locale 重绘标题和 tab，不需生命周期投影。</zh-CN><en>Every primary-page show only reuses the same idempotent helper; the reactive application shell redraws title and tabs directly with locale and needs no lifecycle projection.</en></lang>
-onShow(ensureInitialCatalog);
+/**
+ * <lang><zh-CN>同步首页的常驻 tab chrome，并确保首次目录读取。</zh-CN><en>Synchronizes Home's persistent tab chrome and ensures the initial catalog read.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>幂等目录检查完成后 resolve。</zh-CN><en>Resolves after the idempotent catalog check completes.</en></lang>
+ * @lang zh-CN 微信 custom-tab-bar 在页面显示时校正选中态和 locale；H5 等宿主同步已声明 platform tab labels。
+ * @lang en The WeChat custom tab bar corrects selection and locale when the page is shown; hosts such as H5 synchronize declared platform-tab labels.
+ */
+async function handlePageShow() {
+  // <lang><zh-CN>只把固定首页 value 与共享 runtime translator 交给受限 chrome bridge。</zh-CN><en>Pass only the fixed Home value and shared runtime translator to the bounded chrome bridge.</en></lang>
+  syncPrimaryTabChrome('home', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
+  // <lang><zh-CN>保持原有幂等首次读取，不因 tab 生命周期改变数据行为。</zh-CN><en>Retain the original idempotent first read without changing data behavior for tab lifecycle.</en></lang>
+  await ensureInitialCatalog();
+}
+
+// <lang><zh-CN>每次平台 tab 显示首页时同步常驻底栏并复用目录状态。</zh-CN><en>Synchronize the persistent bottom bar and reuse catalog state whenever the platform tab shows Home.</en></lang>
+onShow(handlePageShow);
 
 // <lang><zh-CN>下拉刷新显式替换 page=1，结束平台 loading 只是 UI 清理，不代表远端网络状态。</zh-CN><en>Pull refresh explicitly replaces page one; ending platform loading is UI cleanup only and represents no remote network state.</en></lang>
 onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });

@@ -1,0 +1,20 @@
+<!--
+@lang zh-CN 微信官方 custom tabBar 的常驻展示面：只呈现四个第一方主页面与当前 runtime locale，不读取业务数据、身份、网络或任意路由。
+@lang en Persistent presentation surface for the official WeChat custom tab bar: renders only four first-party primary pages and the current runtime locale and reads no business data, identity, network, or arbitrary route.
+-->
+<view class="bp-custom-tabbar" role="tablist">
+  <!-- <lang><zh-CN>每项只携带冻结 value 对应的 dataset；点击 handler 再从本地 allowlist 解析固定 pagePath。</zh-CN><en>Each item carries only the dataset for a frozen value; the click handler resolves a fixed pagePath from the local allowlist.</en></lang> -->
+  <button
+    wx:for="{{items}}"
+    wx:key="value"
+    class="bp-custom-tabbar__item {{item.value === selected ? 'bp-custom-tabbar__item--active' : ''}}"
+    type="default"
+    role="tab"
+    aria-selected="{{item.value === selected}}"
+    data-value="{{item.value}}"
+    bindtap="handleSelect"
+  >
+    <!-- <lang><zh-CN>只在已支持的 en/zh-Hans 静态文案之间选择，不拼接双语或显示内部 key。</zh-CN><en>Select only between supported static en/zh-Hans copy and never concatenate languages or display an internal key.</en></lang> -->
+    <text class="bp-custom-tabbar__label">{{locale === 'en' ? item.labelEn : item.labelZh}}</text>
+  </button>
+</view>

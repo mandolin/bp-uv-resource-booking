@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住页面组件树，使 HIA-uView 的受限 locale context 与 BP 显示语言保持同一 canonical 值。</zh-CN><en>The provider directly wraps the page component tree so HIA-uView's constrained locale context shares the BP display language's canonical value.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>个人信息页壳与语言 radio 共用同一 store，选择变化会在同一渲染周期更新当前标题与全部 tab labels。</zh-CN><en>The Profile shell and language radios share one store, so a selection change updates the current title and every tab label in the same render cycle.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.profile')" tab="profile">
+    <runtime-page-shell :title="runtimeLocale.t('title.profile')">
       <view class="profile-page">
       <!-- <lang><zh-CN>示例身份仅为页面展示，不成为可编辑账户表单或身份绑定入口。</zh-CN><en>Demo identity is presentation only and is neither an editable account form nor an identity-binding entry.</en></lang> -->
       <u-card :title="runtimeLocale.t('profile.visitor')" :sub-title="runtimeLocale.t('profile.subtitle')">
@@ -56,8 +56,9 @@
 
 <script setup>
 import { computed } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
-import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 
 // <lang><zh-CN>个人信息页读取唯一共享 locale surface，不创建页面私有语言 store 或平行 UI locale global。</zh-CN><en>Profile reads the sole shared locale surface and creates neither a page-private language store nor a parallel UI locale global.</en></lang>
@@ -71,7 +72,8 @@ const languageChoice = computed({
     if (nextChoice === 'system') runtimeLocale.followSystem();
     else runtimeLocale.selectLocale(nextChoice);
 
-    // <lang><zh-CN>无需额外平台调用；应用自管壳的 computed 文案直接响应共享 locale。</zh-CN><en>No extra platform call is needed; computed copy in the application-owned shell reacts directly to the shared locale.</en></lang>
+    // <lang><zh-CN>当前页面正文/navbar 由响应式 store 重绘；平台管理的 tab chrome 通过受限 bridge 立即同步。</zh-CN><en>The reactive store redraws current page body/navbar; the bounded bridge immediately synchronizes platform-managed tab chrome.</en></lang>
+    syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
   }
 });
 
@@ -90,6 +92,9 @@ function goDiscover() {
   // <lang><zh-CN>只进入应用壳固定声明的发现主页面。</zh-CN><en>Enter only the Discover primary page fixed by the application shell.</en></lang>
   openPrimaryPage('discover');
 }
+
+// <lang><zh-CN>个人信息页每次作为平台 tab 显示时校正选中态和当前 locale。</zh-CN><en>Whenever Profile is shown as a platform tab, correct its selection and current locale.</en></lang>
+onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey)));
 </script>
 
 <style scoped>

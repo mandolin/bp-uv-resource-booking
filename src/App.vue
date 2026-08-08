@@ -1,9 +1,9 @@
 <!--
-@lang zh-CN BP 全局应用入口：只在 launch 初始化受限 runtime locale；可见 title/tab 由各页面的应用自管 HIA-uView 壳响应式呈现，不声明自动登录、远端初始化、业务 storage 恢复、网络或身份 service。
-@lang en Global BP application entry: initializes only the constrained runtime locale at launch; visible titles/tabs are rendered reactively by each page's application-owned HIA-uView shell, and it declares no automatic login, remote initialization, business-storage recovery, network, or identity service.
+@lang zh-CN BP 全局应用入口：只在 launch 初始化受限 runtime locale；可见 title 由各页面的 HIA-uView navbar 响应式呈现，主 tab 由平台管理 chrome 在页面 onShow 同步，不声明自动登录、远端初始化、业务 storage 恢复、网络或身份 service。
+@lang en Global BP application entry: initializes only the constrained runtime locale; each page reactively renders its visible title through HIA-uView navbar, while platform-managed chrome synchronizes primary tabs on page show, and the entry declares no automatic login, remote initialization, business-storage recovery, network, or identity service.
 -->
 <script>
-// <lang><zh-CN>只导入 BP 自有 locale 初始化；页面壳直接消费其响应式 surface，不需要 launch-time 原生壳调用。</zh-CN><en>Import only BP-owned locale initialization; page shells consume its reactive surface directly and need no launch-time native-shell call.</en></lang>
+// <lang><zh-CN>只导入 BP 自有 locale 初始化；页面 navbar 与平台 tab bridge 在各自生命周期消费同一响应式 surface。</zh-CN><en>Import only BP-owned locale initialization; page navbar and the platform-tab bridge consume the same reactive surface in their respective lifecycles.</en></lang>
 import { initializeRuntimeLocale } from './localization/runtime-locale.mjs';
 
 export default {

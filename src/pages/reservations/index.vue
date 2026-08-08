@@ -5,8 +5,8 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住本页，使 UI components、状态标签和领域字段投影使用同一 runtime locale。</zh-CN><en>The provider directly wraps this page so UI components, state labels, and domain-field projection use one runtime locale.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <!-- <lang><zh-CN>应用自管壳用 HIA-uView 呈现当前单语言标题和主导航，预约筛选 tab 仍由页面单独拥有。</zh-CN><en>The application-owned shell uses HIA-uView for the current single-language title and primary navigation, while the page continues to own its booking-filter tabs separately.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.reservations')" tab="reservations">
+    <!-- <lang><zh-CN>页面壳用 HIA-uView 呈现当前单语言标题，平台常驻主导航与页面自有预约筛选 tab 保持职责分离。</zh-CN><en>The page shell uses HIA-uView for the current single-language title, keeping platform-persistent primary navigation separate from page-owned reservation-filter tabs.</en></lang> -->
+    <runtime-page-shell :title="runtimeLocale.t('title.reservations')">
       <view class="reservations-page">
       <view class="reservations-page__heading">
         <text class="reservations-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
@@ -45,8 +45,9 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
-import { openPrimaryPage } from '../../localization/runtime-chrome.mjs';
+import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -190,6 +191,9 @@ function goDiscover() {
   // <lang><zh-CN>只进入应用壳固定声明的发现主页面。</zh-CN><en>Enter only the Discover primary page fixed by the application shell.</en></lang>
   openPrimaryPage('discover');
 }
+
+// <lang><zh-CN>预约页每次作为平台 tab 显示时同步常驻底栏的选中态与单一 locale。</zh-CN><en>Whenever Reservations is shown as a platform tab, synchronize the persistent bottom bar's selection and single locale.</en></lang>
+onShow(() => syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey)));
 </script>
 
 <style scoped>

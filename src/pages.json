@@ -45,6 +45,31 @@
       "^u-(.*)": "@/vendor/HIA-uView/HIA-uView-UI/src/components/u-$1/u-$1.vue"
     }
   },
+  "tabBar": {
+    "custom": true,
+    "color": "#27364a",
+    "selectedColor": "#0047ab",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/discover/index",
+        "text": "发现"
+      },
+      {
+        "pagePath": "pages/reservations/index",
+        "text": "我的预约"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "个人信息"
+      }
+    ]
+  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarBackgroundColor": "#ffffff",

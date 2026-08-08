@@ -5,8 +5,8 @@
 <template>
   <!-- <lang><zh-CN>provider 让本页的 UI component locale 与 BP 文案/领域投影共享同一 runtime 值。</zh-CN><en>The provider makes this page's UI component locale share one runtime value with BP copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <!-- <lang><zh-CN>应用自管壳用 HIA-uView title/tab 直接呈现当前 locale，避免原生小程序壳的静态语言限制。</zh-CN><en>The application-owned shell renders the current locale directly through HIA-uView title/tab surfaces, avoiding the native Mini Program shell's static-language constraint.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.discover')" tab="discover">
+    <!-- <lang><zh-CN>页面壳用 HIA-uView navbar 呈现当前 locale，常驻 custom tabBar 通过页面 onShow 同步同一语言与选中态。</zh-CN><en>The page shell renders the current locale through HIA-uView navbar, while the persistent custom tab bar synchronizes the same language and selection on page show.</en></lang> -->
+    <runtime-page-shell :title="runtimeLocale.t('title.discover')">
       <view class="discover-page">
       <view class="discover-page__heading">
         <text class="discover-page__eyebrow">{{ runtimeLocale.t('discover.eyebrow') }}</text>
@@ -47,6 +47,7 @@ import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
+import { syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
@@ -130,9 +131,24 @@ function openDetail(resourceId) {
   uni.navigateTo({ url: `/pages/resource-detail/index?resourceId=${encodeURIComponent(resourceId)}` });
 }
 
-// <lang><zh-CN>首次挂载与主页面再次显示都使用同一幂等 helper；标题和 tab 由响应式应用壳直接随 locale 重绘。</zh-CN><en>First mount and subsequent primary-page shows use one idempotent helper; title and tabs are redrawn directly with locale by the reactive application shell.</en></lang>
+// <lang><zh-CN>首次挂载继续使用同一幂等 helper；平台 tab 的 show 生命周期另行同步常驻 chrome。</zh-CN><en>First mount continues to use the same idempotent helper; the platform tab's show lifecycle separately synchronizes persistent chrome.</en></lang>
 onMounted(ensureInitialCatalog);
-onShow(ensureInitialCatalog);
+
+/**
+ * <lang><zh-CN>同步发现页的常驻 tab chrome，并确保目录已有首页。</zh-CN><en>Synchronizes Discover's persistent tab chrome and ensures a catalog first page exists.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>幂等目录检查完成后 resolve。</zh-CN><en>Resolves after the idempotent catalog check completes.</en></lang>
+ * @lang zh-CN 该生命周期只同步固定 discover value/locale 并复用已有 local catalog，不预取新 source。
+ * @lang en This lifecycle synchronizes only the fixed Discover value/locale and reuses the existing local catalog without prefetching a new source.
+ */
+async function handlePageShow() {
+  // <lang><zh-CN>当前 tab 实例接收单一选中态和当前 runtime locale。</zh-CN><en>The current tab instance receives one selection state and the current runtime locale.</en></lang>
+  syncPrimaryTabChrome('discover', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
+  // <lang><zh-CN>保留原有 idle-only 数据 gate。</zh-CN><en>Retain the original idle-only data gate.</en></lang>
+  await ensureInitialCatalog();
+}
+
+// <lang><zh-CN>每次平台 tab 显示发现页时同步常驻底栏。</zh-CN><en>Synchronize the persistent bottom bar whenever the platform tab shows Discover.</en></lang>
+onShow(handlePageShow);
 
 // <lang><zh-CN>下拉刷新只替换 page=1 并结束平台 UI loading，不代表网络请求完成。</zh-CN><en>Pull refresh only replaces page one and ends platform UI loading; it represents no network request completion.</en></lang>
 onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });

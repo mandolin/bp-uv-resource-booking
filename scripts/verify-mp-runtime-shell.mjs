@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>验证已生成微信小程序的应用自管 title/tab 壳：六页必须关闭原生导航、引用页面壳，页面壳必须解析 HIA-uView navbar/tabbar 并显式传入 visible；脚本只读固定 `dist/build/mp-weixin`。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title/tab shell: all six pages must disable native navigation and reference the page shell, while the shell must resolve HIA-uView navbar/tabbar and pass visible explicitly; the script reads only fixed `dist/build/mp-weixin`.</en></lang>
+ * <lang><zh-CN>验证已生成微信小程序的应用自管 title 与平台常驻 custom tab 壳：六页必须关闭原生导航并引用 HIA-uView navbar 页面壳，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定 `dist/build/mp-weixin`。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title and platform-persistent custom-tab shell: all six pages must disable native navigation and reference the HIA-uView-navbar page shell, while four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed `dist/build/mp-weixin`.</en></lang>
  * @lang zh-CN 本门禁验证编译产物契约，不替代开发者工具中的实际布局、点击、语言切换和安全区视觉检查。
  * @lang en This gate verifies the compiled-artifact contract and does not replace actual layout, clicks, language switching, and safe-area visual inspection in Developer Tools.
  */
@@ -27,6 +27,9 @@ const pagePaths = Object.freeze([
   'pages/booking-confirm/index'
 ]);
 
+// <lang><zh-CN>四个主页面的生成路径必须与 app.json tabBar 固定顺序一致。</zh-CN><en>Generated paths for the four primary pages must match the fixed app.json tabBar order.</en></lang>
+const primaryPagePaths = Object.freeze(pagePaths.slice(0, 4));
+
 /**
  * <lang><zh-CN>读取固定生成 JSON。</zh-CN><en>Reads a fixed generated JSON file.</en></lang>
  * @param {string} relativePath <lang><zh-CN>由本脚本声明的构建内相对路径。</zh-CN><en>Build-relative path declared by this script.</en></lang>
@@ -52,10 +55,11 @@ async function verifyGeneratedRuntimeShell() {
     throw new Error('Generated Developer Tools project still filters dependency-free files.');
   }
 
-  // <lang><zh-CN>根产物不得恢复 native tabBar；可见 tab 只能来自 HIA-uView 页面壳。</zh-CN><en>The root artifact must not restore native tabBar; visible tabs may come only from the HIA-uView page shell.</en></lang>
+  // <lang><zh-CN>根产物必须声明 official custom tabBar 和四个固定主页面；custom=true 防止渲染静态 native labels。</zh-CN><en>The root artifact must declare the official custom tab bar and four fixed primary pages; custom=true prevents rendering static native labels.</en></lang>
   const appConfiguration = await readOutputJson('app.json');
-  if (Object.prototype.hasOwnProperty.call(appConfiguration, 'tabBar')) {
-    throw new Error('Generated app.json unexpectedly contains native tabBar.');
+  const generatedPrimaryPaths = appConfiguration.tabBar?.list?.map((item) => item.pagePath);
+  if (appConfiguration.tabBar?.custom !== true || JSON.stringify(generatedPrimaryPaths) !== JSON.stringify(primaryPagePaths)) {
+    throw new Error('Generated app.json is missing the fixed official custom tabBar declaration.');
   }
 
   // <lang><zh-CN>每页必须同时保持 custom navigation 和编译后的 RuntimePageShell 引用。</zh-CN><en>Every page must retain both custom navigation and a compiled RuntimePageShell reference.</en></lang>
@@ -66,16 +70,25 @@ async function verifyGeneratedRuntimeShell() {
     }
   }
 
-  // <lang><zh-CN>页面壳的组件清单必须解析到两个 HIA-uView 叶级组件，不能退化为裸 view。</zh-CN><en>The page shell's component manifest must resolve both HIA-uView leaf components and cannot regress to bare views.</en></lang>
+  // <lang><zh-CN>页面壳的组件清单必须解析 HIA-uView navbar，且不得再把页面局部 u-tabbar 编入微信端。</zh-CN><en>The page shell's component manifest must resolve HIA-uView navbar and must no longer compile a page-local u-tabbar into WeChat.</en></lang>
   const shellConfiguration = await readOutputJson('components/RuntimePageShell.json');
-  if (!shellConfiguration.usingComponents?.['u-navbar'] || !shellConfiguration.usingComponents?.['u-tabbar']) {
-    throw new Error('Generated RuntimePageShell is missing HIA-uView navbar or tabbar.');
+  if (!shellConfiguration.usingComponents?.['u-navbar'] || shellConfiguration.usingComponents?.['u-tabbar']) {
+    throw new Error('Generated RuntimePageShell must contain HIA-uView navbar without page-local tabbar.');
   }
 
-  // <lang><zh-CN>检查固定 compiler 产物含两次显式 `visible: true`，防止依赖 Mini Program 首帧中的组件默认 Boolean 值。</zh-CN><en>Check that the pinned compiler artifact contains two explicit `visible: true` values, preventing reliance on component-default Boolean values during the Mini Program first render.</en></lang>
+  // <lang><zh-CN>检查固定 compiler 产物显式显示 navbar，防止依赖 Mini Program 首帧中的组件默认 Boolean 值。</zh-CN><en>Check that the pinned compiler artifact explicitly shows navbar, preventing reliance on the component-default Boolean value during the Mini Program first render.</en></lang>
   const shellRuntime = await readFile(resolve(outputRoot, 'components/RuntimePageShell.js'), 'utf8');
   const explicitVisibleCount = shellRuntime.match(/visible:!0/gu)?.length ?? 0;
-  if (explicitVisibleCount < 2) throw new Error('Generated RuntimePageShell does not explicitly show both HIA-uView chrome components.');
+  if (explicitVisibleCount < 1) throw new Error('Generated RuntimePageShell does not explicitly show HIA-uView navbar.');
+
+  // <lang><zh-CN>官方 custom-tab-bar 四件套必须被编译器原样复制，并保留 fixed 根、双语选择和固定 switchTab。</zh-CN><en>The official custom-tab-bar quartet must be copied verbatim by the compiler and retain a fixed root, bilingual selection, and fixed switchTab.</en></lang>
+  const customTabConfiguration = await readOutputJson('custom-tab-bar/index.json');
+  const customTabRuntime = await readFile(resolve(outputRoot, 'custom-tab-bar/index.js'), 'utf8');
+  const customTabTemplate = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxml'), 'utf8');
+  const customTabStyle = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxss'), 'utf8');
+  if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
+    throw new Error('Generated official custom tabBar does not satisfy persistent bilingual chrome contract.');
+  }
 }
 
 // <lang><zh-CN>以顶层 await 执行唯一只读构建后门禁。</zh-CN><en>Execute the sole read-only post-build gate with top-level await.</en></lang>
