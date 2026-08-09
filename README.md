@@ -30,7 +30,7 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `cd448f568471e5c0c4ebb7990e855c9490b7ae6e` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge 与小程序条件编译回退 / UI source, complete style entry, default theme, locale-provider bridge, and Mini Program conditional fallbacks |
+| `src/vendor/HIA-uView` | `1dfde9f17fc3654857ba17c12ffeca0822fc8dd9` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom 与小程序条件编译回退 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, and Mini Program conditional fallbacks |
 | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Catalog/detail read and reservation write async-provider runtime / 目录/详情读取与预约写入 async-provider runtime |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。

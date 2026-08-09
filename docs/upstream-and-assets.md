@@ -4,16 +4,16 @@
 
 | 输入 / Input | 地址 / Location | 提交 / Commit | 许可证 / License | 使用方式 / Use |
 | --- | --- | --- | --- | --- |
-| HIA-uView | `src/vendor/HIA-uView` | `8213f2b676c2b5470bfdef9b3c95c4fde39baf45` | MIT | 通过明确 Vite alias 使用 UI 源码、完整样式入口、默认主题和小程序条件编译回退 / UI source, complete style entry, default theme, and Mini Program conditional fallbacks through explicit Vite aliases |
+| HIA-uView | `src/vendor/HIA-uView` | `1dfde9f17fc3654857ba17c12ffeca0822fc8dd9` | MIT | 通过明确 `file:` package、静态 Easycom、完整样式入口、默认主题、locale provider bridge、package-owned types 和小程序条件编译回退消费 UI；不深导入 UI runtime 私有状态 / Consumes UI through the explicit `file:` package, static Easycom, complete style entry, default theme, locale provider bridge, package-owned types, and Mini Program conditional fallbacks; it does not deep-import UI runtime private state |
 | HIA-uView-Biz | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | MIT | 通过明确 Vite alias 使用 async-provider runtime / async-provider runtime through an explicit Vite alias |
 
 两个 submodule 均保留为 Git link。升级只能经单独审阅：更新 Git link、记录新 commit、重跑本仓测试与 H5/mp-weixin 构建，再审阅许可证/NOTICE 变化。
 
 Both submodules remain Git links. Upgrade only through a separate review: update the Git link, record the new commit, rerun this repository’s tests and H5/mp-weixin builds, then review license/NOTICE changes.
 
-当前 HIA-uView pin 纳入了微信小程序编译时将组件规则写入 app WXSS 的修复，以及默认浅色 token 的受控 `MP-WEIXIN` 条件编译回退；BP 还以受限 `easycom` 直接将 `u-*` 标签解析到该 pin 的叶级 SFC，以生成组件自身的 JS/JSON/WXSS。两项变更均经过 UI 的文档、主题、H5/mp-weixin fixture、契约与 runtime 检查后才可被 BP 采用。它们不扩大为真机、发布或业务后端支持声明。
+当前 HIA-uView pin 纳入了微信小程序编译时将组件规则写入 app WXSS 的修复、默认浅色 token 的受控 `MP-WEIXIN` 条件编译回退，以及 package-owned declarations、显式 opt-in global types 与静态 Easycom fragment。BP 继续以受限 `easycom` 直接将 `u-*` 标签解析到该 pin 的叶级 SFC，以生成组件自身的 JS/JSON/WXSS。上述能力均经过 UI 的文档、主题、H5/mp-weixin fixture、契约、runtime 与 local package trial 检查后才可被 BP 采用；它们不扩大为真机、发布或业务后端支持声明。
 
-The current HIA-uView pin includes the repair that writes component rules to app WXSS during Mini Program compilation and controlled default-light token `MP-WEIXIN` conditional fallbacks; BP additionally resolves `u-*` tags directly to leaf SFCs in that pin through bounded `easycom` so component JS/JSON/WXML/WXSS are generated as well. BP adopts both changes only after the UI documentation, theme, H5/mp-weixin fixture, contract, and runtime checks pass. They do not expand into a device, release, or business-backend support claim.
+The current HIA-uView pin includes the repair that writes component rules to app WXSS during Mini Program compilation, controlled default-light token `MP-WEIXIN` conditional fallbacks, package-owned declarations, explicit opt-in global types, and a static Easycom fragment. BP additionally resolves `u-*` tags directly to leaf SFCs in that pin through bounded `easycom` so component JS/JSON/WXML/WXSS are generated as well. BP adopts these capabilities only after the UI documentation, theme, H5/mp-weixin fixture, contract, runtime, and local package-trial checks pass. They do not expand into a device, release, or business-backend support claim.
 
 HIA-uView 的更早上游参考项目（uView、uView2.0、uView-Pro、uview-plus）由 HIA-uView 自身的审计与 NOTICE 治理负责。本 BP 不直接复制这些项目的源码。
 

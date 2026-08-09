@@ -5,8 +5,9 @@
 -->
 <template>
   <!-- <lang><zh-CN>badge 只显示有限 authority 文案；降级时追加明确提示，不隐藏 source 状态。</zh-CN><en>Badge displays only finite authority copy and adds an explicit notice when degraded rather than hiding source state.</en></lang> -->
-  <view class="source-badge" :class="`source-badge--${safeAuthority}`">
-    <text class="source-badge__label">{{ label }}</text>
+  <view class="source-badge">
+    <!-- <lang><zh-CN>authority 复用 HIA-uView 的有限 tag 视觉，不在 BP 创建第二套 source 色板；文字始终是主语义。</zh-CN><en>Authority reuses the finite HIA-uView tag treatment and creates no second source color palette in the BP; text always carries the primary meaning.</en></lang> -->
+    <u-tag :text="label" :tone="badgeTone" />
     <text v-if="props.source.degradedReason" class="source-badge__detail">{{ runtimeLocale.t('source.degraded') }}</text>
   </view>
 </template>
@@ -34,13 +35,13 @@ const safeAuthority = computed(() => ['local', 'virtual', 'remote'].includes(pro
 
 // <lang><zh-CN>文字由有限 authority allowlist 对应的资源 key 生成，未转发 source ID、URL 或内部原因。</zh-CN><en>Copy derives from resource keys corresponding to a finite authority allowlist and forwards no source ID, URL, or internal reason.</en></lang>
 const label = computed(() => runtimeLocale.t(`source.${safeAuthority.value}`));
+
+// <lang><zh-CN>tone 只为有限 authority 提供辅助层级；它不编码 online、可信度或写入成功等未验证语义。</zh-CN><en>Tone provides only supporting hierarchy for finite authorities; it encodes no unverified semantics such as online status, trust, or write success.</en></lang>
+const badgeTone = computed(() => safeAuthority.value === 'virtual' ? 'accent' : safeAuthority.value === 'remote' ? 'neutral' : 'primary');
 </script>
 
 <style scoped>
-/* <lang><zh-CN>badge 使用深色文字与浅色表面，不把清透青实底搭配白字。</zh-CN><en>Badge uses dark text with light surface and never pairs solid clear cyan with white text.</en></lang> */
-.source-badge { display: inline-flex; gap: 6px; align-items: center; min-height: 26px; padding: 0 10px; border-radius: 999px; font-size: 12px; color: var(--u-sys-color-text); background: var(--u-sys-color-surface-subtle); }
-.source-badge--local { border: 1px solid #b4c8e8; }
-.source-badge--virtual { background: #d9f2f8; }
-.source-badge--remote { background: #e1ebf8; }
+/* <lang><zh-CN>容器仅排列公共 tag 与降级文字，不复制 tag 的颜色、边框、圆角或交互语义。</zh-CN><en>The container only arranges the public tag and degradation copy; it does not duplicate the tag's colors, border, radius, or interaction semantics.</en></lang> */
+.source-badge { display: inline-flex; gap: 6px; align-items: center; min-height: 26px; }
 .source-badge__detail { color: var(--u-sys-color-text-secondary); }
 </style>
