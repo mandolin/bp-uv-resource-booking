@@ -12,6 +12,12 @@ import { fileURLToPath } from 'node:url';
 
 // <lang><zh-CN>导入公开的独立 client 工厂；测试不会读取或修改 provider 私有 closure。</zh-CN><en>Import public independent-client factory; tests neither read nor modify provider private closure.</en></lang>
 import { createLocalReservationWriteClient } from '../src/services/local-reservation-write-provider.mjs';
+import {
+  confirmLocalReservation,
+  loadResourceDetail,
+  prepareLocalBooking,
+  useBookingDemo
+} from '../src/state/booking-demo.mjs';
 
 /**
  * <lang><zh-CN>启动并等待一条有限 write command。</zh-CN><en>Starts and awaits one finite write command.</en></lang>
@@ -174,6 +180,32 @@ test('invalid reschedule slot keeps prior booking confirmed and returns no parti
     time: '09:00'
   });
   assert.equal(createdReplay.reservation.status, 'confirmed');
+});
+
+test('state accepts only a detail-validated booking draft before a Biz-backed confirmation', async () => {
+  // <lang><zh-CN>先经真实 local read action 装载有限资源详情，测试不伪造 selected detail 或路由输入。</zh-CN><en>Load finite resource detail through actual local read action first; the test fabricates neither selected detail nor route input.</en></lang>
+  await loadResourceDetail('riverside-court-a');
+
+  // <lang><zh-CN>未声明日期不能形成草稿，且 readonly public state 不应保留旧选择。</zh-CN><en>An undeclared date cannot form a draft, and readonly public state must retain no stale selection.</en></lang>
+  const rejectedDraft = prepareLocalBooking('2026-08-11', '09:00');
+  assert.equal(rejectedDraft.kind, 'failure');
+  assert.equal(useBookingDemo().bookingDraft.value, null);
+
+  // <lang><zh-CN>详情 allowlist 内的日期和时段形成与当前资源绑定的受限草稿。</zh-CN><en>Date and slot in detail allowlists form a bounded draft bound to current resource.</en></lang>
+  const preparedDraft = prepareLocalBooking('2026-08-08', '09:00');
+  assert.equal(preparedDraft.kind, 'selection-ready');
+  assert.deepEqual(useBookingDemo().bookingDraft.value, {
+    resourceId: 'riverside-court-a',
+    date: '2026-08-08',
+    time: '09:00'
+  });
+
+  // <lang><zh-CN>确认 action 不接收页面参数，只消费上述草稿并继续经过已锁定 Biz write adapter。</zh-CN><en>The confirmation action accepts no page parameter, consumes only above draft, and continues through locked Biz write adapter.</en></lang>
+  const outcome = await confirmLocalReservation();
+  assert.equal(outcome.kind, 'confirmed');
+  assert.equal(outcome.reservation.resourceId, 'riverside-court-a');
+  assert.equal(outcome.reservation.date, '2026-08-08');
+  assert.equal(outcome.reservation.time, '09:00');
 });
 
 test('booking state imports the write adapter and does not retain raw reservation-domain mutation', async () => {

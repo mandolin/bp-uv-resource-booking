@@ -19,7 +19,7 @@ import {
   BOOKING_DOMAIN_VERSION,
   createLocalCatalogFilterOptions
 } from '../domain/booking-domain.mjs';
-import localDataset from '../data/venues.json';
+import localDataset from '../data/venues.json' with { type: 'json' };
 
 /**
  * <lang><zh-CN>目录每页固定展示数量。</zh-CN><en>Fixed number of catalog entries per page.</en></lang>
@@ -125,6 +125,13 @@ const catalogFailure = ref(null);
  * @lang en Detail retains only result of last explicit navigation request and caches neither multiple entities nor cross-session state.
  */
 const selectedDetail = ref(null);
+
+/**
+ * <lang><zh-CN>从资源详情进入确认页前的受限本地预约草稿。</zh-CN><en>Bounded local booking draft held before moving from resource detail to confirmation.</en></lang>
+ * @lang zh-CN 草稿只包含 provider-read 资源 ID 及已声明的日期/时段；它不含用户、价格、支付、token 或持久化数据。
+ * @lang en The draft contains only provider-read resource ID and declared date/slot; it has no user, price, payment, token, or persistent data.
+ */
+const bookingDraft = ref(null);
 
 /**
  * <lang><zh-CN>详情加载状态。</zh-CN><en>Detail loading state.</en></lang>
@@ -324,6 +331,9 @@ export async function loadResourceDetail(resourceId) {
   // <lang><zh-CN>请求取消旧详情，避免返回较慢的旧资源覆盖新导航。</zh-CN><en>Request cancellation of old detail, avoiding a slower old resource overwriting new navigation.</en></lang>
   activeDetailHandle?.cancel();
 
+  // <lang><zh-CN>新详情读取使旧资源的预约草稿失效，避免确认页跨资源复用日期或时段。</zh-CN><en>A new detail read invalidates an old resource’s booking draft, preventing confirmation from reusing date or slot across resources.</en></lang>
+  bookingDraft.value = null;
+
   // <lang><zh-CN>清空前一详情 failure 并进入独立 loading phase。</zh-CN><en>Clear prior detail failure and enter independent loading phase.</en></lang>
   detailFailure.value = null;
   detailPhase.value = 'loading';
@@ -356,6 +366,35 @@ export async function loadResourceDetail(resourceId) {
   // <lang><zh-CN>写入纯 detail 与 ready phase；source 已随 outcome 受限携带。</zh-CN><en>Write pure detail and ready phase; bounded source already accompanies outcome.</en></lang>
   selectedDetail.value = outcome;
   detailPhase.value = 'ready';
+}
+
+/**
+ * <lang><zh-CN>为当前已加载资源准备一个受限的本地预约草稿。</zh-CN><en>Prepares a bounded local booking draft for the currently loaded resource.</en></lang>
+ * @param {string} date <lang><zh-CN>详情页已选择的 ISO 日期。</zh-CN><en>ISO date selected on the detail page.</en></lang>
+ * @param {string} time <lang><zh-CN>详情页已选择的已声明时段。</zh-CN><en>Declared slot selected on the detail page.</en></lang>
+ * @returns {object} <lang><zh-CN>selection-ready 或 bounded failure outcome。</zh-CN><en>A selection-ready or bounded failure outcome.</en></lang>
+ * @lang zh-CN 本 action 只建立进程内页面流草稿，不发起 Biz write、网络、storage、预约 mutation 或身份处理。
+ * @lang en This action creates only an in-process page-flow draft and starts no Biz write, network, storage, reservation mutation, or identity handling.
+ */
+export function prepareLocalBooking(date, time) {
+  // <lang><zh-CN>草稿只能关联当前 ready detail；不能由路由参数或旧页面字段构造。</zh-CN><en>A draft can associate only with current ready detail and cannot be constructed from route parameters or stale page fields.</en></lang>
+  const detail = selectedDetail.value;
+
+  // <lang><zh-CN>日期和时段均必须来自当前资源的明确 allowlist。</zh-CN><en>Both date and slot must come from explicit allowlists of current resource.</en></lang>
+  const hasAvailableDate = detail?.kind === 'detail' && detail.resource.availableDates.includes(date);
+  const hasAvailableSlot = detail?.kind === 'detail' && detail.resource.availableSlots.includes(time);
+
+  // <lang><zh-CN>无详情或未知选择不会保留旧草稿，并以受限失败留在详情页处理。</zh-CN><en>No detail or unknown selection retains no old draft and returns a bounded failure for the detail page to handle.</en></lang>
+  if (!hasAvailableDate || !hasAvailableSlot) {
+    bookingDraft.value = null;
+    return createStateBookingFailure('conflict', '请选择当前资源已声明的日期和时段。', 'Choose a date and time declared for the current resource.');
+  }
+
+  // <lang><zh-CN>只复制进入确认页必要的稳定 ID 与原始值，避免 draft 携带完整详情或 UI event。</zh-CN><en>Copy only stable ID and primitives needed by confirmation, preventing the draft from carrying full detail or a UI event.</en></lang>
+  bookingDraft.value = { resourceId: detail.resource.id, date, time };
+
+  // <lang><zh-CN>返回新的 plain-data outcome，页面据此执行本地导航而不把 draft 自身写进 route。</zh-CN><en>Return a new plain-data outcome so the page performs local navigation without writing the draft itself into a route.</en></lang>
+  return { contractVersion: BOOKING_DOMAIN_VERSION, kind: 'selection-ready', selection: { ...bookingDraft.value } };
 }
 
 /**
@@ -447,15 +486,17 @@ async function submitReservationWrite(command) {
 
 /**
  * <lang><zh-CN>确认当前 selected detail 的 local 示例预约。</zh-CN><en>Confirms a local demo reservation for current selected detail.</en></lang>
- * @param {string} date <lang><zh-CN>页面选择的 ISO 日期。</zh-CN><en>ISO date selected by the page.</en></lang>
- * @param {string} time <lang><zh-CN>页面选择的已声明 slot。</zh-CN><en>Declared slot selected by the page.</en></lang>
  * @returns {Promise<object>} <lang><zh-CN>Biz write adapter 的 confirmed 或 bounded failure outcome。</zh-CN><en>Confirmed or bounded failure outcome from Biz write adapter.</en></lang>
- * @lang zh-CN 创建只经 Biz write lifecycle 到达 local authority；它不调用远端 API、支付或 storage。
- * @lang en Creation reaches local authority only through Biz write lifecycle; it calls no remote API, payment, or storage.
+ * @lang zh-CN 创建只经 Biz write lifecycle 到达 local authority，且只消费详情页已验证的进程内草稿；它不调用远端 API、支付或 storage。
+ * @lang en Creation reaches local authority only through Biz write lifecycle and consumes only an in-process draft validated by detail; it calls no remote API, payment, or storage.
  */
-export async function confirmLocalReservation(date, time) {
-  // <lang><zh-CN>没有 ready detail 时 write 尚未开始，返回可恢复冲突而不从路由/隐藏状态构造 command。</zh-CN><en>Without ready detail write has not started; return recoverable conflict and construct no command from route/hidden state.</en></lang>
-  if (selectedDetail.value?.kind !== 'detail') {
+export async function confirmLocalReservation() {
+  // <lang><zh-CN>读取当前 detail 与草稿；二者都必须存在且资源 ID 相同，不能从路由/隐藏状态构造 command。</zh-CN><en>Read current detail and draft; both must exist with matching resource IDs, and no command is constructed from route/hidden state.</en></lang>
+  const detail = selectedDetail.value;
+  const draft = bookingDraft.value;
+
+  // <lang><zh-CN>任何草稿不变量缺失时 write 尚未开始，返回可恢复冲突并保留预约集合。</zh-CN><en>When any draft invariant is missing, write has not started; return a recoverable conflict and retain reservation collection.</en></lang>
+  if (detail?.kind !== 'detail' || !draft || draft.resourceId !== detail.resource.id || !detail.resource.availableDates.includes(draft.date) || !detail.resource.availableSlots.includes(draft.time)) {
     // <lang><zh-CN>更新页面 phase 与受限 failure，不修改预约集合。</zh-CN><en>Update page phase and bounded failure without modifying reservation collection.</en></lang>
     const failure = createStateBookingFailure('conflict', '请先重新选择可预约资源。', 'Choose a bookable resource again first.');
     bookingPhase.value = 'conflict';
@@ -467,13 +508,13 @@ export async function confirmLocalReservation(date, time) {
   bookingPhase.value = 'submitting';
   bookingWriteFailure.value = null;
 
-  // <lang><zh-CN>从已经 provider-read 的 detail 提取有限 resource ID，命令不携带整份 detail 或页面对象。</zh-CN><en>Take finite resource ID from provider-read detail; command carries no complete detail or page object.</en></lang>
+  // <lang><zh-CN>从已验证草稿和 provider-read detail 提取有限原始值，命令不携带整份 detail 或页面对象。</zh-CN><en>Take finite primitives from validated draft and provider-read detail; command carries no complete detail or page object.</en></lang>
   const command = {
     commandId: createNextReservationCommandId(),
     operation: 'create',
-    resourceId: selectedDetail.value.resource.id,
-    date,
-    time
+    resourceId: detail.resource.id,
+    date: draft.date,
+    time: draft.time
   };
 
   // <lang><zh-CN>唯一 write helper 负责通过 Biz runtime 发送、隔离并等待 command。</zh-CN><en>The sole write helper sends, isolates, and awaits command through Biz runtime.</en></lang>
@@ -603,6 +644,7 @@ export function useBookingDemo() {
     catalogFailure: readonly(catalogFailure),
     canLoadMore: readonly(canLoadMore),
     selectedDetail: readonly(selectedDetail),
+    bookingDraft: readonly(bookingDraft),
     detailPhase: readonly(detailPhase),
     detailFailure: readonly(detailFailure),
     reservations: readonly(reservations),
@@ -613,6 +655,7 @@ export function useBookingDemo() {
     refreshCatalog,
     loadNextCatalogPage,
     loadResourceDetail,
+    prepareLocalBooking,
     confirmLocalReservation,
     cancelLocalReservation,
     rescheduleLocalReservation

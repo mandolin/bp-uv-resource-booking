@@ -8,24 +8,19 @@
     <!-- <lang><zh-CN>确认页使用带本地化返回文字的应用自管 navbar，并保持表单内业务状态由页面拥有。</zh-CN><en>Confirmation uses the application-owned navbar with localized back copy while retaining page ownership of form business state.</en></lang> -->
     <runtime-page-shell :title="runtimeLocale.t('title.confirm')" back>
       <view class="booking-confirm-page">
-      <!-- <lang><zh-CN>页面只在已有 detail 时开放确认；无 detail 时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with an existing detail; without it, explicit recovery prevents a hidden state or URL from creating a reservation directly.</en></lang> -->
-      <view v-if="detail.kind === 'detail'" class="booking-confirm-page__content">
+      <!-- <lang><zh-CN>页面只在已有 detail 和同资源已验证草稿时开放确认；无任一条件时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with existing detail and same-resource validated draft; without either, explicit recovery prevents hidden state or URL from creating a booking directly.</en></lang> -->
+      <view v-if="hasBookingDraft" class="booking-confirm-page__content">
         <source-badge :source="detail.source" />
         <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('booking.eyebrow') }}</text>
         <text class="booking-confirm-page__title">{{ resourceName }}</text>
         <text class="booking-confirm-page__venue">{{ venueName }} · {{ districtName }}</text>
-        <u-form>
-          <u-form-item :label="runtimeLocale.t('booking.chooseDate')" :help-text="runtimeLocale.t('booking.chooseDateHint')" required>
-            <view class="booking-confirm-page__choices">
-              <u-button v-for="date in dateOptions" :key="date.value" :label="date.label" :variant="selectedDate === date.value ? 'primary' : 'secondary'" size="sm" @click="selectedDate = date.value" />
-            </view>
-          </u-form-item>
-          <u-form-item :label="runtimeLocale.t('booking.chooseSlot')" :help-text="runtimeLocale.t('booking.chooseSlotHint')" required>
-            <view class="booking-confirm-page__choices">
-              <u-button v-for="slot in detail.resource.availableSlots" :key="slot" :label="slot" :variant="selectedTime === slot ? 'primary' : 'secondary'" size="sm" @click="selectedTime = slot" />
-            </view>
-          </u-form-item>
-        </u-form>
+        <!-- <lang><zh-CN>确认页只回显详情页已验证选择；它不重新开放任意日期/时段输入或将草稿写入 route。</zh-CN><en>Confirmation only echoes selection validated by detail; it reopens no arbitrary date/slot input and writes no draft into route.</en></lang> -->
+        <u-card :title="runtimeLocale.t('booking.selectionTitle')">
+          <u-cell :label="runtimeLocale.t('booking.venueLabel')" :value="venueName" />
+          <u-cell :label="runtimeLocale.t('booking.resourceLabel')" :value="resourceName" />
+          <u-cell :label="runtimeLocale.t('booking.dateLabel')" :value="selectedDateLabel" />
+          <u-cell :label="runtimeLocale.t('booking.timeLabel')" :value="bookingDraft.time" />
+        </u-card>
         <u-notice v-if="resultMessage" visible :tone="resultTone" :message="resultMessage" />
         <u-notice visible tone="info" :message="runtimeLocale.t('booking.localNotice')" />
         <!-- <lang><zh-CN>此按钮只调用已锁定 Biz write adapter 的 state action；页面不直接改写预约、调用 domain 或模拟后端。</zh-CN><en>This button calls only the state action backed by locked Biz write adapter; page directly mutates no reservation, calls no domain, and simulates no backend.</en></lang> -->
@@ -54,19 +49,22 @@ const runtimeLocale = useRuntimeLocale();
 // <lang><zh-CN>缺失详情时返回空对象，使模板明确走空态而非读取隐藏字段。</zh-CN><en>Return an empty object when detail is absent, making the template explicitly use the empty state rather than reading hidden fields.</en></lang>
 const detail = computed(() => demo.selectedDetail.value ?? {});
 
+// <lang><zh-CN>确认页只读取 state 已验证的受限草稿，页面不从路由、storage 或临时表单重建选择。</zh-CN><en>Confirmation reads only bounded draft already validated by state and rebuilds no selection from route, storage, or a temporary form.</en></lang>
+const bookingDraft = computed(() => demo.bookingDraft.value ?? {});
+
+// <lang><zh-CN>草稿必须对应当前 ready detail，且日期与时段仍在该资源的明确 allowlist 中。</zh-CN><en>The draft must correspond to current ready detail, with date and slot still in that resource’s explicit allowlists.</en></lang>
+const hasBookingDraft = computed(() => detail.value.kind === 'detail'
+  && bookingDraft.value.resourceId === detail.value.resource.id
+  && detail.value.resource.availableDates.includes(bookingDraft.value.date)
+  && detail.value.resource.availableSlots.includes(bookingDraft.value.time));
+
 // <lang><zh-CN>确认标题只经 runtime `localize` 投影当前 detail 的有限双语字段。</zh-CN><en>Confirmation headings project finite bilingual fields of current detail only through runtime `localize`.</en></lang>
 const resourceName = computed(() => runtimeLocale.localize(detail.value.resource?.name));
 const venueName = computed(() => runtimeLocale.localize(detail.value.venue?.name));
 const districtName = computed(() => runtimeLocale.localize(detail.value.venue?.district));
 
-// <lang><zh-CN>日期只来自当前资源明确声明的 local availability；标签随当前 locale 格式化，但不从系统时间、远端日历或动态脚本派生。</zh-CN><en>Dates come only from local availability explicitly declared by the current resource; labels follow current locale but derive from no system clock, remote calendar, or dynamic script.</en></lang>
-const dateOptions = computed(() => (detail.value.kind === 'detail' ? detail.value.resource.availableDates : []).map((value) => Object.freeze({ value, label: runtimeLocale.formatDate(value) })));
-
-// <lang><zh-CN>默认选中当前资源的第一个明确日期；没有详情时空值阻止 booking command。</zh-CN><en>Select the current resource’s first explicit date by default; without a detail, an empty value blocks a booking command.</en></lang>
-const selectedDate = ref(detail.value.kind === 'detail' ? detail.value.resource.availableDates[0] ?? '' : '');
-
-// <lang><zh-CN>时段只在 detail ready 后初始化；空值使缺失 detail 不能构造 booking。</zh-CN><en>Slot initializes only after detail is ready; an empty value prevents booking construction without a detail.</en></lang>
-const selectedTime = ref(detail.value.kind === 'detail' ? detail.value.resource.availableSlots[0] ?? '' : '');
+// <lang><zh-CN>日期只格式化详情已验证并放入草稿的 ISO 值；不从系统时间、远端日历或动态脚本派生。</zh-CN><en>Date formats only ISO value validated by detail and placed in draft; it derives from no system clock, remote calendar, or dynamic script.</en></lang>
+const selectedDateLabel = computed(() => runtimeLocale.formatDate(bookingDraft.value.date));
 
 // <lang><zh-CN>结果只保存已本地化的可见文本，不保存原始错误、输入或领域对象。</zh-CN><en>Result retains only localized visible copy and stores no raw error, input, or domain object.</en></lang>
 const resultMessage = ref('');
@@ -81,8 +79,8 @@ const resultTone = ref('info');
  * @lang en The action handles no remote transaction; success, conflict, and uncertain failure all remain visible and recoverable on current page.
  */
 async function confirmBooking() {
-  // <lang><zh-CN>等待 state 经 Biz write runtime 返回 canonical outcome；参数都来自有限页面选择。</zh-CN><en>Await canonical outcome returned by state through Biz write runtime; every argument comes from finite page selection.</en></lang>
-  const outcome = await demo.confirmLocalReservation(selectedDate.value, selectedTime.value);
+  // <lang><zh-CN>等待 state 经 Biz write runtime 返回 canonical outcome；state 只消费详情页已验证草稿。</zh-CN><en>Await canonical outcome returned by state through Biz write runtime; state consumes only the detail-validated draft.</en></lang>
+  const outcome = await demo.confirmLocalReservation();
 
   // <lang><zh-CN>失败只呈现 domain 已受限的双语字段经统一 helper 投影后的单语言文本。</zh-CN><en>On failure, present only the single-language text projected by the shared helper from domain-bounded bilingual fields.</en></lang>
   if (outcome.kind === 'failure') {
@@ -118,5 +116,4 @@ function backToDiscover() {
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .booking-confirm-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
 .booking-confirm-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
-.booking-confirm-page__choices { display: flex; gap: 8px; flex-wrap: wrap; }
 </style>

@@ -21,11 +21,20 @@
         <text class="resource-detail-page__title">{{ resourceName }}</text>
         <text class="resource-detail-page__venue">{{ venueName }} · {{ districtName }}</text>
         <text class="resource-detail-page__summary">{{ venueSummary }}</text>
-        <u-card :title="runtimeLocale.t('detail.availableSlots')" :sub-title="runtimeLocale.t('detail.localSchedule')">
-          <view class="resource-detail-page__slots"><u-tag v-for="slot in detail.resource.availableSlots" :key="slot" :text="slot" tone="accent" shape="pill" /></view>
+        <!-- <lang><zh-CN>日期和时段都只来自当前资源的明确 local allowlist；按钮选择由页面拥有，组件不推断库存。</zh-CN><en>Both dates and slots come only from current resource’s explicit local allowlists; the page owns button selection and the component infers no inventory.</en></lang> -->
+        <u-card :title="runtimeLocale.t('detail.availableDates')" :sub-title="runtimeLocale.t('detail.chooseDate')">
+          <view class="resource-detail-page__choices">
+            <u-button v-for="date in availableDates" :key="date.value" :label="date.label" :variant="selectedDate === date.value ? 'primary' : 'secondary'" size="sm" @click="selectDate(date.value)" />
+          </view>
         </u-card>
+        <u-card :title="runtimeLocale.t('detail.availableSlots')" :sub-title="runtimeLocale.t('detail.chooseSlot')">
+          <view class="resource-detail-page__choices">
+            <u-button v-for="slot in detail.resource.availableSlots" :key="slot" :label="slot" :variant="selectedTime === slot ? 'primary' : 'secondary'" size="sm" @click="selectTime(slot)" />
+          </view>
+        </u-card>
+        <u-notice v-if="selectionFailure" visible tone="error" :message="runtimeLocale.localize(selectionFailure.message) || runtimeLocale.t('common.notAvailable')" />
         <u-notice visible tone="info" :message="runtimeLocale.t('detail.bookingNotice')" />
-        <u-button :label="runtimeLocale.t('detail.continueBooking')" block @click="continueBooking" />
+        <u-button :label="runtimeLocale.t('detail.continueBooking')" block :disabled="!selectedDate || !selectedTime" @click="continueBooking" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('detail.emptyTitle')" :description="runtimeLocale.t('detail.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
       </view>
@@ -34,7 +43,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
@@ -52,12 +61,43 @@ const runtimeLocale = useRuntimeLocale();
 // <lang><zh-CN>模板只在 ready branch 消费此 detail；缺失时空对象保持 computed 无副作用。</zh-CN><en>The template consumes this detail only in the ready branch; an empty object on absence keeps computed values side-effect-free.</en></lang>
 const detail = computed(() => demo.selectedDetail.value ?? {});
 
+// <lang><zh-CN>日期和时段值只在详情成功后从其有限 allowlist 初始化；空值使缺失详情不能创建草稿。</zh-CN><en>Date and slot values initialize only from finite allowlists after detail succeeds; empty values prevent creating a draft without detail.</en></lang>
+const selectedDate = ref('');
+const selectedTime = ref('');
+
+// <lang><zh-CN>详情页保留最近一次草稿校验失败，以便用户在原地调整选择而不是误以为已经预约。</zh-CN><en>The detail page retains the most recent draft-validation failure so a user can adjust selection in place rather than believe a booking already exists.</en></lang>
+const selectionFailure = ref(null);
+
+/**
+ * <lang><zh-CN>在详情切换后用该资源的首个有限日期和时段同步页面选择。</zh-CN><en>Synchronizes page selection to the resource’s first finite date and slot after detail changes.</en></lang>
+ * @param {object} nextDetail <lang><zh-CN>state 提供的最新 detail outcome 或空对象。</zh-CN><en>Latest detail outcome or empty object supplied by state.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 同步不请求 availability，也不保留前一资源的 selection；每个资源需显式以自己的声明值重新开始。
+ * @lang en Synchronization requests no availability and retains no prior resource selection; every resource explicitly restarts from its own declared values.
+ */
+function synchronizeBookingSelection(nextDetail) {
+  // <lang><zh-CN>成功 detail 使用首项，其他 phase 清空选择，确保 disabled 按钮反映真实页面状态。</zh-CN><en>A successful detail uses first entries while other phases clear selection, ensuring disabled button reflects actual page state.</en></lang>
+  selectedDate.value = nextDetail.kind === 'detail' ? nextDetail.resource.availableDates[0] ?? '' : '';
+  selectedTime.value = nextDetail.kind === 'detail' ? nextDetail.resource.availableSlots[0] ?? '' : '';
+
+  // <lang><zh-CN>新详情没有继承旧草稿失败，避免错误消息跨资源显示。</zh-CN><en>A new detail inherits no prior draft failure, avoiding error copy displayed across resources.</en></lang>
+  selectionFailure.value = null;
+}
+
+// <lang><zh-CN>state 更新是资源切换的唯一选择同步入口；immediate 覆盖页面首次加载前后的两种时序。</zh-CN><en>A state update is the sole selection-synchronization entry for resource changes; immediate covers timing both before and after first page load.</en></lang>
+watch(detail, synchronizeBookingSelection, { immediate: true });
+
 // <lang><zh-CN>所有可见领域字段经同一 `localize` helper 选择语言与 fallback。</zh-CN><en>Every visible domain field selects language and fallback through the same `localize` helper.</en></lang>
 const resourceName = computed(() => runtimeLocale.localize(detail.value.resource?.name));
 const resourceType = computed(() => runtimeLocale.localize(detail.value.resource?.type));
 const venueName = computed(() => runtimeLocale.localize(detail.value.venue?.name));
 const districtName = computed(() => runtimeLocale.localize(detail.value.venue?.district));
 const venueSummary = computed(() => runtimeLocale.localize(detail.value.venue?.summary));
+
+// <lang><zh-CN>日期标签使用共享 locale 格式化当前资源 JSON 已声明的 ISO 值，不生成或查询日历日期。</zh-CN><en>Date labels format only ISO values declared by current resource JSON through shared locale and generate or query no calendar date.</en></lang>
+const availableDates = computed(() => detail.value.kind === 'detail'
+  ? detail.value.resource.availableDates.map((value) => Object.freeze({ value, label: runtimeLocale.formatDate(value) }))
+  : []);
 
 // <lang><zh-CN>图片只经已登记 asset map 读取，未知 ID 不会变成网络或文件路径。</zh-CN><en>The image is read only through the registered asset map; an unknown ID cannot become a network or file path.</en></lang>
 const venueImage = computed(() => detail.value.venue ? getVenueImage(detail.value.venue.imageId) : null);
@@ -80,8 +120,49 @@ async function readRouteResource(query) {
  * @lang zh-CN 详情已在共享受限 state 中，路由不复制资源对象、source 或业务字段。
  * @lang en Detail already exists in shared bounded state; routing copies no resource object, source, or business field.
  */
+/**
+ * <lang><zh-CN>选择当前资源已声明的一个日期。</zh-CN><en>Selects one date declared by current resource.</en></lang>
+ * @param {string} date <lang><zh-CN>当前按钮绑定的有限 ISO 日期。</zh-CN><en>Finite ISO date bound by current button.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 选择变化不启动读取、写入或库存预留；它只更新详情页本地草稿候选。
+ * @lang en Changing selection starts no read, write, or inventory hold; it updates only local draft candidate on detail.
+ */
+function selectDate(date) {
+  // <lang><zh-CN>值来自当前按钮绑定的 finite local option，选择变化不启动读取或写入。</zh-CN><en>Value comes from current button’s finite local option; changing selection starts no read or write.</en></lang>
+  selectedDate.value = date;
+  selectionFailure.value = null;
+}
+
+/**
+ * <lang><zh-CN>选择当前资源已声明的一个时段。</zh-CN><en>Selects one slot declared by current resource.</en></lang>
+ * @param {string} time <lang><zh-CN>当前按钮绑定的有限时段。</zh-CN><en>Finite slot bound by current button.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 选择变化不启动读取、写入或库存预留；预约仅在确认页经 Biz write boundary 提交。
+ * @lang en Changing selection starts no read, write, or inventory hold; a booking submits only through Biz write boundary on confirmation.
+ */
+function selectTime(time) {
+  // <lang><zh-CN>值来自当前按钮绑定的 finite local option，选择变化清除旧草稿失败。</zh-CN><en>Value comes from current button’s finite local option; a selection change clears prior draft failure.</en></lang>
+  selectedTime.value = time;
+  selectionFailure.value = null;
+}
+
+/**
+ * <lang><zh-CN>验证详情页选择并进入本地确认页。</zh-CN><en>Validates detail-page selection and enters local confirmation.</en></lang>
+ * @returns {void} <lang><zh-CN>验证成功时导航，否则保留当前页面的受限失败。</zh-CN><en>Navigates on successful validation; otherwise retains bounded failure on current page.</en></lang>
+ * @lang zh-CN 该步骤只创建受限进程内草稿，不创建预约、请求、支付或库存预留。
+ * @lang en This step creates only a bounded in-process draft and creates no booking, request, payment, or inventory hold.
+ */
 function continueBooking() {
-  // <lang><zh-CN>只执行本地页面导航，不创建预约、请求或支付流程。</zh-CN><en>Perform only local page navigation and create no reservation, request, or payment flow.</en></lang>
+  // <lang><zh-CN>先经共享 state 验证 detail 与两个 allowlist，不将日期/时段写进 route。</zh-CN><en>Validate detail and both allowlists through shared state first and write neither date nor slot into route.</en></lang>
+  const outcome = demo.prepareLocalBooking(selectedDate.value, selectedTime.value);
+
+  // <lang><zh-CN>失败留在当前详情页供用户调整，不能导航到一个无效确认流程。</zh-CN><en>Keep failure on current detail page for adjustment and never navigate to an invalid confirmation flow.</en></lang>
+  if (outcome.kind === 'failure') {
+    selectionFailure.value = outcome;
+    return;
+  }
+
+  // <lang><zh-CN>草稿已验证后只执行本地页面导航，实际预约仍在确认页触发。</zh-CN><en>After draft validation, perform only local page navigation; the actual booking still starts on confirmation.</en></lang>
   uni.navigateTo({ url: '/pages/booking-confirm/index' });
 }
 
@@ -110,6 +191,6 @@ onLoad(readRouteResource);
 .resource-detail-page__title { color: var(--u-sys-color-text); font-size: 28px; font-weight: 700; line-height: 1.25; }
 .resource-detail-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
 .resource-detail-page__summary { color: var(--u-sys-color-text); font-size: 15px; line-height: 1.7; }
-.resource-detail-page__slots { display: flex; gap: 8px; flex-wrap: wrap; }
+.resource-detail-page__choices { display: flex; gap: 8px; flex-wrap: wrap; }
 .resource-detail-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
 </style>

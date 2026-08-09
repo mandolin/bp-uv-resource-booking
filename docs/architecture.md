@@ -14,6 +14,10 @@ page → booking-demo state → local-project-provider → async-provider runtim
 
 Booking creation, cancellation, and reschedule use a separate but equally locked write adapter. Write authority is fixed to `local` before it starts and never automatically retries or falls back; state replaces its visible reservation list only after adapter returns a definite complete snapshot.
 
+资源详情先从该资源已声明的日期和时段中创建内存期草稿；确认页只能回显并提交同一资源的已验证草稿。草稿不进入 URL、storage 或后端请求，且本身不表示库存预留或预约已创建。
+
+Resource detail first creates an in-memory draft from dates and slots declared by that resource; confirmation can only echo and submit a validated draft for that same resource. The draft enters no URL, storage, or backend request and does not itself represent an inventory hold or a created booking.
+
 ```text
 page → booking-demo state → local-reservation-write-provider → async-provider runtime → local mock transaction → local JSON seed
 ```
