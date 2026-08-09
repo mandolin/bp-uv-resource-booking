@@ -8,7 +8,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import localDataset from '../src/data/venues.json' with { type: 'json' };
-import { createLocalCatalogPage, createLocalReservation, createLocalResourceDetail } from '../src/domain/booking-domain.mjs';
+import {
+  createLocalCatalogFilterOptions,
+  createLocalCatalogPage,
+  createLocalReservation,
+  createLocalResourceDetail
+} from '../src/domain/booking-domain.mjs';
 
 test('catalog uses explicit page facts and isolates entries', () => {
   // <lang><zh-CN>第一页以每页两项取得可预测小样本。</zh-CN><en>Read the first page with two entries for a predictable small fixture.</en></lang>
@@ -36,12 +41,45 @@ test('catalog rejects unsupported request shape without echoing it', () => {
   assert.equal('keyword' in outcome, false);
 });
 
+test('catalog applies declared local venue, type, and date filters before paging', () => {
+  // <lang><zh-CN>只查询澄港场馆的学习空间且要求已声明的八月八日可用性。</zh-CN><en>Query only study spaces at Harbor venue with declared availability on August 8.</en></lang>
+  const filteredPage = createLocalCatalogPage(localDataset, {
+    page: 1,
+    pageSize: 2,
+    keyword: '',
+    venueId: 'harbor-reading-hall',
+    resourceTypeId: 'study-space',
+    date: '2026-08-08'
+  });
+
+  // <lang><zh-CN>筛选后 total/hasNext 与同一结果集一致，并只保留两个受控资源。</zh-CN><en>After filtering, total/hasNext agree with one result set and retain only the two controlled resources.</en></lang>
+  assert.equal(filteredPage.kind, 'page');
+  assert.equal(filteredPage.total, 2);
+  assert.equal(filteredPage.hasNext, false);
+  assert.deepEqual(filteredPage.entries.map((entry) => entry.id), ['harbor-quiet-reading', 'harbor-shared-study-table']);
+});
+
+test('catalog filter options are detached, finite, and derived from declared availability', () => {
+  // <lang><zh-CN>从同一静态 dataset 获取页面可消费的 selector options。</zh-CN><en>Get selector options consumable by pages from the same static dataset.</en></lang>
+  const filterOptions = createLocalCatalogFilterOptions(localDataset);
+
+  // <lang><zh-CN>锁定四个场馆、五种资源类型和三个示例日期，不让页面自行扫描 JSON。</zh-CN><en>Lock four venues, five resource types, and three demo dates so pages do not scan JSON themselves.</en></lang>
+  assert.equal(filterOptions.venues.length, 4);
+  assert.equal(filterOptions.resourceTypes.length, 5);
+  assert.deepEqual(filterOptions.dates, ['2026-08-08', '2026-08-09', '2026-08-10']);
+
+  // <lang><zh-CN>修改 option 标签不会写回原始 JSON 场馆名称。</zh-CN><en>Mutating an option label must not write back to the original JSON venue name.</en></lang>
+  assert.throws(() => { filterOptions.venues[0].label.en = 'Must not mutate'; }, TypeError);
+  assert.equal(localDataset.venues[0].name.en, 'Riverside Sports Hall');
+});
+
 test('detail exposes only declared slots and booking accepts only those slots', () => {
   // <lang><zh-CN>读取一个有限资源详情。</zh-CN><en>Read one finite resource detail.</en></lang>
   const detail = createLocalResourceDetail(localDataset, 'riverside-court-a');
 
   // <lang><zh-CN>详情只包含 local JSON 已声明的时段。</zh-CN><en>Detail contains only slots declared in local JSON.</en></lang>
   assert.equal(detail.kind, 'detail');
+  assert.deepEqual(detail.resource.availableDates, ['2026-08-08', '2026-08-09', '2026-08-10']);
   assert.deepEqual(detail.resource.availableSlots, ['09:00', '11:00', '14:00', '16:00']);
 
   // <lang><zh-CN>已声明时段能够创建限定的 confirmed record。</zh-CN><en>A declared slot can create a bounded confirmed record.</en></lang>
@@ -54,4 +92,9 @@ test('detail exposes only declared slots and booking accepts only those slots', 
   assert.equal(conflict.kind, 'failure');
   assert.equal(conflict.code, 'conflict');
   assert.equal(JSON.stringify(conflict).includes('23:59'), false);
+
+  // <lang><zh-CN>未声明日期同样不可创建预约，防止确认页绕过本地可用日期 allowlist。</zh-CN><en>An undeclared date also cannot create a booking, preventing the confirmation page from bypassing the local available-date allowlist.</en></lang>
+  const dateConflict = createLocalReservation(detail, '2026-08-11', '09:00', 4);
+  assert.equal(dateConflict.kind, 'failure');
+  assert.equal(dateConflict.code, 'conflict');
 });

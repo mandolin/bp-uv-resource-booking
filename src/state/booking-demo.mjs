@@ -16,7 +16,8 @@ import {
   startLocalReservationWrite
 } from '../services/local-reservation-write-provider.mjs';
 import {
-  BOOKING_DOMAIN_VERSION
+  BOOKING_DOMAIN_VERSION,
+  createLocalCatalogFilterOptions
 } from '../domain/booking-domain.mjs';
 import localDataset from '../data/venues.json';
 
@@ -26,6 +27,20 @@ import localDataset from '../data/venues.json';
  * @lang en The count is compatible with local-domain safety cap, supporting reach-bottom append while keeping explicit page state observable in small fixtures.
  */
 const CATALOG_PAGE_SIZE = 2;
+
+/**
+ * <lang><zh-CN>没有筛选条件时使用的固定 catalog filter 形状。</zh-CN><en>Fixed catalog-filter shape used when no filtering condition applies.</en></lang>
+ * @lang zh-CN 空字符串只表达“未选择”；它不代表任意条件、全部字段匹配或隐藏的默认排序。
+ * @lang en An empty string expresses only “not selected”; it represents neither an arbitrary condition, all-field matching, nor hidden default sorting.
+ */
+const DEFAULT_CATALOG_FILTERS = Object.freeze({ venueId: '', resourceTypeId: '', date: '' });
+
+/**
+ * <lang><zh-CN>从同一静态 dataset 生成页面可读的有限筛选选项。</zh-CN><en>Generates the finite filter options readable by pages from the same static dataset.</en></lang>
+ * @lang zh-CN state 只公开 detached option value，不公开 dataset 本体或其可写引用。
+ * @lang en State exposes only detached option values and exposes neither the dataset itself nor a writable reference to it.
+ */
+const catalogFilterOptions = createLocalCatalogFilterOptions(localDataset);
 
 /**
  * <lang><zh-CN>当前 catalog 请求的可取消 handle。</zh-CN><en>Cancellable handle of the current catalog request.</en></lang>
@@ -75,6 +90,13 @@ const catalogPhase = ref('idle');
  * @lang en Input enters local query only on explicit user search/refresh and is neither automatically requested nor saved.
  */
 const catalogKeyword = ref('');
+
+/**
+ * <lang><zh-CN>当前 catalog 已提交的固定筛选条件。</zh-CN><en>Current fixed filter conditions committed to the catalog.</en></lang>
+ * @lang zh-CN 条件只在用户明确搜索、清除或改变 selector 时更新；下一页始终重用同一组值。
+ * @lang en Conditions update only when a user explicitly searches, clears, or changes a selector; later pages always reuse the same values.
+ */
+const catalogFilters = ref({ ...DEFAULT_CATALOG_FILTERS });
 
 /**
  * <lang><zh-CN>最近成功页的分页事实。</zh-CN><en>Pagination facts from most recent successful page.</en></lang>
@@ -178,15 +200,36 @@ const reservationCards = computed(() => reservations.value.map((reservation) => 
 const canLoadMore = computed(() => catalogPaging.value.hasNext && catalogPhase.value !== 'loading' && catalogPhase.value !== 'appending');
 
 /**
+ * <lang><zh-CN>将页面提交的候选筛选收敛为唯一允许进入 local provider 的固定形状。</zh-CN><en>Narrows candidate page filters to the sole fixed shape allowed to enter the local provider.</en></lang>
+ * @param {unknown} filters <lang><zh-CN>页面给出的候选筛选对象。</zh-CN><en>Candidate filter object supplied by a page.</en></lang>
+ * @returns {object} <lang><zh-CN>只含三个字符串值的 detached filter record。</zh-CN><en>A detached filter record containing only three string values.</en></lang>
+ * @lang zh-CN 未知对象、数组、对象字段或表达式不会进入 provider；无效字段确定性降级为未选择。
+ * @lang en Unknown objects, arrays, object fields, or expressions enter no provider; an invalid field deterministically degrades to not selected.
+ */
+function normalizeCatalogFilters(filters) {
+  // <lang><zh-CN>只接受非数组对象作为候选，其他形状不能提供可读取的筛选字段。</zh-CN><en>Accept only a non-array object as the candidate because other shapes provide no readable filter fields.</en></lang>
+  const candidate = typeof filters === 'object' && filters !== null && !Array.isArray(filters) ? filters : DEFAULT_CATALOG_FILTERS;
+
+  // <lang><zh-CN>逐项保留字符串并 trim；未知类型回退空字符串，不进行隐式序列化。</zh-CN><en>Retain and trim strings item by item; unknown types fall back to empty strings without implicit serialization.</en></lang>
+  const venueId = typeof candidate.venueId === 'string' ? candidate.venueId.trim() : '';
+  const resourceTypeId = typeof candidate.resourceTypeId === 'string' ? candidate.resourceTypeId.trim() : '';
+  const date = typeof candidate.date === 'string' ? candidate.date.trim() : '';
+
+  // <lang><zh-CN>返回独立对象，避免后续页面修改传入对象改变已提交查询。</zh-CN><en>Return an independent object so later page mutations cannot alter the committed query.</en></lang>
+  return { venueId, resourceTypeId, date };
+}
+
+/**
  * <lang><zh-CN>加载或刷新目录页。</zh-CN><en>Loads or refreshes a catalog page.</en></lang>
- * @param {object} options <lang><zh-CN>请求模式和关键字。</zh-CN><en>Request mode and keyword.</en></lang>
+ * @param {object} options <lang><zh-CN>请求模式、关键字和固定筛选。</zh-CN><en>Request mode, keyword, and fixed filters.</en></lang>
  * @param {boolean} options.append <lang><zh-CN>是否追加下一页。</zh-CN><en>Whether to append the next page.</en></lang>
  * @param {string} options.keyword <lang><zh-CN>明确输入的关键字。</zh-CN><en>Explicitly entered keyword.</en></lang>
+ * @param {unknown} options.filters <lang><zh-CN>候选场馆、类型和日期筛选。</zh-CN><en>Candidate venue, type, and date filters.</en></lang>
  * @returns {Promise<void>} <lang><zh-CN>页面状态稳定后 resolve。</zh-CN><en>Resolves after page state stabilizes.</en></lang>
  * @lang zh-CN 不等待或暴露 provider exception；所有结果先经 async runtime/project adapter 的受限 terminal mapping。
  * @lang en Does not await or expose provider exception; every result first crosses bounded terminal mapping of async runtime/project adapter.
  */
-async function loadCatalog({ append, keyword }) {
+async function loadCatalog({ append, keyword, filters }) {
   // <lang><zh-CN>非追加操作替换 page=1；追加只在已有已知下一页时前进一页。</zh-CN><en>Non-append operation replaces page one; append advances one page only when a next page is already known.</en></lang>
   const requestedPage = append ? catalogPaging.value.page + 1 : 1;
 
@@ -195,12 +238,16 @@ async function loadCatalog({ append, keyword }) {
     return;
   }
 
+  // <lang><zh-CN>刷新时规范化新筛选，追加时只使用已提交值，避免 page 间混入未提交草稿。</zh-CN><en>Normalize new filters on refresh and use only committed values on append, preventing an unsubmitted draft from mixing across pages.</en></lang>
+  const requestedFilters = append ? catalogFilters.value : normalizeCatalogFilters(filters);
+
   // <lang><zh-CN>取消先前尚未结束的读取请求；新 request 的结果由当前 call 自己拥有。</zh-CN><en>Request cancellation of prior unfinished read; result of new request is owned by current call itself.</en></lang>
   activeCatalogHandle?.cancel();
 
-  // <lang><zh-CN>新搜索/刷新会立即更新 keyword；append 保留上次已确认 keyword。</zh-CN><en>New search/refresh updates keyword immediately; append retains last confirmed keyword.</en></lang>
+  // <lang><zh-CN>新搜索/刷新会立即更新 keyword 与筛选；append 保留上次已确认的完整查询。</zh-CN><en>New search/refresh updates keyword and filters; append retains the last confirmed complete query.</en></lang>
   if (!append) {
     catalogKeyword.value = keyword;
+    catalogFilters.value = { ...requestedFilters };
   }
 
   // <lang><zh-CN>首次/刷新使用 loading，追加使用 appending，使列表在后者失败时保持可读。</zh-CN><en>Initial/refresh uses loading while append uses appending, keeping list readable when the latter fails.</en></lang>
@@ -209,8 +256,8 @@ async function loadCatalog({ append, keyword }) {
   // <lang><zh-CN>新请求开始前清除旧 failure，但不在 append 时清空已有 entries。</zh-CN><en>Clear old failure before new request but do not clear existing entries during append.</en></lang>
   catalogFailure.value = null;
 
-  // <lang><zh-CN>从 explicit local provider 获取可取消 handle，输入只含有限 paging/keyword。</zh-CN><en>Obtain cancellable handle from explicit local provider; input contains only finite paging/keyword.</en></lang>
-  const requestHandle = startLocalCatalogQuery(requestedPage, CATALOG_PAGE_SIZE, catalogKeyword.value);
+  // <lang><zh-CN>从 explicit local provider 获取可取消 handle，输入只含有限 paging/keyword/filter 值。</zh-CN><en>Obtain cancellable handle from explicit local provider; input contains only finite paging/keyword/filter values.</en></lang>
+  const requestHandle = startLocalCatalogQuery(requestedPage, CATALOG_PAGE_SIZE, catalogKeyword.value, requestedFilters);
 
   // <lang><zh-CN>将当前 handle 保留为私有取消目标，不放入响应式页面状态。</zh-CN><en>Retain current handle as private cancellation target and do not place it in reactive page state.</en></lang>
   activeCatalogHandle = requestHandle;
@@ -245,13 +292,14 @@ async function loadCatalog({ append, keyword }) {
 /**
  * <lang><zh-CN>显式刷新目录的首页。</zh-CN><en>Explicitly refreshes first catalog page.</en></lang>
  * @param {string} keyword <lang><zh-CN>最新搜索关键字。</zh-CN><en>Latest search keyword.</en></lang>
+ * @param {unknown} [filters] <lang><zh-CN>候选场馆、类型和日期筛选。</zh-CN><en>Candidate venue, type, and date filters.</en></lang>
  * @returns {Promise<void>} <lang><zh-CN>目录稳定后 resolve。</zh-CN><en>Resolves after catalog stabilizes.</en></lang>
  * @lang zh-CN 此操作对应筛选/下拉刷新，始终替换 page=1，而不混入当前追加页。
  * @lang en This operation corresponds to filter/pull refresh and always replaces page one without mixing current appended page.
  */
-export function refreshCatalog(keyword = catalogKeyword.value) {
+export function refreshCatalog(keyword = catalogKeyword.value, filters = DEFAULT_CATALOG_FILTERS) {
   // <lang><zh-CN>委托唯一 load helper，保持 loading、取消和 failure 语义一致。</zh-CN><en>Delegate to the sole load helper, keeping loading, cancellation, and failure semantics consistent.</en></lang>
-  return loadCatalog({ append: false, keyword });
+  return loadCatalog({ append: false, keyword, filters });
 }
 
 /**
@@ -261,8 +309,8 @@ export function refreshCatalog(keyword = catalogKeyword.value) {
  * @lang en A page may call this only at reach-bottom; the component itself listens to no scroll and proactively requests nothing.
  */
 export function loadNextCatalogPage() {
-  // <lang><zh-CN>保留当前 keyword，使后续 page 保持同一明确查询条件。</zh-CN><en>Retain current keyword so later page keeps the same explicit query condition.</en></lang>
-  return loadCatalog({ append: true, keyword: catalogKeyword.value });
+  // <lang><zh-CN>保留当前 keyword 与筛选，使后续 page 保持同一明确查询条件。</zh-CN><en>Retain current keyword and filters so later pages keep the same explicit query condition.</en></lang>
+  return loadCatalog({ append: true, keyword: catalogKeyword.value, filters: catalogFilters.value });
 }
 
 /**
@@ -548,6 +596,8 @@ export function useBookingDemo() {
     catalogEntries: readonly(catalogEntries),
     catalogPhase: readonly(catalogPhase),
     catalogKeyword: readonly(catalogKeyword),
+    catalogFilters: readonly(catalogFilters),
+    catalogFilterOptions,
     catalogPaging: readonly(catalogPaging),
     catalogSource: readonly(catalogSource),
     catalogFailure: readonly(catalogFailure),

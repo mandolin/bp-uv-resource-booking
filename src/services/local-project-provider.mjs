@@ -76,7 +76,11 @@ function isSupportedReadRequest(request) {
   return typeof request === 'object'
     && request !== null
     && !Array.isArray(request)
-    && ((request.operation === 'catalog' && Number.isInteger(request.page) && Number.isInteger(request.pageSize))
+    && ((request.operation === 'catalog' && Number.isInteger(request.page) && Number.isInteger(request.pageSize)
+      && (request.keyword === undefined || typeof request.keyword === 'string')
+      && (request.venueId === undefined || typeof request.venueId === 'string')
+      && (request.resourceTypeId === undefined || typeof request.resourceTypeId === 'string')
+      && (request.date === undefined || typeof request.date === 'string'))
       || (request.operation === 'detail' && typeof request.resourceId === 'string'));
 }
 
@@ -106,8 +110,15 @@ function createLocalSourceProvider() {
 
       // <lang><zh-CN>catalog 只调用纯分页投影，不混入详情字段或状态写入。</zh-CN><en>Catalog calls only pure pagination projection and mixes in no detail field or state write.</en></lang>
       if (request.operation === 'catalog') {
-        // <lang><zh-CN>将选定 page/pageSize/keyword 映射给 domain，同时不透传 operation 到 canonical value。</zh-CN><en>Map selected page/pageSize/keyword to domain and do not pass operation through to canonical value.</en></lang>
-        const outcome = createLocalCatalogPage(localDataset, { page: request.page, pageSize: request.pageSize, keyword: request.keyword });
+        // <lang><zh-CN>将选定 page/pageSize/keyword/fixed filters 映射给 domain，同时不透传 operation 到 canonical value。</zh-CN><en>Map selected page/pageSize/keyword/fixed filters to domain and do not pass operation through to canonical value.</en></lang>
+        const outcome = createLocalCatalogPage(localDataset, {
+          page: request.page,
+          pageSize: request.pageSize,
+          keyword: request.keyword,
+          venueId: request.venueId,
+          resourceTypeId: request.resourceTypeId,
+          date: request.date
+        });
 
         // <lang><zh-CN>domain failure 仍作为安全 private value 返回，由 adapter 统一映射 page/failure。</zh-CN><en>Domain failure still returns as safe private value and is uniformly mapped by adapter to page/failure.</en></lang>
         return Promise.resolve({ kind: 'success', value: outcome });
@@ -192,13 +203,22 @@ function mapReadEnvelope(envelope) {
  * @param {number} page <lang><zh-CN>one-based page。</zh-CN><en>One-based page.</en></lang>
  * @param {number} pageSize <lang><zh-CN>每页数量。</zh-CN><en>Entries per page.</en></lang>
  * @param {string} keyword <lang><zh-CN>受控查询关键字。</zh-CN><en>Controlled query keyword.</en></lang>
+ * @param {object} filters <lang><zh-CN>受控场馆、类型和日期筛选。</zh-CN><en>Controlled venue, type, and date filters.</en></lang>
  * @returns {object} <lang><zh-CN>mapped Promise 与 explicit cancel handle。</zh-CN><en>A mapped Promise and explicit cancel handle.</en></lang>
  * @lang zh-CN 目录读取不访问远端；页面决定何时调用、何时丢弃其结果和如何显示 loading/footer。
  * @lang en Catalog reading accesses no remote; the page decides when to call, discard its result, and display loading/footer.
  */
-export function startLocalCatalogQuery(page, pageSize, keyword) {
+export function startLocalCatalogQuery(page, pageSize, keyword, filters) {
   // <lang><zh-CN>以 adapter-private operation shape 调用 host，保持 runtime request isolation 生效。</zh-CN><en>Call host using adapter-private operation shape, keeping runtime request isolation effective.</en></lang>
-  const invocation = localReadHost.start({ operation: 'catalog', page, pageSize, keyword });
+  const invocation = localReadHost.start({
+    operation: 'catalog',
+    page,
+    pageSize,
+    keyword,
+    venueId: filters?.venueId,
+    resourceTypeId: filters?.resourceTypeId,
+    date: filters?.date
+  });
 
   // <lang><zh-CN>返回新的 outer handle，不改变 runtime-owned cancel 函数语义。</zh-CN><en>Return a new outer handle without changing runtime-owned cancel-function semantics.</en></lang>
   return { promise: invocation.promise.then(mapReadEnvelope), cancel: invocation.cancel };

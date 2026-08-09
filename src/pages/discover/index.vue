@@ -14,6 +14,21 @@
         <source-badge :source="demo.catalogSource.value" />
       </view>
       <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @search="handleSearch" @clear="handleClear" />
+      <!-- <lang><zh-CN>三项筛选均为 state 提供的有限本地值；selector 提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>All three filters are finite local values provided by state; a selector submission replaces page one, and appended pages never mix in a draft.</en></lang> -->
+      <u-card class="discover-page__filters" :title="runtimeLocale.t('discover.filtersTitle')" :sub-title="runtimeLocale.t('discover.filtersHint')">
+        <u-form>
+          <u-form-item :label="runtimeLocale.t('discover.venueLabel')">
+            <u-select v-model="selectedVenueId" :options="venueOptions" :placeholder="runtimeLocale.t('discover.venuePlaceholder')" @change="handleFilterChange" />
+          </u-form-item>
+          <u-form-item :label="runtimeLocale.t('discover.typeLabel')">
+            <u-select v-model="selectedResourceTypeId" :options="resourceTypeOptions" :placeholder="runtimeLocale.t('discover.typePlaceholder')" @change="handleFilterChange" />
+          </u-form-item>
+          <u-form-item :label="runtimeLocale.t('discover.dateLabel')">
+            <u-select v-model="selectedDate" :options="dateOptions" :placeholder="runtimeLocale.t('discover.datePlaceholder')" @change="handleFilterChange" />
+          </u-form-item>
+        </u-form>
+        <u-button :label="runtimeLocale.t('discover.clearFilters')" variant="secondary" size="sm" @click="handleClearFilters" />
+      </u-card>
 
       <!-- <lang><zh-CN>加载、错误、空目录与可追加列表互斥，避免状态被纯 CSS 或隐藏分支掩盖。</zh-CN><en>Loading, error, empty catalog, and appendable list are mutually exclusive, preventing state from being hidden by CSS or a concealed branch.</en></lang> -->
       <u-loading-page v-if="demo.catalogPhase.value === 'loading'" :message="runtimeLocale.t('discover.loading')" />
@@ -60,6 +75,58 @@ const runtimeLocale = useRuntimeLocale();
 // <lang><zh-CN>搜索草稿在用户明确提交前不改变当前 catalog。</zh-CN><en>The search draft changes no current catalog before an explicit user submission.</en></lang>
 const keyword = ref('');
 
+// <lang><zh-CN>三个 selector 草稿从当前已提交查询初始化；用户变更后才显式替换目录首页。</zh-CN><en>The three selector drafts initialize from the current committed query; only a user change explicitly replaces the catalog first page.</en></lang>
+const selectedVenueId = ref(demo.catalogFilters.value.venueId);
+const selectedResourceTypeId = ref(demo.catalogFilters.value.resourceTypeId);
+const selectedDate = ref(demo.catalogFilters.value.date);
+
+/**
+ * <lang><zh-CN>将 state 的有限双语 option 集合投影为当前 runtime locale 的 USelect 输入。</zh-CN><en>Projects state’s finite bilingual option collection into current-runtime-locale input for USelect.</en></lang>
+ * @param {ReadonlyArray<object>} options <lang><zh-CN>state 给出的有限 option 集合。</zh-CN><en>Finite option collection supplied by state.</en></lang>
+ * @returns {Array<object>} <lang><zh-CN>仅含 value/label 的新 UI option 集合。</zh-CN><en>A new UI option collection containing only value/label.</en></lang>
+ * @lang zh-CN 函数不暴露或改写 dataset 标签；空值选项由各 selector 的 placeholder 负责表达。
+ * @lang en The function exposes or mutates no dataset label; each selector’s placeholder expresses the empty choice.
+ */
+function createLocalizedOptions(options) {
+  // <lang><zh-CN>逐项复制固定 value 并按当前共享 locale 投影标签。</zh-CN><en>Copy the fixed value item by item and project its label through the current shared locale.</en></lang>
+  const localizedOptions = [];
+
+  // <lang><zh-CN>输入只来自冻结的 state option 集合，不枚举页面数据或动态属性。</zh-CN><en>Input comes only from the frozen state option collection and enumerates no page data or dynamic property.</en></lang>
+  for (const option of options) {
+    // <lang><zh-CN>USelect 只需要这两个受控原始字段。</zh-CN><en>USelect needs only these two controlled primitive fields.</en></lang>
+    localizedOptions.push({ value: option.value, label: runtimeLocale.localize(option.label) });
+  }
+
+  // <lang><zh-CN>返回新数组，使 locale 更新后的 computed 值不会共享可写 UI option 对象。</zh-CN><en>Return a new array so computed values after a locale update share no writable UI option objects.</en></lang>
+  return localizedOptions;
+}
+
+/**
+ * <lang><zh-CN>将明确 ISO 示例日期投影为当前语言的 USelect 选项。</zh-CN><en>Projects explicit ISO demo dates as current-language options for USelect.</en></lang>
+ * @param {ReadonlyArray<string>} dates <lang><zh-CN>state 给出的稳定日期字符串。</zh-CN><en>Stable date strings supplied by state.</en></lang>
+ * @returns {Array<object>} <lang><zh-CN>仅含 value/label 的新日期 option 集合。</zh-CN><en>A new date-option collection containing only value/label.</en></lang>
+ * @lang zh-CN 日期标签只格式化已声明的 ISO 字符串，不读取设备日历或生成未来日期。
+ * @lang en Date labels format only declared ISO strings and read no device calendar or generate future dates.
+ */
+function createDateOptions(dates) {
+  // <lang><zh-CN>为每个受控日期创建独立 UI record。</zh-CN><en>Create an independent UI record for each controlled date.</en></lang>
+  const localizedDates = [];
+
+  // <lang><zh-CN>保持 state 给出的确定性顺序，避免因宿主排序导致页面快照变化。</zh-CN><en>Keep the deterministic order supplied by state, avoiding host sorting that could change page snapshots.</en></lang>
+  for (const date of dates) {
+    // <lang><zh-CN>值保留 ISO 供 domain 比较，标签仅用于显示。</zh-CN><en>Retain ISO as the domain-comparison value and use the label only for display.</en></lang>
+    localizedDates.push({ value: date, label: runtimeLocale.formatDate(date) });
+  }
+
+  // <lang><zh-CN>返回 detached collection，不向模板泄漏 state 的数组引用。</zh-CN><en>Return a detached collection and leak no state-array reference to the template.</en></lang>
+  return localizedDates;
+}
+
+// <lang><zh-CN>每次 locale 变化时重建 selector 标签，但不改变已提交的稳定筛选值。</zh-CN><en>Rebuild selector labels whenever locale changes without changing committed stable filter values.</en></lang>
+const venueOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.venues));
+const resourceTypeOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.resourceTypes));
+const dateOptions = computed(() => createDateOptions(demo.catalogFilterOptions.dates));
+
 // <lang><zh-CN>将 state 映射为有限 footer 状态，以支持“滚动 + 明确页次 + 可发现重试”。</zh-CN><en>Map state to finite footer status, supporting “scroll + explicit page state + discoverable retry”.</en></lang>
 const footerStatus = computed(() => {
   if (demo.catalogPhase.value === 'appending') return 'loading';
@@ -86,6 +153,21 @@ async function ensureInitialCatalog() {
 }
 
 /**
+ * <lang><zh-CN>读取发现页当前可见的 selector 草稿。</zh-CN><en>Reads the selector drafts currently visible on Discover.</en></lang>
+ * @returns {object} <lang><zh-CN>受限场馆、类型和日期 filter record。</zh-CN><en>A bounded venue, type, and date filter record.</en></lang>
+ * @lang zh-CN 仅复制三个 selector 的原始值；页面不把搜索、分页或任何 UI object 混入 provider 输入。
+ * @lang en Copies only the three selector primitives; the page mixes no search, paging, or UI object into provider input.
+ */
+function readFilterDraft() {
+  // <lang><zh-CN>返回新对象，防止 action 之后的 UI 更新改写已经提交的请求值。</zh-CN><en>Return a new object so a UI update after the action cannot rewrite an already submitted request value.</en></lang>
+  return {
+    venueId: selectedVenueId.value,
+    resourceTypeId: selectedResourceTypeId.value,
+    date: selectedDate.value
+  };
+}
+
+/**
  * <lang><zh-CN>提交发现页的本地搜索。</zh-CN><en>Submits Discover's local search.</en></lang>
  * @returns {Promise<void>} <lang><zh-CN>page=1 替换完成后 resolve。</zh-CN><en>Resolves after page-one replacement completes.</en></lang>
  * @lang zh-CN 关键字只传给 local JSON contains 查询，不成为 URL、表达式或偏好。
@@ -93,7 +175,7 @@ async function ensureInitialCatalog() {
  */
 async function handleSearch() {
   // <lang><zh-CN>以页面草稿执行明确首页刷新。</zh-CN><en>Run an explicit first-page refresh with the page draft.</en></lang>
-  await demo.refreshCatalog(keyword.value);
+  await demo.refreshCatalog(keyword.value, readFilterDraft());
 }
 
 /**
@@ -103,9 +185,36 @@ async function handleSearch() {
  * @lang en Writes no storage or cross-page filter preference.
  */
 async function handleClear() {
-  // <lang><zh-CN>先清空可见草稿，再请求全量 local 首页。</zh-CN><en>Clear visible draft first, then request the full local first page.</en></lang>
+  // <lang><zh-CN>先清空可见关键字草稿，再以不变筛选请求 local 首页。</zh-CN><en>Clear the visible keyword draft first, then request the local first page with unchanged filters.</en></lang>
   keyword.value = '';
-  await demo.refreshCatalog('');
+  await demo.refreshCatalog('', readFilterDraft());
+}
+
+/**
+ * <lang><zh-CN>提交一个 selector 变更后的完整本地筛选。</zh-CN><en>Submits the complete local filter after one selector changes.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>已替换 page=1 后 resolve。</zh-CN><en>Resolves after page one has been replaced.</en></lang>
+ * @lang zh-CN 事件参数不作为查询输入；受控 v-model 已先更新相应草稿，避免组件事件形状成为领域契约。
+ * @lang en The event parameter is not query input; controlled v-model has updated the matching draft first, avoiding a component-event shape becoming a domain contract.
+ */
+async function handleFilterChange() {
+  // <lang><zh-CN>将关键字与三个已提交草稿一并刷新，保持 total/page/hasNext 对同一查询成立。</zh-CN><en>Refresh keyword and all three committed drafts together, keeping total/page/hasNext true for one query.</en></lang>
+  await demo.refreshCatalog(keyword.value, readFilterDraft());
+}
+
+/**
+ * <lang><zh-CN>清空三个有限 selector 并恢复当前关键字下的全量本地目录。</zh-CN><en>Clears the three finite selectors and restores the complete local catalog under the current keyword.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>已替换 page=1 后 resolve。</zh-CN><en>Resolves after page one has been replaced.</en></lang>
+ * @lang zh-CN 本操作不写入设备 preference 或 storage，也不会清空独立的关键字草稿。
+ * @lang en This action writes no device preference or storage and does not clear the independent keyword draft.
+ */
+async function handleClearFilters() {
+  // <lang><zh-CN>同步重置所有 selector，使按钮后的可见表单与提交 query 一致。</zh-CN><en>Synchronously reset every selector so the visible form after the button matches the submitted query.</en></lang>
+  selectedVenueId.value = '';
+  selectedResourceTypeId.value = '';
+  selectedDate.value = '';
+
+  // <lang><zh-CN>用当前关键字和已清空 filter 显式替换首页。</zh-CN><en>Explicitly replace the first page with current keyword and cleared filters.</en></lang>
+  await demo.refreshCatalog(keyword.value, readFilterDraft());
 }
 
 /**
@@ -163,6 +272,7 @@ onReachBottom(handleLoadMore);
 .discover-page__heading { display: flex; gap: 7px; flex-direction: column; margin-bottom: 16px; }
 .discover-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .discover-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
+.discover-page__filters { margin-top: 14px; }
 .discover-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
 .discover-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 16px; }
 .discover-page__footer { display: flex; gap: 8px; flex-direction: column; align-items: center; padding: 8px 0 20px; color: var(--u-sys-color-text-secondary); font-size: 12px; }

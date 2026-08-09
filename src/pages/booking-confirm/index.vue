@@ -59,12 +59,11 @@ const resourceName = computed(() => runtimeLocale.localize(detail.value.resource
 const venueName = computed(() => runtimeLocale.localize(detail.value.venue?.name));
 const districtName = computed(() => runtimeLocale.localize(detail.value.venue?.district));
 
-// <lang><zh-CN>日期是已审阅的有限 local mock options；只有标签随当前 locale 格式化，不从系统时间、远端日历或动态脚本派生。</zh-CN><en>Dates are reviewed finite local mock options; only labels are formatted for current locale and derive from no system clock, remote calendar, or dynamic script.</en></lang>
-const BOOKING_DATES = Object.freeze(['2026-08-08', '2026-08-09', '2026-08-10']);
-const dateOptions = computed(() => BOOKING_DATES.map((value) => Object.freeze({ value, label: runtimeLocale.formatDate(value) })));
+// <lang><zh-CN>日期只来自当前资源明确声明的 local availability；标签随当前 locale 格式化，但不从系统时间、远端日历或动态脚本派生。</zh-CN><en>Dates come only from local availability explicitly declared by the current resource; labels follow current locale but derive from no system clock, remote calendar, or dynamic script.</en></lang>
+const dateOptions = computed(() => (detail.value.kind === 'detail' ? detail.value.resource.availableDates : []).map((value) => Object.freeze({ value, label: runtimeLocale.formatDate(value) })));
 
-// <lang><zh-CN>默认选中第一个明确日期，调用方仍可在有限按钮中改变它。</zh-CN><en>Select the first explicit date by default while callers may still change it through finite buttons.</en></lang>
-const selectedDate = ref(BOOKING_DATES[0]);
+// <lang><zh-CN>默认选中当前资源的第一个明确日期；没有详情时空值阻止 booking command。</zh-CN><en>Select the current resource’s first explicit date by default; without a detail, an empty value blocks a booking command.</en></lang>
+const selectedDate = ref(detail.value.kind === 'detail' ? detail.value.resource.availableDates[0] ?? '' : '');
 
 // <lang><zh-CN>时段只在 detail ready 后初始化；空值使缺失 detail 不能构造 booking。</zh-CN><en>Slot initializes only after detail is ready; an empty value prevents booking construction without a detail.</en></lang>
 const selectedTime = ref(detail.value.kind === 'detail' ? detail.value.resource.availableSlots[0] ?? '' : '');

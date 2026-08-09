@@ -22,6 +22,10 @@ page → booking-demo state → local-reservation-write-provider → async-provi
 
 The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; only reach-bottom appends the next page; the footer shows loaded / total / current-page facts and retains displayed content plus a retry entry when append fails.
 
+目录筛选仅接受当前本地 JSON 已声明的场馆 ID、资源类型 ID 和可用日期；它们与关键词共同在分页之前计算。页面不会传入任意字段、表达式、URL 参数或实时排班，空筛选只表示“不限制”。
+
+Catalog filtering accepts only venue IDs, resource-type IDs, and available dates declared by current local JSON; they are computed together with keyword matching before paging. Pages pass no arbitrary field, expression, URL parameter, or live schedule, and an empty filter means only “unrestricted.”
+
 ## 预约边界 / Booking boundary
 
 确认预约、取消与改期都经 `local-reservation-write-provider` 的 Biz async-provider write lifecycle 到达进程内 mock transaction，刷新即回到 `venues.json` 中的初始预约。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；改期采用“取消旧预约 + 创建新预约”，若新时段冲突则旧预约保持确认状态。没有远端撤销、退款、库存释放、支付或会员规则。

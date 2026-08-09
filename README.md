@@ -1,8 +1,8 @@
 # 城市公共资源预约示例 / Resource Booking Demo
 
-`bp-uv-resource-booking` 是一个面向单运营主体、多场馆的 UniApp boilerplate。它演示“目录—查询—详情—本地 mock 预约—二次确认取消”的通用资源与服务预约流，不是羽毛球、票务、会员、支付或真实后端的行业预置项目。
+`bp-uv-resource-booking` 是一个面向单运营主体、多场馆的 UniApp boilerplate。它演示“目录—关键词与本地筛选—详情—本地 mock 预约—二次确认取消”的通用资源与服务预约流，不是羽毛球、票务、会员、支付或真实后端的行业预置项目。
 
-`bp-uv-resource-booking` is a UniApp boilerplate for one operating entity with multiple venues. It demonstrates a general resource-and-service booking flow—catalog, search, detail, local mock booking, and second-confirmation cancellation. It is not an industry preset for badminton, ticketing, membership, payment, or a real backend.
+`bp-uv-resource-booking` is a UniApp boilerplate for one operating entity with multiple venues. It demonstrates a general resource-and-service booking flow—catalog, keyword and local filtering, detail, local mock booking, and second-confirmation cancellation. It is not an industry preset for badminton, ticketing, membership, payment, or a real backend.
 
 ## 当前边界 / Current boundary
 
