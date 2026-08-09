@@ -6,8 +6,8 @@
 <template>
   <!-- <lang><zh-CN>card 将原创 image、资源类型、名称和下一时段组织为可点击但无副作用的展示层。</zh-CN><en>Card organizes original image, resource type, name, and next slot as a clickable but side-effect-free presentation layer.</en></lang> -->
   <u-card :title="resourceName" :sub-title="venueName" shadow>
-    <!-- <lang><zh-CN>图片来自有限 asset map；缺失时 UImage 显示自己的中性 fallback。</zh-CN><en>Image comes from finite asset map; UImage displays its own neutral fallback when missing.</en></lang> -->
-    <u-image class="resource-card__image" :src="imageUrl || ''" :alt="resourceName" size="large" shape="rounded" />
+    <!-- <lang><zh-CN>图片来自有限 asset map；alt 使用场馆而非单个 resource 名称，说明封面所描述的真实视觉对象；缺失时 UImage 显示自己的中性 fallback。</zh-CN><en>Image comes from finite asset map; alt names the venue rather than one resource because it describes the actual visual subject; UImage displays its own neutral fallback when missing.</en></lang> -->
+    <u-image class="resource-card__image" :src="imageUrl || ''" :alt="venueName" size="large" shape="rounded" />
     <!-- <lang><zh-CN>中性标签不使用行业标签库，领域文本均通过受控 localize helper 投影。</zh-CN><en>Neutral tags use no industry-tag registry, and all domain text is projected through the constrained localize helper.</en></lang> -->
     <view class="resource-card__meta"><u-tag :text="resourceType" tone="primary" /><text>{{ districtName }}</text></view>
     <!-- <lang><zh-CN>下一时段只作示例可用性提示，不声明实时库存或锁定。</zh-CN><en>Next slot is only a demo availability hint and declares no live inventory or lock.</en></lang> -->

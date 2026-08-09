@@ -7,6 +7,8 @@
 // <lang><zh-CN>显式导入两张原创 venue 图片，使 H5/mp-weixin bundler 都能追踪静态资源。</zh-CN><en>Explicitly import two original venue images so both H5/mp-weixin bundlers can track static resources.</en></lang>
 import riversideSportsHallImage from '../static/images/venue-riverside-sports-hall-v1.png';
 import cloudlineArtsCenterImage from '../static/images/venue-cloudline-arts-center-v1.png';
+import harborReadingHallImage from '../static/images/venue-harbor-reading-hall-v1.png';
+import newtownWorkshopImage from '../static/images/venue-newtown-workshop-v1.png';
 
 /**
  * <lang><zh-CN>可公开呈现的 venue image ID 与静态 asset URL 映射。</zh-CN><en>Mapping of publicly presentable venue-image IDs to static asset URLs.</en></lang>
@@ -15,7 +17,9 @@ import cloudlineArtsCenterImage from '../static/images/venue-cloudline-arts-cent
  */
 const imageById = Object.freeze({
   'riverside-sports-hall': riversideSportsHallImage,
-  'cloudline-arts-center': cloudlineArtsCenterImage
+  'cloudline-arts-center': cloudlineArtsCenterImage,
+  'harbor-reading-hall': harborReadingHallImage,
+  'newtown-workshop': newtownWorkshopImage
 });
 
 /**

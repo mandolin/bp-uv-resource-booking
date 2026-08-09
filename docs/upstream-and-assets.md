@@ -25,10 +25,12 @@ Earlier HIA-uView upstream references (uView, uView2.0, uView-Pro, and uview-plu
 
 Both images are fictional venue images generated for this project on 2026-08-03 using built-in image generation with the project-specific prompts below. They do not come from the web, a stock library, a real venue, or a third-party photograph; they have no faces, logo, readable text, or brand. They serve demo presentation only and must not be represented as a real venue, factual place, or commercially cleared brand asset.
 
-| 文件 / File | 项目用途 / Project use | 生成 prompt 摘要 / Prompt summary |
+| 文件 / File | 项目用途与 alt / Project use and alt | 生成 prompt 摘要 / Prompt summary |
 | --- | --- | --- |
 | `src/static/images/venue-riverside-sports-hall-v1.png` | 滨河综合运动馆 / Riverside Sports Hall | 虚构的中国城市多功能运动馆，适合羽毛球与社区活动，木地板，干净明亮，无人物、文字或标识 / Fictional Chinese municipal multipurpose sports hall for badminton and community activity, hardwood floor, clean and bright, no people, text, or logo |
 | `src/static/images/venue-cloudline-arts-center-v1.png` | 云际艺术与活动中心 / Cloudline Arts Center | 虚构的中国城市艺术与社区活动中心，可容纳工作坊与小型演出，无人物、文字或标识 / Fictional Chinese municipal arts and community activity center for workshops and small performances, no people, text, or logo |
+| `src/static/images/venue-harbor-reading-hall-v1.png` | 澄港阅览与学习馆 / Harbor Reading and Study Hall；card/detail alt 使用场馆名称 / card/detail alt uses the venue name | 内置图像生成，虚构中国城市公共阅览与学习空间，明亮木质内装、书架、长桌、绿植、无人、无文字、无标识 / Built-in image generation; fictional Chinese municipal reading and study hall with bright wood interior, bookshelves, shared tables, plants, no people, text, or logo |
+| `src/static/images/venue-newtown-workshop-v1.png` | 新城社区创作空间 / New Town Community Workshop；card/detail alt 使用场馆名称 / card/detail alt uses the venue name | 内置图像生成，虚构中国城市社区工作坊与灵活活动空间，木地板、模块桌椅、自然光、无人、无文字、无标识 / Built-in image generation; fictional Chinese municipal community workshop and flexible activity space with wood floor, modular tables, daylight, no people, text, or logo |
 
 ## 依赖风险披露 / Dependency risk disclosure
 

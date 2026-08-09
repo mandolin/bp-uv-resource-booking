@@ -18,7 +18,7 @@ test('catalog uses explicit page facts and isolates entries', () => {
   assert.equal(firstPage.kind, 'page');
   assert.equal(firstPage.page, 1);
   assert.equal(firstPage.entries.length, 2);
-  assert.equal(firstPage.total, 4);
+  assert.equal(firstPage.total, 10);
   assert.equal(firstPage.hasNext, true);
 
   // <lang><zh-CN>改写返回项不应污染重新生成的 local JSON projection。</zh-CN><en>Mutating a returned entry must not contaminate a newly generated local-JSON projection.</en></lang>

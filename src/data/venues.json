@@ -88,6 +88,120 @@
           "availableSlots": ["10:00", "15:00", "19:00"]
         }
       ]
+    },
+    {
+      "id": "harbor-reading-hall",
+      "name": {
+        "zh-Hans": "澄港阅览与学习馆",
+        "en": "Harbor Reading and Study Hall"
+      },
+      "summary": {
+        "zh-Hans": "面向安静阅读、协作学习和小型交流的开放公共空间。",
+        "en": "An open public space for quiet reading, collaborative study, and small discussions."
+      },
+      "district": {
+        "zh-Hans": "澄港片区",
+        "en": "Harbor district"
+      },
+      "imageId": "harbor-reading-hall",
+      "resources": [
+        {
+          "id": "harbor-quiet-reading",
+          "name": {
+            "zh-Hans": "安静阅览区",
+            "en": "Quiet Reading Area"
+          },
+          "type": {
+            "zh-Hans": "学习空间",
+            "en": "Study space"
+          },
+          "capacity": 32,
+          "availableSlots": ["09:00", "10:00", "13:00", "15:00"]
+        },
+        {
+          "id": "harbor-shared-study-table",
+          "name": {
+            "zh-Hans": "共享学习桌",
+            "en": "Shared Study Table"
+          },
+          "type": {
+            "zh-Hans": "学习空间",
+            "en": "Study space"
+          },
+          "capacity": 8,
+          "availableSlots": ["09:00", "11:00", "14:00", "16:00"]
+        },
+        {
+          "id": "harbor-discussion-room",
+          "name": {
+            "zh-Hans": "小组交流室",
+            "en": "Discussion Room"
+          },
+          "type": {
+            "zh-Hans": "共享空间",
+            "en": "Shared space"
+          },
+          "capacity": 12,
+          "availableSlots": ["10:00", "13:00", "15:00"]
+        }
+      ]
+    },
+    {
+      "id": "newtown-workshop",
+      "name": {
+        "zh-Hans": "新城社区创作空间",
+        "en": "New Town Community Workshop"
+      },
+      "summary": {
+        "zh-Hans": "可灵活组合用于工作坊、共享创作和社区课程的明亮活动空间。",
+        "en": "A bright flexible activity space for workshops, shared making, and community classes."
+      },
+      "district": {
+        "zh-Hans": "新城片区",
+        "en": "New Town district"
+      },
+      "imageId": "newtown-workshop",
+      "resources": [
+        {
+          "id": "newtown-flexible-workshop",
+          "name": {
+            "zh-Hans": "灵活工作坊区",
+            "en": "Flexible Workshop Area"
+          },
+          "type": {
+            "zh-Hans": "活动空间",
+            "en": "Activity space"
+          },
+          "capacity": 20,
+          "availableSlots": ["09:30", "11:30", "14:30", "17:30"]
+        },
+        {
+          "id": "newtown-community-classroom",
+          "name": {
+            "zh-Hans": "社区学习室",
+            "en": "Community Learning Room"
+          },
+          "type": {
+            "zh-Hans": "学习空间",
+            "en": "Study space"
+          },
+          "capacity": 18,
+          "availableSlots": ["09:00", "12:00", "15:00", "18:00"]
+        },
+        {
+          "id": "newtown-project-table",
+          "name": {
+            "zh-Hans": "项目协作桌",
+            "en": "Project Collaboration Table"
+          },
+          "type": {
+            "zh-Hans": "共享空间",
+            "en": "Shared space"
+          },
+          "capacity": 6,
+          "availableSlots": ["10:00", "13:00", "16:00"]
+        }
+      ]
     }
   ],
   "mockReservations": [
