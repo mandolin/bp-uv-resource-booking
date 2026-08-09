@@ -31,6 +31,7 @@
               <text>{{ runtimeLocale.formatDate(reservation.date) }} · {{ reservation.time }}</text>
               <u-tag :text="reservationStatusLabel(reservation.status)" :tone="reservation.status === 'confirmed' ? 'primary' : 'neutral'" />
             </view>
+            <u-button size="sm" variant="text" :label="runtimeLocale.t('common.viewDetails')" @click="openReservationDetail(reservation.id)" />
             <u-steps :current="reservation.status === 'confirmed' ? 1 : 2" direction="horizontal" :steps="reservationSteps(reservation.status)" />
             <view v-if="reservation.status === 'confirmed'" class="reservations-page__actions">
               <text class="reservations-page__hint">{{ runtimeLocale.t('reservation.cancelHint') }}</text>
@@ -113,6 +114,18 @@ function reservationSteps(status) {
   ];
   if (status === 'cancelled') steps.push(Object.freeze({ label: runtimeLocale.t('reservation.stepCancelled') }));
   return Object.freeze(steps);
+}
+
+/**
+ * <lang><zh-CN>打开一条已在当前有限列表中的预约详情。</zh-CN><en>Opens details of one reservation already in current finite list.</en></lang>
+ * @param {string} reservationId <lang><zh-CN>当前卡片的稳定预约 ID。</zh-CN><en>Stable reservation ID of current card.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 路由只携带有限 ID；详情页仍须在 readonly state 中重新查找，不能信任任意 query 为记录。
+ * @lang en The route carries only a finite ID; detail must still look it up in readonly state and cannot trust arbitrary query as a record.
+ */
+function openReservationDetail(reservationId) {
+  // <lang><zh-CN>使用本地页面导航，不向 query 写入日期、时段、状态或任何用户资料。</zh-CN><en>Use local page navigation and write no date, slot, status, or user information into query.</en></lang>
+  uni.navigateTo({ url: `/pages/reservation-detail/index?reservationId=${encodeURIComponent(reservationId)}` });
 }
 
 /**

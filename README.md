@@ -15,8 +15,8 @@
 - 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 呈现；“个人信息”可选择跟随系统、简体中文或 English。标题继续使用 HIA-uView `u-navbar`，微信主导航通过 official custom tabBar 与 `switchTab` 保持跨页面常驻，并以受控 adapter 对齐 HIA-uView `u-tabbar` 的浅色视觉契约。
 - Page body copy, titles, and all four tabs render from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. Titles continue to use HIA-uView `u-navbar`; WeChat primary navigation remains persistent across pages through the official custom tab bar and `switchTab`, with a controlled adapter aligned to HIA-uView `u-tabbar`'s light visual contract.
 
-- 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。写入 adapter 同时定义了受控改期语义：保留已取消的旧预约，并创建一条新预约；当前首版页面尚未开放改期入口。
-- Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion. The write adapter also defines controlled reschedule semantics: it retains a cancelled old reservation and creates a new one; the initial page set does not yet expose a reschedule entry.
+- 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。已确认预约可从详情进入受控改期：先验证并创建新预约，成功后才保留旧记录为“已取消”；它不能换资源，也不接入真实库存、支付或后端。
+- Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion. A confirmed booking can enter controlled reschedule from details: it validates and creates a replacement first, then retains the old record as cancelled only after success; it cannot change resource and connects to no live inventory, payment, or backend.
 
 ## 可复现输入 / Reproducible inputs
 

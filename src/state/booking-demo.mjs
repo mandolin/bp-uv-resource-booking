@@ -176,9 +176,9 @@ const bookingWriteFailure = ref(null);
 const lastConfirmedReservation = ref(null);
 
 /**
- * <lang><zh-CN>供预约页呈现的最小预约卡片集合。</zh-CN><en>Minimum reservation-card collection for presentation on the reservations page.</en></lang>
- * @lang zh-CN 卡片只补充 local JSON 中已有的双语 venue/resource 字段；页面必须通过 runtime locale 投影它们，不读取或推断联系人、价格、支付或身份资料。
- * @lang en Cards add only existing bilingual venue/resource fields from local JSON; pages must project them through runtime locale and read or infer no contact, price, payment, or identity detail.
+ * <lang><zh-CN>供预约列表、详情和受控改期页呈现的最小预约视图集合。</zh-CN><en>Minimum reservation-view collection for list, detail, and controlled-reschedule pages.</en></lang>
+ * @lang zh-CN 视图只补充 local JSON 中已有的双语 venue/resource、静态图片 ID 与声明可用性；页面必须通过 runtime locale 投影它们，不读取或推断联系人、价格、支付或身份资料。
+ * @lang en Views add only existing bilingual venue/resource, static image ID, and declared availability from local JSON; pages must project them through runtime locale and read or infer no contact, price, payment, or identity detail.
  */
 const reservationCards = computed(() => reservations.value.map((reservation) => {
   // <lang><zh-CN>按当前记录的有限 venue ID 找到其静态展示记录；未知 ID 保持受限 fallback。</zh-CN><en>Find the static presentation record by current finite venue ID; an unknown ID retains a bounded fallback.</en></lang>
@@ -193,8 +193,13 @@ const reservationCards = computed(() => reservations.value.map((reservation) => 
     date: reservation.date,
     time: reservation.time,
     status: reservation.status,
+    venueId: reservation.venueId,
+    resourceId: reservation.resourceId,
+    venueImageId: venue?.imageId ?? '',
     venueName: venue?.name ?? { 'zh-Hans': '示例场馆', en: 'Demo venue' },
-    resourceName: resource?.name ?? { 'zh-Hans': '示例资源', en: 'Demo resource' }
+    resourceName: resource?.name ?? { 'zh-Hans': '示例资源', en: 'Demo resource' },
+    availableDates: resource ? [...resource.availableDates] : [],
+    availableSlots: resource ? [...resource.availableSlots] : []
   };
 }));
 

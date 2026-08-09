@@ -12,15 +12,8 @@ import { fileURLToPath } from 'node:url';
 // <lang><zh-CN>从脚本位置解析仓根，避免依赖调用命令的 cwd 或外部路径。</zh-CN><en>Resolve repository root from script location, avoiding dependence on command cwd or external paths.</en></lang>
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
-// <lang><zh-CN>所有受检页面是声明式有限列表，不递归发现、枚举或执行任意用户文件。</zh-CN><en>All inspected pages are a declarative finite list; the script recursively discovers, enumerates, or executes no arbitrary user files.</en></lang>
-const pagePaths = Object.freeze([
-  'src/pages/home/index.vue',
-  'src/pages/discover/index.vue',
-  'src/pages/reservations/index.vue',
-  'src/pages/profile/index.vue',
-  'src/pages/resource-detail/index.vue',
-  'src/pages/booking-confirm/index.vue'
-]);
+// <lang><zh-CN>页面清单只从应用已声明的 pages 配置读取；这让新页面自动进入同一受控门禁，且不递归扫描目录。</zh-CN><en>Read the page list only from the application's declared pages configuration; this brings new pages into the same controlled gate without recursively scanning directories.</en></lang>
+const pagesConfigurationPath = 'src/pages.json';
 
 // <lang><zh-CN>共用展示组件同样受模板直取/裸文案 gate 约束，但不要求各自拥有页面级 provider。</zh-CN><en>Shared presentation components are also subject to template direct-access/unbound-copy gates, but are not required to own a page-level provider.</en></lang>
 const componentPaths = Object.freeze([
@@ -40,6 +33,41 @@ function getTemplateText(sourceText) {
   // <lang><zh-CN>只取第一个固定 template block；缺失时返回空文本，并由调用方报告受控错误。</zh-CN><en>Take only the first fixed template block; on absence return empty text for caller to report a controlled error.</en></lang>
   const templateMatch = /<template>([\s\S]*?)<\/template>/u.exec(sourceText);
   return templateMatch ? templateMatch[1].replace(/<!--[\s\S]*?-->/gu, '') : '';
+}
+
+/**
+ * <lang><zh-CN>将声明式 `pages.json` 的有限页面路径转换为受检 SFC 路径。</zh-CN><en>Converts finite page paths declared in `pages.json` into inspected SFC paths.</en></lang>
+ * @param {unknown} pagesConfiguration <lang><zh-CN>已解析的应用 pages 配置。</zh-CN><en>Parsed application pages configuration.</en></lang>
+ * @returns {string[]} <lang><zh-CN>按 pages 配置顺序排列的安全仓内 SFC 路径。</zh-CN><en>Safe repository-local SFC paths in pages-configuration order.</en></lang>
+ * @lang zh-CN 该窄转换器只接受本项目的受控页面段；它不把配置内容当作任意文件路径。
+ * @lang en This narrow converter accepts only this project's controlled page segments; it never treats configuration content as an arbitrary file path.
+ */
+function getDeclaredPageSources(pagesConfiguration) {
+  // <lang><zh-CN>pages 必须是非空数组，空声明不能令所有页面级 i18n 检查被静默跳过。</zh-CN><en>Pages must be a nonempty array, so an empty declaration cannot silently skip every page-level i18n check.</en></lang>
+  if (!Array.isArray(pagesConfiguration?.pages) || pagesConfiguration.pages.length === 0) {
+    throw new Error('pages.json must declare at least one application page.');
+  }
+
+  // <lang><zh-CN>收集后的路径保持声明顺序，以便失败诊断稳定且与路由配置直接对应。</zh-CN><en>Collected paths preserve declaration order, keeping failure diagnostics stable and directly corresponding to route configuration.</en></lang>
+  const declaredSources = [];
+
+  for (const page of pagesConfiguration.pages) {
+    // <lang><zh-CN>只接受由小写字母、数字、连字符和单斜杠段组成的页面路径，拒绝绝对路径、空段和 traversal。</zh-CN><en>Accept only page paths made of lowercase letters, digits, hyphens, and single slash segments, rejecting absolute paths, empty segments, and traversal.</en></lang>
+    const pagePath = typeof page?.path === 'string' ? page.path : '';
+    if (!/^pages(?:\/[a-z0-9-]+)+$/u.test(pagePath)) {
+      throw new Error('pages.json contains an unsafe or unsupported page path.');
+    }
+
+    // <lang><zh-CN>只把已验证页面段映射到固定 `src` 根下的同名 Vue 文件。</zh-CN><en>Map only the verified page segment to its same-named Vue file beneath the fixed `src` root.</en></lang>
+    declaredSources.push(`src/${pagePath}.vue`);
+  }
+
+  // <lang><zh-CN>重复路由会让一个页面的合格结果掩盖另一个声明问题，因此在读取 SFC 前拒绝。</zh-CN><en>Duplicate routes could let one passing page hide another declaration problem, so reject them before reading SFCs.</en></lang>
+  if (new Set(declaredSources).size !== declaredSources.length) {
+    throw new Error('pages.json must not declare duplicate application pages.');
+  }
+
+  return declaredSources;
 }
 
 /**
@@ -84,15 +112,16 @@ async function verifySfc(relativePath, requireProvider) {
  * @lang en Order is fixed; failure messages contain only repository-relative paths and output no source, user data, or environment information.
  */
 async function verifyRuntimeI18n() {
-  // <lang><zh-CN>先检查六个页面，再检查三个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check six pages first then three shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
+  // <lang><zh-CN>只读取应用的固定 pages 配置，并将其有限声明转换为页面 SFC 清单；不进行文件系统发现。</zh-CN><en>Read only the application's fixed pages configuration and convert its finite declarations into a page-SFC list; perform no filesystem discovery.</en></lang>
+  const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, pagesConfigurationPath), 'utf8'));
+  const pagePaths = getDeclaredPageSources(pagesConfiguration);
+
+  // <lang><zh-CN>先检查全部已声明页面，再检查三个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check every declared page first then three shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
   for (const relativePath of pagePaths) await verifySfc(relativePath, true);
   for (const relativePath of componentPaths) await verifySfc(relativePath, false);
 
-  // <lang><zh-CN>读取声明式页面配置，确保标题保持应用自管，同时主页面进入平台管理的 custom tab 生命周期。</zh-CN><en>Read declarative page configuration to ensure titles remain application-owned while primary pages enter the platform-managed custom-tab lifecycle.</en></lang>
-  const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, 'src/pages.json'), 'utf8'));
-
-  // <lang><zh-CN>六页都必须关闭原生导航栏，避免应用自管标题与原生静态标题同时显示。</zh-CN><en>All six pages must disable the native navigation bar, preventing an application-owned title and a native static title from appearing together.</en></lang>
-  if (!Array.isArray(pagesConfiguration.pages) || pagesConfiguration.pages.length !== pagePaths.length || pagesConfiguration.pages.some((page) => page.style?.navigationStyle !== 'custom')) {
+  // <lang><zh-CN>全部已声明页面都必须关闭原生导航栏，避免应用自管标题与原生静态标题同时显示。</zh-CN><en>Every declared page must disable the native navigation bar, preventing an application-owned title and a native static title from appearing together.</en></lang>
+  if (pagesConfiguration.pages.some((page) => page.style?.navigationStyle !== 'custom')) {
     throw new Error('Every page must use application-owned custom navigation.');
   }
 
@@ -109,8 +138,16 @@ async function verifyRuntimeI18n() {
     throw new Error('Runtime page shell must render HIA-uView navbar without a page-local tabbar.');
   }
 
+  // <lang><zh-CN>按受控 pages 配置建立路径映射，使 tab 合约不依赖页面在数组中的偶然排列。</zh-CN><en>Build a path map from controlled pages configuration so the tab contract does not depend on incidental array ordering.</en></lang>
+  const pageSourcesByRoute = new Map(pagesConfiguration.pages.map((page) => [page.path, `src/${page.path}.vue`]));
+
   // <lang><zh-CN>四个主页面必须在 onShow 通过受限 bridge 同步当前 custom tab 实例，避免首次进入时选中态或语言漂移。</zh-CN><en>All four primary pages must synchronize their current custom-tab instance through the bounded bridge on show, avoiding selection or locale drift on first entry.</en></lang>
-  for (const relativePath of pagePaths.slice(0, 4)) {
+  for (const primaryPath of expectedPrimaryPaths) {
+    // <lang><zh-CN>tabBar 声明的每一主页面都必须实际存在于受检 pages 集合。</zh-CN><en>Every primary page declared by tabBar must exist in the inspected pages set.</en></lang>
+    const relativePath = pageSourcesByRoute.get(primaryPath);
+    if (!relativePath) throw new Error(`Missing primary page source for ${primaryPath}.`);
+
+    // <lang><zh-CN>已验证的相对路径只用于读取该固定主页面，不接收运行时导航输入。</zh-CN><en>The verified relative path is used only to read that fixed primary page and accepts no runtime navigation input.</en></lang>
     const sourceText = await readFile(resolve(projectRoot, relativePath), 'utf8');
     if (!sourceText.includes('syncPrimaryTabChrome')) throw new Error(`Missing persistent tab chrome synchronization in ${relativePath}.`);
   }

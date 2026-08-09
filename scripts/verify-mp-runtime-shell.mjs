@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>验证已生成微信小程序的应用自管 title 与平台常驻 custom tab 壳：六页必须关闭原生导航并引用 HIA-uView navbar 页面壳，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定 `dist/build/mp-weixin`。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title and platform-persistent custom-tab shell: all six pages must disable native navigation and reference the HIA-uView-navbar page shell, while four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed `dist/build/mp-weixin`.</en></lang>
+ * <lang><zh-CN>验证已生成微信小程序的应用自管 title 与平台常驻 custom tab 壳：全部应用页面必须关闭原生导航并引用 HIA-uView navbar 页面壳，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定 `dist/build/mp-weixin`。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title and platform-persistent custom-tab shell: every application page must disable native navigation and reference the HIA-uView-navbar page shell, while four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed `dist/build/mp-weixin`.</en></lang>
  * @lang zh-CN 本门禁验证编译产物契约，不替代开发者工具中的实际布局、点击、语言切换和安全区视觉检查。
  * @lang en This gate verifies the compiled-artifact contract and does not replace actual layout, clicks, language switching, and safe-area visual inspection in Developer Tools.
  */
@@ -13,22 +13,13 @@ import { fileURLToPath } from 'node:url';
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputRoot = resolve(projectRoot, 'dist/build/mp-weixin');
 
-/**
- * <lang><zh-CN>六个已审阅页面的固定生成路径。</zh-CN><en>Fixed generated paths for the six reviewed pages.</en></lang>
- * @lang zh-CN 列表与 `pages.json` 对齐，不从构建目录动态发现页面或第三方组件。
- * @lang en The list aligns with `pages.json` and dynamically discovers neither pages nor third-party components from the build directory.
- */
-const pagePaths = Object.freeze([
+// <lang><zh-CN>四个主页面的生成路径必须与 app.json tabBar 固定顺序一致；它们是已审阅应用导航的有限 allowlist。</zh-CN><en>Generated paths for the four primary pages must match the fixed app.json tabBar order; they are the reviewed application's finite navigation allowlist.</en></lang>
+const primaryPagePaths = Object.freeze([
   'pages/home/index',
   'pages/discover/index',
   'pages/reservations/index',
-  'pages/profile/index',
-  'pages/resource-detail/index',
-  'pages/booking-confirm/index'
+  'pages/profile/index'
 ]);
-
-// <lang><zh-CN>四个主页面的生成路径必须与 app.json tabBar 固定顺序一致。</zh-CN><en>Generated paths for the four primary pages must match the fixed app.json tabBar order.</en></lang>
-const primaryPagePaths = Object.freeze(pagePaths.slice(0, 4));
 
 /**
  * <lang><zh-CN>读取固定生成 JSON。</zh-CN><en>Reads a fixed generated JSON file.</en></lang>
@@ -40,6 +31,35 @@ const primaryPagePaths = Object.freeze(pagePaths.slice(0, 4));
 async function readOutputJson(relativePath) {
   // <lang><zh-CN>路径只由固定 output root 与声明相对路径组成。</zh-CN><en>The path consists only of the fixed output root and declared relative path.</en></lang>
   return JSON.parse(await readFile(resolve(outputRoot, relativePath), 'utf8'));
+}
+
+/**
+ * <lang><zh-CN>从已生成 app 配置取得全部受控应用页面。</zh-CN><en>Obtains every controlled application page from generated app configuration.</en></lang>
+ * @param {object} appConfiguration <lang><zh-CN>已解析的微信 `app.json`。</zh-CN><en>Parsed WeChat `app.json`.</en></lang>
+ * @returns {string[]} <lang><zh-CN>声明顺序不变的安全页面路径。</zh-CN><en>Safe page paths with declaration order preserved.</en></lang>
+ * @lang zh-CN 编译产物清单是本门禁唯一的页面输入；不会枚举构建目录或追随任意路径。
+ * @lang en The compiled artifact list is this gate's sole page input; it enumerates no build directory and follows no arbitrary path.
+ */
+function getGeneratedPagePaths(appConfiguration) {
+  // <lang><zh-CN>编译结果必须保留非空 pages 数组；否则页面壳检查会被无效产物静默绕过。</zh-CN><en>The compiled result must retain a nonempty pages array; otherwise an invalid artifact could silently bypass page-shell checks.</en></lang>
+  if (!Array.isArray(appConfiguration.pages) || appConfiguration.pages.length === 0) {
+    throw new Error('Generated app.json must declare at least one application page.');
+  }
+
+  // <lang><zh-CN>只接受普通 application page 段，拒绝绝对路径、空段、反斜杠和 traversal。</zh-CN><en>Accept only ordinary application-page segments, rejecting absolute paths, empty segments, backslashes, and traversal.</en></lang>
+  const generatedPaths = appConfiguration.pages.map((pagePath) => {
+    if (typeof pagePath !== 'string' || !/^pages(?:\/[a-z0-9-]+)+$/u.test(pagePath)) {
+      throw new Error('Generated app.json contains an unsafe or unsupported page path.');
+    }
+    return pagePath;
+  });
+
+  // <lang><zh-CN>重复输出路径会让同一合格 json 掩盖 page-list 退化，因此拒绝。</zh-CN><en>Duplicate output paths could let one passing JSON hide page-list degradation, so reject them.</en></lang>
+  if (new Set(generatedPaths).size !== generatedPaths.length) {
+    throw new Error('Generated app.json must not declare duplicate application pages.');
+  }
+
+  return generatedPaths;
 }
 
 /**
@@ -57,6 +77,7 @@ async function verifyGeneratedRuntimeShell() {
 
   // <lang><zh-CN>根产物必须声明 official custom tabBar 和四个固定主页面；custom=true 防止渲染静态 native labels。</zh-CN><en>The root artifact must declare the official custom tab bar and four fixed primary pages; custom=true prevents rendering static native labels.</en></lang>
   const appConfiguration = await readOutputJson('app.json');
+  const pagePaths = getGeneratedPagePaths(appConfiguration);
   const generatedPrimaryPaths = appConfiguration.tabBar?.list?.map((item) => item.pagePath);
   if (appConfiguration.tabBar?.custom !== true || JSON.stringify(generatedPrimaryPaths) !== JSON.stringify(primaryPagePaths)) {
     throw new Error('Generated app.json is missing the fixed official custom tabBar declaration.');

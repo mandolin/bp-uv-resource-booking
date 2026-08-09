@@ -37,6 +37,18 @@
       "style": {
         "navigationStyle": "custom"
       }
+    },
+    {
+      "path": "pages/reservation-detail/index",
+      "style": {
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/reservation-reschedule/index",
+      "style": {
+        "navigationStyle": "custom"
+      }
     }
   ],
   "easycom": {

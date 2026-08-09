@@ -42,8 +42,20 @@
         :message="runtimeLocale.t('profile.preferenceSaved')"
       />
 
+      <!-- <lang><zh-CN>预约概览只计数共享 readonly local mock collection；它不读取身份、后台订单或跨会话历史。</zh-CN><en>Booking summary counts only the shared readonly local-mock collection; it reads no identity, backend order, or cross-session history.</en></lang> -->
+      <u-card :title="runtimeLocale.t('profile.bookingSummary')">
+        <u-cell :label="runtimeLocale.t('profile.activeBookings')" :value="String(reservationSummary.confirmed)" />
+        <u-cell :label="runtimeLocale.t('profile.cancelledBookings')" :value="String(reservationSummary.cancelled)" />
+        <u-button :label="runtimeLocale.t('profile.viewBookings')" variant="secondary" block @click="goReservations" />
+      </u-card>
+
       <!-- <lang><zh-CN>数据边界用只读 cell 展示，不把示例资料伪装为可保存的个人档案。</zh-CN><en>Data boundaries use read-only cells and do not present demo details as a saveable personal profile.</en></lang> -->
       <u-card :title="runtimeLocale.t('profile.dataBoundary')">
+        <!-- <lang><zh-CN>UCell 不接受默认 slot，因此 source badge 使用调用方自有布局完整呈现，而不创建仿制信息行。</zh-CN><en>UCell accepts no default slot, so source badge is fully presented in caller-owned layout without creating an imitation information row.</en></lang> -->
+        <view class="profile-page__source">
+          <text class="profile-page__source-label">{{ runtimeLocale.t('profile.dataSource') }}</text>
+          <source-badge :source="demo.catalogSource.value" />
+        </view>
         <u-cell :label="runtimeLocale.t('profile.bookings')" />
         <u-cell :label="runtimeLocale.t('profile.venues')" />
         <u-cell :label="runtimeLocale.t('profile.images')" />
@@ -58,11 +70,30 @@
 import { computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
+import SourceBadge from '../../components/SourceBadge.vue';
 import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
+import { useBookingDemo } from '../../state/booking-demo.mjs';
+
+// <lang><zh-CN>个人信息页只读取共享 demo 状态，避免建立另一份预约统计或页面私有数据源。</zh-CN><en>Profile reads only shared demo state, avoiding another booking summary or page-private data source.</en></lang>
+const demo = useBookingDemo();
 
 // <lang><zh-CN>个人信息页读取唯一共享 locale surface，不创建页面私有语言 store 或平行 UI locale global。</zh-CN><en>Profile reads the sole shared locale surface and creates neither a page-private language store nor a parallel UI locale global.</en></lang>
 const runtimeLocale = useRuntimeLocale();
+
+// <lang><zh-CN>概览只区分当前 local mock contract 的两个有限状态，未知状态不计入任何展示计数。</zh-CN><en>The summary distinguishes only the two finite statuses of the current local-mock contract; an unknown status contributes to no displayed count.</en></lang>
+const reservationSummary = computed(() => {
+  // <lang><zh-CN>先创建本次计算专属的可变计数器，随后冻结返回投影以避免模板意外改写。</zh-CN><en>Create mutable counters private to this computation, then freeze returned projection to prevent accidental template mutation.</en></lang>
+  const summary = { confirmed: 0, cancelled: 0 };
+
+  for (const reservation of demo.reservationCards.value) {
+    // <lang><zh-CN>confirmed 与 cancelled 分别对应当前设计稿的两项可发现计数。</zh-CN><en>Confirmed and cancelled respectively correspond to the two discoverable counts in the current design board.</en></lang>
+    if (reservation.status === 'confirmed') summary.confirmed += 1;
+    else if (reservation.status === 'cancelled') summary.cancelled += 1;
+  }
+
+  return Object.freeze(summary);
+});
 
 // <lang><zh-CN>radio 以 `system` 显式表示无 stored preference；其余值只能是规格允许的 canonical locale。</zh-CN><en>Radio uses `system` explicitly to represent no stored preference; all other values can only be spec-permitted canonical locales.</en></lang>
 const languageChoice = computed({
@@ -93,6 +124,17 @@ function goDiscover() {
   openPrimaryPage('discover');
 }
 
+/**
+ * <lang><zh-CN>转到“我的预约”主页面。</zh-CN><en>Moves to the My Bookings primary page.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 此导航只进入应用固定 tab，不预取、取消或创建预约。
+ * @lang en This navigation enters only an application-fixed tab and neither prefetches, cancels, nor creates a booking.
+ */
+function goReservations() {
+  // <lang><zh-CN>只选择主导航 allowlist 中的预约页面。</zh-CN><en>Select only the bookings page in the primary-navigation allowlist.</en></lang>
+  openPrimaryPage('reservations');
+}
+
 // <lang><zh-CN>个人信息页每次作为平台 tab 显示时校正选中态和当前 locale。</zh-CN><en>Whenever Profile is shown as a platform tab, correct its selection and current locale.</en></lang>
 onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey)));
 </script>
@@ -103,4 +145,6 @@ onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messag
 .profile-page__identity { display: flex; gap: 14px; align-items: center; }
 .profile-page__name { display: block; color: var(--u-sys-color-text); font-size: 19px; font-weight: 700; }
 .profile-page__detail { display: block; margin-top: 4px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.5; }
+.profile-page__source { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+.profile-page__source-label { color: var(--u-sys-color-text); font-size: 15px; }
 </style>
