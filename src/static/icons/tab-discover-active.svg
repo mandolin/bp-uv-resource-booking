@@ -1,7 +1,7 @@
-<!-- <lang><zh-CN>本仓原创的发现选中实心图标；钴蓝圆盘与留白指针只表达当前 tab，不表示位置权限。</zh-CN><en>Repository-original selected Discover solid icon; the cobalt disc and white needle express only the current tab and no location permission.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+<!-- <lang><zh-CN>本仓原创的发现选中实心图标；27 单位网格上的 24 单位钴蓝圆盘与留白指针直接生成整数 3x 资产，只表达当前 tab。</zh-CN><en>Repository-original selected Discover solid icon; the 24-unit cobalt disc and white needle on a 27-unit grid directly produce an integer 3x asset and express only the current tab.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected Discover</title>
   <desc>Solid cobalt compass with a white needle for the selected Discover tab.</desc>
-  <circle cx="12" cy="12" r="9.2" fill="#0047ab" />
-  <path fill="#ffffff" d="m15.6 7.6-2.2 5.8-5 3 2.2-5.8 5-3Zm-2.8 4.3-.8-.8-.8 2.1.8.8.8-2.1Z" />
+  <circle cx="13.5" cy="13.5" r="12" fill="#0047ab" />
+  <path fill="#ffffff" d="m18.3 7.7-3.1 7.8-6.8 3.8 3.1-7.8 6.8-3.8Zm-3.9 5.7-1.1-1.1-1.1 2.8 1.1 1.1 1.1-2.8Z" />
 </svg>

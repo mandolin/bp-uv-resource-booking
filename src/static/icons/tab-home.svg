@@ -1,8 +1,8 @@
-<!-- <lang><zh-CN>本仓原创的首页未选中线性图标；不包含第三方字体、商标或可读文字。</zh-CN><en>Repository-original unselected Home line icon; contains no third-party font, trademark, or readable text.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27364a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<!-- <lang><zh-CN>本仓原创的首页未选中线性图标；27 单位网格与 7/3 单位描边在 3x 栅格中落到整数物理像素，不包含第三方字体、商标或可读文字。</zh-CN><en>Repository-original unselected Home line icon; its 27-unit grid and 7/3-unit stroke land on integer physical pixels in the 3x raster and contain no third-party font, trademark, or readable text.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none" stroke="#172536" stroke-width="2.333333" stroke-linecap="round" stroke-linejoin="round">
   <title>Home</title>
   <desc>Outline of a house for the Home tab.</desc>
-  <path d="M3.5 10.6 12 3.7l8.5 6.9" />
-  <path d="M5.4 9.4v10.2h13.2V9.4" />
-  <path d="M9.4 19.6v-5.7h5.2v5.7" />
+  <path d="m3 13 10.5-10 10.5 10" />
+  <path d="M5.5 11v13h16V11" />
+  <path d="M10.5 24v-7h6v7" />
 </svg>

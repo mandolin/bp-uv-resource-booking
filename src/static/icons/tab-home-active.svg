@@ -1,6 +1,6 @@
-<!-- <lang><zh-CN>本仓原创的首页选中实心图标；钴蓝房屋剪影强化当前页，但不承载文字或业务状态。</zh-CN><en>Repository-original selected Home solid icon; the cobalt house silhouette reinforces the current page but carries no text or business state.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+<!-- <lang><zh-CN>本仓原创的首页选中实心图标；27 单位网格把 24 单位钴蓝房屋剪影直接栅格为 81×81 的整数 3x 资产，不承载文字或业务状态。</zh-CN><en>Repository-original selected Home solid icon; its 27-unit grid rasterizes the 24-unit cobalt house silhouette directly into an integer 3x 81×81 asset and carries no text or business state.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected Home</title>
   <desc>Solid cobalt house for the selected Home tab.</desc>
-  <path fill="#0047ab" d="M2.8 10.7 12 3.3l9.2 7.4-1.4 1.7-1.3-1.1v8.9h-5v-5.7h-3v5.7h-5v-8.9l-1.3 1.1-1.4-1.7Z" />
+  <path fill="#0047ab" d="M1.5 12.5 13.5 1.5l12 11-1.7 2-1.8-1.6v12.6H15.8v-7.8h-4.6v7.8H5V12.9l-1.8 1.6-1.7-2Z" />
 </svg>

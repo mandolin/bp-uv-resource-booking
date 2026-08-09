@@ -57,7 +57,7 @@
   font-weight: 600;
 }
 
-/* <lang><zh-CN>四项统一使用 27px 几何框；81×81 PNG 在微信常用 3x 屏上正好按整数比例呈现，避免此前缩到 24px 造成的非整数重采样模糊。</zh-CN><en>All four items use a 27px geometry box; the 81×81 PNG maps at an exact integer ratio on common WeChat 3x screens, avoiding the non-integer resampling blur caused by the former 24px display size.</en></lang> */
+/* <lang><zh-CN>四项统一使用 27px 几何框；运行时 PNG 由 27 单位 SVG 源稿直接按 3x 生成 81×81，并在常见 3x 屏按整数比例呈现，前后两段都不再发生非整数重采样。</zh-CN><en>All four items use a 27px geometry box; runtime PNGs are generated directly at 3x from 27-unit SVG sources into 81×81 assets and render at an integer ratio on common 3x screens, avoiding non-integer resampling in both stages.</en></lang> */
 .bp-custom-tabbar__icon {
   display: block;
   flex: none;

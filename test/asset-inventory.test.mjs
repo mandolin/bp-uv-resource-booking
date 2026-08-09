@@ -93,7 +93,7 @@ test('catalog retains four venues, ten resources, and registered original images
   }
 });
 
-test('custom tab bar retains eight registered original sources and eight compatible runtime states', async function verifyTabIconInventory() {
+test('custom tab bar retains eight integer-grid original sources and eight compatible runtime states', async function verifyTabIconInventory() {
   // <lang><zh-CN>从冻结 allowlist 获取固定八张 SVG 源稿，不扫描 static 目录或接收运行时输入。</zh-CN><en>Obtain the eight fixed SVG sources from the frozen allowlist without scanning the static directory or accepting runtime input.</en></lang>
   const tabIconSourceFiles = Object.values(tabIconSourceFileByState);
 
@@ -107,8 +107,21 @@ test('custom tab bar retains eight registered original sources and eight compati
   assert.equal(new Set(tabIconRuntimeFiles).size, 8);
 
   for (const relativeIconPath of tabIconSourceFiles) {
-    // <lang><zh-CN>从当前测试文件只解析受登记的仓内相对路径，验证每张原创 SVG 源稿存在。</zh-CN><en>Resolve only the registered in-repository relative path from this test file and verify that each original SVG source exists.</en></lang>
-    await access(fileURLToPath(new URL(relativeIconPath, import.meta.url)));
+    // <lang><zh-CN>从当前测试文件只解析受登记的仓内相对路径，并读取每张原创 SVG 源稿，不遍历目录。</zh-CN><en>Resolve only the registered in-repository relative path from this test file and read each original SVG source without scanning a directory.</en></lang>
+    const absoluteIconPath = fileURLToPath(new URL(relativeIconPath, import.meta.url));
+    const sourceText = await readFile(absoluteIconPath, 'utf8');
+
+    // <lang><zh-CN>全部源稿必须直接使用 27×27 网格，使 3x 栅格化一步得到 81×81，禁止重新引入 24→81 的非整数预缩放。</zh-CN><en>Every source must use a direct 27×27 grid so one 3x rasterization yields 81×81; reintroducing the non-integer 24→81 preraster scale is forbidden.</en></lang>
+    assert.match(sourceText, /<svg[^>]*width="27"[^>]*height="27"[^>]*viewBox="0 0 27 27"/u);
+
+    // <lang><zh-CN>选中态使用同一钴蓝实心表达；未选中态使用更深中性色和正好映射为 7 个物理像素的 7/3 描边。</zh-CN><en>Selected states use the same solid cobalt expression; unselected states use a darker neutral and a 7/3 stroke that maps to exactly seven physical pixels.</en></lang>
+    const isSelectedSource = relativeIconPath.includes('-active.svg');
+    if (isSelectedSource) {
+      assert.equal(sourceText.includes('fill="#0047ab"'), true);
+    } else {
+      assert.equal(sourceText.includes('stroke="#172536"'), true);
+      assert.equal(sourceText.includes('stroke-width="2.333333"'), true);
+    }
   }
 
   for (const relativeIconPath of tabIconRuntimeFiles) {

@@ -1,7 +1,7 @@
-<!-- <lang><zh-CN>本仓原创的个人信息选中实心图标；钴蓝人像剪影只表达当前 tab。</zh-CN><en>Repository-original selected Profile solid icon; the cobalt person silhouette expresses only the current tab.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+<!-- <lang><zh-CN>本仓原创的个人信息选中实心图标；27 单位网格上的 24 单位钴蓝人像剪影直接生成整数 3x 资产，只表达当前 tab。</zh-CN><en>Repository-original selected Profile solid icon; the 24-unit cobalt person silhouette on a 27-unit grid directly produces an integer 3x asset and expresses only the current tab.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected Profile</title>
   <desc>Solid cobalt person silhouette for the selected Profile tab.</desc>
-  <circle cx="12" cy="7.4" r="4.5" fill="#0047ab" />
-  <path fill="#0047ab" d="M2.8 21c.6-5.4 3.9-8 9.2-8s8.6 2.6 9.2 8H2.8Z" />
+  <circle cx="13.5" cy="7.5" r="6" fill="#0047ab" />
+  <path fill="#0047ab" d="M1.5 25.5c.8-7.2 5.1-10.8 12-10.8s11.2 3.6 12 10.8h-24Z" />
 </svg>

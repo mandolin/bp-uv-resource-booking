@@ -1,7 +1,7 @@
-<!-- <lang><zh-CN>本仓原创的发现未选中线性图标；指南针形状只是导航隐喻，不表示定位能力。</zh-CN><en>Repository-original unselected Discover line icon; the compass is a navigation metaphor and does not represent location capability.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27364a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<!-- <lang><zh-CN>本仓原创的发现未选中线性图标；27 单位网格与 7/3 单位描边提供整数 3x 栅格，指南针只作导航隐喻而不表示定位能力。</zh-CN><en>Repository-original unselected Discover line icon; its 27-unit grid and 7/3-unit stroke provide an integer 3x raster, while the compass remains only a navigation metaphor and represents no location capability.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none" stroke="#172536" stroke-width="2.333333" stroke-linecap="round" stroke-linejoin="round">
   <title>Discover</title>
   <desc>Outline compass for the Discover tab.</desc>
-  <circle cx="12" cy="12" r="8.6" />
-  <path d="m14.9 8.6-1.7 4.6-4.1 2.2 1.7-4.6 4.1-2.2Z" />
+  <circle cx="13.5" cy="13.5" r="11" />
+  <path d="m17.5 8.5-2.8 7-6.2 3 2.8-7 6.2-3Z" />
 </svg>
