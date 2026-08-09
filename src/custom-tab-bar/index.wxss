@@ -55,7 +55,7 @@
   font-weight: 600;
 }
 
-/* <lang><zh-CN>图标的 24px 几何框在四项之间保持一致；颜色由已选择的本地 SVG 资产确定。</zh-CN><en>The icon's 24px geometry remains consistent across all four items; the selected local SVG asset determines its color.</en></lang> */
+/* <lang><zh-CN>图标的 24px 几何框在四项之间保持一致；颜色由原创 SVG 源稿派生的本地透明 PNG 运行时资产确定。</zh-CN><en>The icon's 24px geometry remains consistent across all four items; the local transparent PNG runtime asset derived from the original SVG source determines its color.</en></lang> */
 .bp-custom-tabbar__icon {
   display: block;
   flex: none;

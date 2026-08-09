@@ -15,6 +15,22 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // <lang><zh-CN>页面清单只从应用已声明的 pages 配置读取；这让新页面自动进入同一受控门禁，且不递归扫描目录。</zh-CN><en>Read the page list only from the application's declared pages configuration; this brings new pages into the same controlled gate without recursively scanning directories.</en></lang>
 const pagesConfigurationPath = 'src/pages.json';
 
+/**
+ * <lang><zh-CN>宿主 tabBar 与微信 custom-tab-bar 共用的八张透明 PNG 运行时图标按页面和状态固定排序。</zh-CN><en>The eight transparent PNG runtime icons shared by the host tabBar and WeChat custom-tab-bar are fixed in page-and-state order.</en></lang>
+ * @lang zh-CN 微信在 custom 组件运行前仍校验宿主声明；精确 allowlist 防止 SVG、网络 URL、未知文件或普通/选中态复用重新进入启动路径。
+ * @lang en WeChat still validates the host declaration before the custom component runs; the exact allowlist prevents SVGs, network URLs, unknown files, or normal/selected-state reuse from re-entering the startup path.
+ */
+const expectedTabIconPaths = Object.freeze([
+  'static/icons/tab-home.png',
+  'static/icons/tab-home-active.png',
+  'static/icons/tab-discover.png',
+  'static/icons/tab-discover-active.png',
+  'static/icons/tab-reservations.png',
+  'static/icons/tab-reservations-active.png',
+  'static/icons/tab-profile.png',
+  'static/icons/tab-profile-active.png'
+]);
+
 // <lang><zh-CN>共用展示组件同样受模板直取/裸文案 gate 约束，但不要求各自拥有页面级 provider。</zh-CN><en>Shared presentation components are also subject to template direct-access/unbound-copy gates, but are not required to own a page-level provider.</en></lang>
 const componentPaths = Object.freeze([
   'src/components/ResourceCard.vue',
@@ -132,6 +148,12 @@ async function verifyRuntimeI18n() {
     throw new Error('Platform-managed custom tabBar must declare the four fixed primary pages.');
   }
 
+  // <lang><zh-CN>按声明顺序展开普通/选中图标；字段缺失会保留为 undefined 并与精确 allowlist 不匹配。</zh-CN><en>Flatten normal/selected icons in declaration order; a missing field remains undefined and fails the exact allowlist comparison.</en></lang>
+  const declaredTabIconPaths = pagesConfiguration.tabBar.list.flatMap((item) => [item.iconPath, item.selectedIconPath]);
+  if (JSON.stringify(declaredTabIconPaths) !== JSON.stringify(expectedTabIconPaths)) {
+    throw new Error('Platform-managed custom tabBar must use the eight registered PNG runtime icons.');
+  }
+
   // <lang><zh-CN>页面壳仍必须组合锁定 HIA-uView navbar，但不得再在每个页面内重复创建 u-tabbar。</zh-CN><en>The page shell must still compose the pinned HIA-uView navbar but must no longer recreate u-tabbar inside every page.</en></lang>
   const runtimeShellSource = await readFile(resolve(projectRoot, 'src/components/RuntimePageShell.vue'), 'utf8');
   if (!runtimeShellSource.includes('<u-navbar visible') || runtimeShellSource.includes('<u-tabbar')) {
@@ -158,6 +180,14 @@ async function verifyRuntimeI18n() {
   const customTabStyle = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxss'), 'utf8');
   if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
     throw new Error('WeChat custom tabBar does not satisfy persistent bilingual chrome contract.');
+  }
+
+  for (const expectedIconPath of expectedTabIconPaths) {
+    // <lang><zh-CN>custom 组件使用根相对路径；逐项验证它与宿主声明消费同一登记 PNG，而不是保留另一套 SVG 或动态路径。</zh-CN><en>The custom component uses root-relative paths; verify each item consumes the same registered PNG as the host declaration rather than retaining another SVG set or dynamic path.</en></lang>
+    const expectedRuntimeLiteral = `/${expectedIconPath}`;
+    if (!customTabRuntime.includes(expectedRuntimeLiteral)) {
+      throw new Error('WeChat custom tabBar runtime does not use the registered PNG icon set.');
+    }
   }
 }
 

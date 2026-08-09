@@ -34,20 +34,24 @@ All four images are fictional venue images generated for this project on 2026-08
 
 ## 原创界面图标 / Original UI icons
 
-底部主导航的八张 SVG 是本项目为 Home、Discover、My bookings 和 Profile 四个语义直接绘制的线性图标；每项分别保留中性未选中态和钴蓝选中态。它们不来自图标库、字体、网络、上游仓或第三方品牌，也不表示定位、真实日程、库存、头像或身份数据。它们随本仓 MIT 许可证发布。
+底部主导航为 Home、Discover、My bookings 和 Profile 四个语义各保留中性未选中态和钴蓝选中态：八张 SVG 是本项目直接绘制的可审计源稿，八张 81×81 透明 PNG 是从对应源稿等比栅格化的微信运行时派生物。微信即使启用 official custom tabBar，也会在组件运行前校验宿主 `tabBar` 图标格式，因此宿主声明和自定义组件共同使用 PNG，SVG 只作为原创源稿保留。两类资产均不来自图标库、字体、网络、上游仓或第三方品牌，也不表示定位、真实日程、库存、头像或身份数据；它们随本仓 MIT 许可证发布。
 
-The eight bottom-primary-navigation SVGs are line icons drawn directly for this project for the Home, Discover, My bookings, and Profile meanings. Each item retains a neutral unselected state and a cobalt selected state. They come from no icon library, font, network source, upstream repository, or third-party brand, and they represent no location, live schedule, inventory, avatar, or identity data. They are distributed under this repository's MIT License.
+The bottom primary navigation retains a neutral unselected state and a cobalt selected state for each of Home, Discover, My bookings, and Profile: eight SVGs are auditable sources drawn directly for this project, while eight transparent 81×81 PNGs are proportional raster derivatives of their corresponding sources. Even with the official custom tabBar enabled, WeChat validates the host `tabBar` icon format before the component runs, so the host declaration and custom component share the PNGs while SVGs remain as original sources only. Neither asset set comes from an icon library, font, network source, upstream repository, or third-party brand, and they represent no location, live schedule, inventory, avatar, or identity data. They are distributed under this repository's MIT License.
 
 首页双入口另使用两张本项目原创 SVG：浅色日历只装饰主按钮“选择日期”，钴蓝公共建筑只装饰次按钮“浏览场馆”。操作名称始终由相邻的运行时本地化文字承担；图标不表示真实日程、定位、场馆状态或库存。
 
 Home's paired entries use two additional original project SVGs: a light calendar decorates the primary “Choose a date” button and a cobalt public-building outline decorates the secondary “Browse venues” button. Adjacent runtime-localized copy always carries the action name; the icons represent no live schedule, location, venue status, or inventory.
 
-| 语义 / Meaning | 未选中 / Unselected | 选中 / Selected | 边界 / Boundary |
+| 语义 / Meaning | SVG 源稿（未选中 / 选中） / SVG sources (unselected / selected) | PNG 运行时（未选中 / 选中） / PNG runtime (unselected / selected) | 边界 / Boundary |
 | --- | --- | --- | --- |
-| Home / 首页 | `src/static/icons/tab-home.svg` | `src/static/icons/tab-home-active.svg` | 房屋轮廓仅表示主页 / House outline identifies only the primary Home page |
-| Discover / 发现 | `src/static/icons/tab-discover.svg` | `src/static/icons/tab-discover-active.svg` | 指南针仅为导航隐喻，不声明定位能力 / Compass is only a navigation metaphor and claims no location capability |
-| My bookings / 我的预约 | `src/static/icons/tab-reservations.svg` | `src/static/icons/tab-reservations-active.svg` | 日历不包含真实日期或库存 / Calendar contains no live date or inventory |
-| Profile / 个人信息 | `src/static/icons/tab-profile.svg` | `src/static/icons/tab-profile-active.svg` | 人像轮廓不是真实头像或认证身份 / Person outline is no real avatar or authenticated identity |
+| Home / 首页 | `tab-home.svg` / `tab-home-active.svg` | `tab-home.png` / `tab-home-active.png` | 房屋轮廓仅表示主页 / House outline identifies only the primary Home page |
+| Discover / 发现 | `tab-discover.svg` / `tab-discover-active.svg` | `tab-discover.png` / `tab-discover-active.png` | 指南针仅为导航隐喻，不声明定位能力 / Compass is only a navigation metaphor and claims no location capability |
+| My bookings / 我的预约 | `tab-reservations.svg` / `tab-reservations-active.svg` | `tab-reservations.png` / `tab-reservations-active.png` | 日历不包含真实日期或库存 / Calendar contains no live date or inventory |
+| Profile / 个人信息 | `tab-profile.svg` / `tab-profile-active.svg` | `tab-profile.png` / `tab-profile-active.png` | 人像轮廓不是真实头像或认证身份 / Person outline is no real avatar or authenticated identity |
+
+上述表格中的文件均位于 `src/static/icons/`。PNG 运行时资产固定为 81×81、透明背景和小于 40 KiB；测试会校验文件签名、几何、数量和 source/runtime 对应关系，构建后门禁还会校验生成的 `app.json` 与 custom-tab-bar 只引用这八张 PNG。
+
+All files in the table live under `src/static/icons/`. Runtime PNGs are fixed at 81×81 with transparency and below 40 KiB. Tests verify signatures, geometry, counts, and source/runtime correspondence; the post-build gate also verifies that generated `app.json` and custom-tab-bar reference only these eight PNGs.
 
 | 首页入口 / Home entry | 文件 / File | 边界 / Boundary |
 | --- | --- | --- |

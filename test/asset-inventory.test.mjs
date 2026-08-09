@@ -6,7 +6,7 @@
 
 // <lang><zh-CN>使用 Node 内建断言、文件访问和 test runner，不增加图像或网络测试依赖。</zh-CN><en>Use Node built-in assertions, file access, and test runner and add no image or network test dependency.</en></lang>
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -26,11 +26,11 @@ const imageFileById = Object.freeze({
 });
 
 /**
- * <lang><zh-CN>锁定四项底部主导航的未选中/选中原创 SVG 资产对。</zh-CN><en>Locks the original unselected/selected SVG asset pair for each of the four bottom primary-navigation items.</en></lang>
- * @lang zh-CN 固定映射防止 custom tabBar 把任意路径、网络资源或第三方图标库变成导航输入。
- * @lang en The fixed mapping prevents the custom tab bar from turning arbitrary paths, network resources, or third-party icon libraries into navigation inputs.
+ * <lang><zh-CN>锁定四项底部主导航的未选中/选中原创 SVG 源稿。</zh-CN><en>Locks the original unselected/selected SVG sources for each of the four bottom primary-navigation items.</en></lang>
+ * @lang zh-CN 源稿保留可审计矢量表达；微信运行时不直接消费这些文件。
+ * @lang en The sources retain auditable vector expressions; the WeChat runtime does not consume these files directly.
  */
-const tabIconFileByState = Object.freeze({
+const tabIconSourceFileByState = Object.freeze({
   home: '../src/static/icons/tab-home.svg',
   'home-active': '../src/static/icons/tab-home-active.svg',
   discover: '../src/static/icons/tab-discover.svg',
@@ -40,6 +40,27 @@ const tabIconFileByState = Object.freeze({
   profile: '../src/static/icons/tab-profile.svg',
   'profile-active': '../src/static/icons/tab-profile-active.svg'
 });
+
+/**
+ * <lang><zh-CN>锁定由八张原创 SVG 源稿派生的透明 PNG 运行时资产。</zh-CN><en>Locks the transparent PNG runtime assets derived from the eight original SVG sources.</en></lang>
+ * @lang zh-CN 固定映射同时供宿主 `tabBar` 声明和 custom tabBar 组件使用，防止微信启动前格式校验与实际呈现资产发生分叉。
+ * @lang en The fixed mapping is shared conceptually by the host `tabBar` declaration and custom-tabBar component, preventing WeChat's prelaunch format validation from diverging from the assets actually rendered.
+ */
+const tabIconRuntimeFileByState = Object.freeze({
+  home: '../src/static/icons/tab-home.png',
+  'home-active': '../src/static/icons/tab-home-active.png',
+  discover: '../src/static/icons/tab-discover.png',
+  'discover-active': '../src/static/icons/tab-discover-active.png',
+  reservations: '../src/static/icons/tab-reservations.png',
+  'reservations-active': '../src/static/icons/tab-reservations-active.png',
+  profile: '../src/static/icons/tab-profile.png',
+  'profile-active': '../src/static/icons/tab-profile-active.png'
+});
+
+/**
+ * <lang><zh-CN>PNG 文件头是运行时位图最小真实性门禁，避免只改扩展名伪装格式。</zh-CN><en>The PNG signature is the minimum runtime-bitmap authenticity gate, preventing a renamed extension from masquerading as the format.</en></lang>
+ */
+const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /**
  * <lang><zh-CN>锁定首页双入口使用的两张第一方原创 SVG 装饰图标。</zh-CN><en>Locks the two first-party original decorative SVG icons used by Home's paired entries.</en></lang>
@@ -72,17 +93,34 @@ test('catalog retains four venues, ten resources, and registered original images
   }
 });
 
-test('custom tab bar retains eight registered original local icon states', async function verifyTabIconInventory() {
-  // <lang><zh-CN>从冻结 allowlist 获取固定八个相对路径，不扫描 static 目录或接收运行时输入。</zh-CN><en>Obtain the fixed eight relative paths from the frozen allowlist without scanning the static directory or accepting runtime input.</en></lang>
-  const tabIconFiles = Object.values(tabIconFileByState);
+test('custom tab bar retains eight registered original sources and eight compatible runtime states', async function verifyTabIconInventory() {
+  // <lang><zh-CN>从冻结 allowlist 获取固定八张 SVG 源稿，不扫描 static 目录或接收运行时输入。</zh-CN><en>Obtain the eight fixed SVG sources from the frozen allowlist without scanning the static directory or accepting runtime input.</en></lang>
+  const tabIconSourceFiles = Object.values(tabIconSourceFileByState);
 
-  // <lang><zh-CN>四项导航必须各有一张中性态和一张钴蓝选中态，且不得复用同一文件伪装两个状态。</zh-CN><en>Each of four navigation items must have one neutral and one cobalt selected asset, and no file may be reused to masquerade as both states.</en></lang>
-  assert.equal(tabIconFiles.length, 8);
-  assert.equal(new Set(tabIconFiles).size, 8);
+  // <lang><zh-CN>独立取得八张 PNG 运行时资产，使测试能同时约束来源可审计性与微信格式兼容性。</zh-CN><en>Obtain the eight PNG runtime assets separately so the test constrains both source auditability and WeChat format compatibility.</en></lang>
+  const tabIconRuntimeFiles = Object.values(tabIconRuntimeFileByState);
 
-  for (const relativeIconPath of tabIconFiles) {
-    // <lang><zh-CN>从当前测试文件只解析受登记的仓内相对路径，验证每张 SVG 存在。</zh-CN><en>Resolve only the registered in-repository relative path from this test file and verify that each SVG exists.</en></lang>
+  // <lang><zh-CN>四项导航必须各有一张中性态和一张钴蓝选中态，源稿与运行时集合都不得复用同一文件伪装两个状态。</zh-CN><en>Each of four navigation items must have one neutral and one cobalt selected state, and neither the source nor runtime set may reuse one file to masquerade as two states.</en></lang>
+  assert.equal(tabIconSourceFiles.length, 8);
+  assert.equal(new Set(tabIconSourceFiles).size, 8);
+  assert.equal(tabIconRuntimeFiles.length, 8);
+  assert.equal(new Set(tabIconRuntimeFiles).size, 8);
+
+  for (const relativeIconPath of tabIconSourceFiles) {
+    // <lang><zh-CN>从当前测试文件只解析受登记的仓内相对路径，验证每张原创 SVG 源稿存在。</zh-CN><en>Resolve only the registered in-repository relative path from this test file and verify that each original SVG source exists.</en></lang>
     await access(fileURLToPath(new URL(relativeIconPath, import.meta.url)));
+  }
+
+  for (const relativeIconPath of tabIconRuntimeFiles) {
+    // <lang><zh-CN>运行时路径只来自冻结 allowlist，并解析到仓内文件；不接受 pages 配置或用户文本决定读取位置。</zh-CN><en>The runtime path comes only from the frozen allowlist and resolves to an in-repository file; no pages configuration or user text chooses the read location.</en></lang>
+    const absoluteIconPath = fileURLToPath(new URL(relativeIconPath, import.meta.url));
+
+    // <lang><zh-CN>读取受登记 PNG 的有限二进制内容，验证真实签名与固定 81×81 IHDR，而不是信任文件后缀。</zh-CN><en>Read the finite binary content of the registered PNG and verify its real signature and fixed 81×81 IHDR rather than trusting the suffix.</en></lang>
+    const iconBytes = await readFile(absoluteIconPath);
+    assert.equal(iconBytes.subarray(0, pngSignature.length).equals(pngSignature), true);
+    assert.equal(iconBytes.readUInt32BE(16), 81);
+    assert.equal(iconBytes.readUInt32BE(20), 81);
+    assert.equal(iconBytes.length < 40 * 1024, true);
   }
 });
 

@@ -67,26 +67,26 @@
       {
         "pagePath": "pages/home/index",
         "text": "首页",
-        "iconPath": "static/icons/tab-home.svg",
-        "selectedIconPath": "static/icons/tab-home-active.svg"
+        "iconPath": "static/icons/tab-home.png",
+        "selectedIconPath": "static/icons/tab-home-active.png"
       },
       {
         "pagePath": "pages/discover/index",
         "text": "发现",
-        "iconPath": "static/icons/tab-discover.svg",
-        "selectedIconPath": "static/icons/tab-discover-active.svg"
+        "iconPath": "static/icons/tab-discover.png",
+        "selectedIconPath": "static/icons/tab-discover-active.png"
       },
       {
         "pagePath": "pages/reservations/index",
         "text": "我的预约",
-        "iconPath": "static/icons/tab-reservations.svg",
-        "selectedIconPath": "static/icons/tab-reservations-active.svg"
+        "iconPath": "static/icons/tab-reservations.png",
+        "selectedIconPath": "static/icons/tab-reservations-active.png"
       },
       {
         "pagePath": "pages/profile/index",
         "text": "个人信息",
-        "iconPath": "static/icons/tab-profile.svg",
-        "selectedIconPath": "static/icons/tab-profile-active.svg"
+        "iconPath": "static/icons/tab-profile.png",
+        "selectedIconPath": "static/icons/tab-profile-active.png"
       }
     ]
   },

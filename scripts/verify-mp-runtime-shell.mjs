@@ -22,6 +22,27 @@ const primaryPagePaths = Object.freeze([
 ]);
 
 /**
+ * <lang><zh-CN>生成 app.json 与 custom-tab-bar 必须共同消费的八张 PNG 按普通/选中状态固定。</zh-CN><en>The eight PNGs that generated app.json and custom-tab-bar must consume together are fixed in normal/selected-state order.</en></lang>
+ * @lang zh-CN 精确清单在微信启动前阻止不受支持的 SVG、网络 URL、丢失资产或状态复用进入产物。
+ * @lang en The exact list blocks unsupported SVGs, network URLs, missing assets, or reused states from entering the artifact before WeChat startup.
+ */
+const expectedTabIconPaths = Object.freeze([
+  'static/icons/tab-home.png',
+  'static/icons/tab-home-active.png',
+  'static/icons/tab-discover.png',
+  'static/icons/tab-discover-active.png',
+  'static/icons/tab-reservations.png',
+  'static/icons/tab-reservations-active.png',
+  'static/icons/tab-profile.png',
+  'static/icons/tab-profile-active.png'
+]);
+
+/**
+ * <lang><zh-CN>标准 PNG signature 用于证明构建产物是真实位图而不是只改后缀的 SVG。</zh-CN><en>The standard PNG signature proves the built artifact is a real bitmap rather than an SVG with only its suffix changed.</en></lang>
+ */
+const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+/**
  * <lang><zh-CN>读取固定生成 JSON。</zh-CN><en>Reads a fixed generated JSON file.</en></lang>
  * @param {string} relativePath <lang><zh-CN>由本脚本声明的构建内相对路径。</zh-CN><en>Build-relative path declared by this script.</en></lang>
  * @returns {Promise<object>} <lang><zh-CN>已解析对象。</zh-CN><en>Parsed object.</en></lang>
@@ -83,6 +104,24 @@ async function verifyGeneratedRuntimeShell() {
     throw new Error('Generated app.json is missing the fixed official custom tabBar declaration.');
   }
 
+  // <lang><zh-CN>按四个主页面的声明顺序展开普通/选中图标，让格式、顺序和状态配对一次性进入精确门禁。</zh-CN><en>Flatten normal/selected icons in the four-primary-page declaration order so format, order, and state pairing enter one exact gate.</en></lang>
+  const generatedTabIconPaths = appConfiguration.tabBar.list.flatMap((item) => [item.iconPath, item.selectedIconPath]);
+  if (JSON.stringify(generatedTabIconPaths) !== JSON.stringify(expectedTabIconPaths)) {
+    throw new Error('Generated app.json must use the eight registered PNG runtime icons.');
+  }
+
+  for (const expectedIconPath of expectedTabIconPaths) {
+    // <lang><zh-CN>路径来自脚本内冻结 allowlist，只读取对应构建资产，不枚举目录或接受配置生成任意文件系统目标。</zh-CN><en>The path comes from the script-frozen allowlist and reads only the corresponding built asset without enumerating directories or letting configuration produce an arbitrary file-system target.</en></lang>
+    const iconBytes = await readFile(resolve(outputRoot, expectedIconPath));
+
+    // <lang><zh-CN>签名、IHDR 几何和大小共同锁定微信兼容的 81×81 透明 PNG 交付轮廓；透明像素本身留给人工视觉与源码资产测试。</zh-CN><en>Signature, IHDR geometry, and size together lock the WeChat-compatible 81×81 PNG delivery shape; transparency itself remains covered by visual review and the source-asset test.</en></lang>
+    const hasPngSignature = iconBytes.subarray(0, pngSignature.length).equals(pngSignature);
+    const hasExpectedGeometry = iconBytes.length >= 24 && iconBytes.readUInt32BE(16) === 81 && iconBytes.readUInt32BE(20) === 81;
+    if (!hasPngSignature || !hasExpectedGeometry || iconBytes.length >= 40 * 1024) {
+      throw new Error(`Generated tab icon is not a bounded 81x81 PNG: ${expectedIconPath}.`);
+    }
+  }
+
   // <lang><zh-CN>每页必须同时保持 custom navigation 和编译后的 RuntimePageShell 引用。</zh-CN><en>Every page must retain both custom navigation and a compiled RuntimePageShell reference.</en></lang>
   for (const pagePath of pagePaths) {
     const pageConfiguration = await readOutputJson(`${pagePath}.json`);
@@ -109,6 +148,14 @@ async function verifyGeneratedRuntimeShell() {
   const customTabStyle = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxss'), 'utf8');
   if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
     throw new Error('Generated official custom tabBar does not satisfy persistent bilingual chrome contract.');
+  }
+
+  for (const expectedIconPath of expectedTabIconPaths) {
+    // <lang><zh-CN>生成 custom runtime 采用根相对字面值；逐项要求与 app.json 的登记 PNG 完全同源。</zh-CN><en>The generated custom runtime uses root-relative literals; require each item to share the exact registered PNG with app.json.</en></lang>
+    const expectedRuntimeLiteral = `/${expectedIconPath}`;
+    if (!customTabRuntime.includes(expectedRuntimeLiteral)) {
+      throw new Error('Generated custom tabBar runtime does not use the registered PNG icon set.');
+    }
   }
 }
 
