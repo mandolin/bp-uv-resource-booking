@@ -190,7 +190,8 @@ onLoad(readRouteReservation);
 /* <lang><zh-CN>详情页以 token 化表面、图片、状态和双按钮动作组织本地示例，不模拟订单号、用户信息或支付收据。</zh-CN><en>Detail uses tokenized surfaces, image, state, and dual-button actions to organize local demo without simulating order number, user information, or payment receipt.</en></lang> */
 .reservation-detail-page { padding: 16px; background: var(--u-sys-color-surface-subtle); }
 .reservation-detail-page__content { display: flex; gap: 16px; flex-direction: column; }
-.reservation-detail-page__image { width: 100%; height: 220px; }
+.reservation-detail-page__image { display: block; width: 100%; height: 194px; }
+.reservation-detail-page__image :deep(.u-image__native) { height: 100%; width: 100%; }
 .reservation-detail-page__status-row { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
 .reservation-detail-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; line-height: 1.3; }
 .reservation-detail-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }

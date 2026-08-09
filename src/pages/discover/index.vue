@@ -14,13 +14,14 @@
         <source-badge :source="demo.catalogSource.value" />
       </view>
       <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @search="handleSearch" @clear="handleClear" />
-      <!-- <lang><zh-CN>三项紧凑触发器均为 state 提供的有限本地值；选择面板提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>All three compact triggers use finite local values supplied by state; a selection-panel submission replaces page one, and appended pages never mix in a draft.</en></lang> -->
+      <!-- <lang><zh-CN>三项紧凑触发器复用 HIA-uView button 与 action-sheet：按钮只打开有限本地选项，选择面板提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>Three compact triggers reuse HIA-uView buttons and action sheet: a button only opens finite local options, while selection replaces page one and appended pages never mix a draft.</en></lang> -->
       <view class="discover-page__filters">
-        <u-dropdown v-model="filterTriggerValue" @change="openFilterSheet">
-          <u-dropdown-item value="venue" :label="venueTriggerLabel" />
-          <u-dropdown-item value="resourceType" :label="resourceTypeTriggerLabel" />
-          <u-dropdown-item value="date" :label="dateTriggerLabel" />
-        </u-dropdown>
+        <view class="discover-page__filter-actions">
+          <!-- <lang><zh-CN>每个动作只传固定筛选类别，不把标签、事件或页面对象当作查询输入。</zh-CN><en>Each action passes only a fixed filter kind and never treats a label, event, or page object as query input.</en></lang> -->
+          <u-button :label="venueTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('venue')" />
+          <u-button :label="resourceTypeTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('resourceType')" />
+          <u-button :label="dateTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('date')" />
+        </view>
         <text class="discover-page__filters-hint">{{ runtimeLocale.t('discover.filtersHint') }}</text>
       </view>
       <!-- <lang><zh-CN>底部面板只呈现当前有限 option 集合；页面收到 select intent 后才更新 filter 和目录。</zh-CN><en>The bottom sheet presents only the current finite option collection; the page updates filter and catalog only after receiving a select intent.</en></lang> -->
@@ -46,7 +47,7 @@
       />
       <u-list v-else class="discover-page__list">
         <!-- <lang><zh-CN>卡片只得到已映射 entry，并仅将查看意图返回给页面。</zh-CN><en>Cards receive only mapped entries and return only a view intent to the page.</en></lang> -->
-        <resource-card v-for="entry in demo.catalogEntries.value" :key="entry.id" :entry="entry" @view="openDetail" />
+        <resource-card v-for="entry in demo.catalogEntries.value" :key="entry.id" :entry="entry" layout="catalog" @view="openDetail" />
         <view class="discover-page__footer">
           <!-- <lang><zh-CN>追加失败仍保留已有列表和页次；notice 明确说明当前可见结果未被清空，重试只重新请求下一页。</zh-CN><en>An append failure retains existing list and page facts; notice explicitly says visible results remain and retry requests only the next page.</en></lang> -->
           <u-notice v-if="appendFailureMessage" visible tone="warning" :message="appendFailureMessage" />
@@ -83,10 +84,7 @@ const selectedVenueId = ref(demo.catalogFilters.value.venueId);
 const selectedResourceTypeId = ref(demo.catalogFilters.value.resourceTypeId);
 const selectedDate = ref(demo.catalogFilters.value.date);
 
-// <lang><zh-CN>下拉触发器只短暂保存当前要打开的有限筛选类别，不把它误作已提交的业务筛选值。</zh-CN><en>The dropdown trigger only briefly retains the finite filter kind to open and never treats it as a committed business-filter value.</en></lang>
-const filterTriggerValue = ref('');
-
-// <lang><zh-CN>底部选择面板拥有当前类别与受控可见性；页面在 select intent 后明确关闭它。</zh-CN><en>The bottom selection panel owns current kind and controlled visibility; the page explicitly closes it after a select intent.</en></lang>
+// <lang><zh-CN>底部选择面板拥有当前固定类别与受控可见性；页面在 select intent 后明确关闭它。</zh-CN><en>The bottom selection panel owns current fixed kind and controlled visibility; the page explicitly closes it after a select intent.</en></lang>
 const filterSheetKind = ref('');
 const filterSheetVisible = ref(false);
 
@@ -157,7 +155,7 @@ function createFilterTriggerLabel(selectedValue, options, fallback) {
   return `${visibleLabel} ▾`;
 }
 
-// <lang><zh-CN>三个触发器随当前选择与语言更新，宽度仍由 UI dropdown item 的 token 化边界管理。</zh-CN><en>The three triggers update with current selection and language while width remains governed by UI dropdown-item tokenized bounds.</en></lang>
+// <lang><zh-CN>三个触发器随当前选择与语言更新；其紧凑三列布局由页面组合管理，按钮本身仍使用 UI 的 token 化边界。</zh-CN><en>The three triggers update with current selection and language; page composition manages their compact three-column layout while buttons retain UI tokenized bounds.</en></lang>
 const venueTriggerLabel = computed(() => createFilterTriggerLabel(selectedVenueId.value, venueOptions.value, runtimeLocale.t('discover.venueLabel')));
 const resourceTypeTriggerLabel = computed(() => createFilterTriggerLabel(selectedResourceTypeId.value, resourceTypeOptions.value, runtimeLocale.t('discover.typeLabel')));
 const dateTriggerLabel = computed(() => createFilterTriggerLabel(selectedDate.value, dateOptions.value, runtimeLocale.t('discover.dateLabel')));
@@ -261,17 +259,18 @@ async function handleFilterChange() {
 }
 
 /**
- * <lang><zh-CN>打开当前 dropdown 触发的固定维度选择面板。</zh-CN><en>Opens the fixed-dimension selection panel triggered by the current dropdown.</en></lang>
+ * <lang><zh-CN>打开一个固定维度的本地选择面板。</zh-CN><en>Opens the local selection panel for one fixed dimension.</en></lang>
+ * @param {'venue'|'resourceType'|'date'} filterKind <lang><zh-CN>已声明的筛选类别。</zh-CN><en>Declared filter kind.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN dropdown event 不直接更新业务筛选；只有 action-sheet select 才提交新查询。
- * @lang en A dropdown event does not directly update business filters; only an action-sheet select submits a new query.
+ * @lang zh-CN button click 不直接更新业务筛选；只有 action-sheet select 才提交新查询。
+ * @lang en A button click does not directly update business filters; only an action-sheet select submits a new query.
  */
-function openFilterSheet() {
-  // <lang><zh-CN>只接受三类固定 trigger 值，未知值不会打开空面板或写入筛选状态。</zh-CN><en>Accept only the three fixed trigger values; an unknown value opens no empty panel and writes no filter state.</en></lang>
-  if (!['venue', 'resourceType', 'date'].includes(filterTriggerValue.value)) return;
+function openFilterSheet(filterKind) {
+  // <lang><zh-CN>只接受三类固定类别，未知输入不会打开空面板或写入筛选状态。</zh-CN><en>Accept only three fixed kinds; an unknown input opens no empty panel and writes no filter state.</en></lang>
+  if (!['venue', 'resourceType', 'date'].includes(filterKind)) return;
 
   // <lang><zh-CN>将有限类别转移给面板并显式显示；业务 selector 仍保持原值。</zh-CN><en>Transfer finite kind to the panel and explicitly show it; business selectors retain their prior values.</en></lang>
-  filterSheetKind.value = filterTriggerValue.value;
+  filterSheetKind.value = filterKind;
   filterSheetVisible.value = true;
 }
 
@@ -299,16 +298,15 @@ async function selectFilterSheetItem(selection) {
 }
 
 /**
- * <lang><zh-CN>关闭有限筛选 action sheet 并清除仅用于触发的 UI 状态。</zh-CN><en>Closes the finite filter action sheet and clears UI state used only for triggering.</en></lang>
+ * <lang><zh-CN>关闭有限筛选 action sheet 并清除临时面板类别。</zh-CN><en>Closes the finite filter action sheet and clears temporary panel kind.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
  * @lang zh-CN 此函数不重置已提交筛选，也不发起读取；mask/cancel 和 select 后都可安全调用。
  * @lang en This function resets no committed filter and starts no read; it is safe after mask/cancel or select.
  */
 function closeFilterSheet() {
-  // <lang><zh-CN>先隐藏面板，再清空类别和 dropdown 的短暂选中态。</zh-CN><en>Hide panel first, then clear kind and the dropdown’s temporary selected state.</en></lang>
+  // <lang><zh-CN>先隐藏面板，再清空临时类别。</zh-CN><en>Hide panel first, then clear temporary kind.</en></lang>
   filterSheetVisible.value = false;
   filterSheetKind.value = '';
-  filterTriggerValue.value = '';
 }
 
 /**
@@ -367,6 +365,7 @@ onReachBottom(handleLoadMore);
 .discover-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .discover-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
 .discover-page__filters { display: flex; gap: 8px; flex-direction: column; margin-top: 14px; }
+.discover-page__filter-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .discover-page__filters-hint { color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
 .discover-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
 .discover-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 16px; }

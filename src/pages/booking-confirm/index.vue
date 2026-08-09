@@ -10,18 +10,25 @@
       <view class="booking-confirm-page">
       <!-- <lang><zh-CN>页面只在已有 detail 和同资源已验证草稿时开放确认；无任一条件时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with existing detail and same-resource validated draft; without either, explicit recovery prevents hidden state or URL from creating a booking directly.</en></lang> -->
       <!-- <lang><zh-CN>确认成功后切换到独立结果投影，防止仍显示可再次提交的确认按钮。</zh-CN><en>After confirmation succeeds, switch to a separate result projection so a button allowing another submission is not still shown.</en></lang> -->
-      <view v-if="confirmedReservation" class="booking-confirm-page__content">
+      <view v-if="confirmedReservation" class="booking-confirm-page__content booking-confirm-page__result">
+        <!-- <lang><zh-CN>结果头将确认状态与本地数据来源分为两层：视觉标记只表示当前 mock write 的成功 outcome，source badge 保留其非真实业务边界。</zh-CN><en>Result header separates confirmation state from local-data provenance: visual mark expresses only successful current mock-write outcome, while source badge retains its non-real-business boundary.</en></lang> -->
+        <view class="booking-confirm-page__result-header">
+          <view class="booking-confirm-page__result-mark" aria-hidden="true"><text>✓</text></view>
+          <view class="booking-confirm-page__result-copy">
+            <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
+            <text class="booking-confirm-page__title">{{ runtimeLocale.t('booking.confirmedTitle') }}</text>
+            <!-- <lang><zh-CN>结果状态使用现有 HIA-uView tag，并按内容宽度显示，避免与下方预约信息卡竞争主层级。</zh-CN><en>Result status uses the existing HIA-uView tag and displays at content width, avoiding competition with the booking-information card below.</en></lang> -->
+            <u-tag class="booking-confirm-page__result-state" :text="runtimeLocale.t('reservation.confirmed')" tone="primary" />
+          </view>
+        </view>
         <source-badge :source="detail.source" />
-        <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
-        <text class="booking-confirm-page__title">{{ runtimeLocale.t('booking.confirmedTitle') }}</text>
-        <u-tag :text="runtimeLocale.t('reservation.confirmed')" tone="primary" />
-        <u-card :title="runtimeLocale.t('booking.selectionTitle')">
+        <u-card class="booking-confirm-page__summary" :title="runtimeLocale.t('booking.selectionTitle')" shadow>
           <u-cell :label="runtimeLocale.t('booking.venueLabel')" :value="confirmedReservation.venueName" />
           <u-cell :label="runtimeLocale.t('booking.resourceLabel')" :value="confirmedReservation.resourceName" />
           <u-cell :label="runtimeLocale.t('booking.dateLabel')" :value="runtimeLocale.formatDate(confirmedReservation.date)" />
           <u-cell :label="runtimeLocale.t('booking.timeLabel')" :value="confirmedReservation.time" />
         </u-card>
-        <u-notice visible tone="success" :message="runtimeLocale.t('booking.confirmedDescription')" />
+        <u-notice visible tone="info" :message="runtimeLocale.t('booking.confirmedDescription')" />
         <view class="booking-confirm-page__actions">
           <u-button :label="runtimeLocale.t('booking.viewReservation')" block @click="openConfirmedReservationDetail" />
           <u-button :label="runtimeLocale.t('booking.returnHome')" variant="secondary" block @click="returnHome" />
@@ -189,9 +196,15 @@ function backToDiscover() {
 </script>
 
 <style scoped>
-/* <lang><zh-CN>确认页以清晰的表单分组和主题卡片组织 local flow，不模拟支付或会员视觉。</zh-CN><en>Confirmation uses clear form grouping and theme cards to organize local flow without simulating payment or membership visuals.</en></lang> */
+/* <lang><zh-CN>确认页以清晰的表单分组、受控结果标记和主题卡片组织 local flow，不模拟支付、会员或真实订单视觉。</zh-CN><en>Confirmation uses clear form grouping, controlled result mark, and theme cards to organize local flow without simulating payment, membership, or real-order visuals.</en></lang> */
 .booking-confirm-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
 .booking-confirm-page__content { display: flex; gap: 16px; flex-direction: column; }
+.booking-confirm-page__result { gap: 18px; padding-top: 8px; }
+.booking-confirm-page__result-header { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 112px; padding: 8px 0; text-align: left; }
+.booking-confirm-page__result-mark { display: flex; align-items: center; justify-content: center; flex: 0 0 64px; height: 64px; width: 64px; border-radius: 50%; background: var(--u-sys-color-action-primary); color: var(--u-sys-color-on-action-primary); font-size: 36px; font-weight: 700; line-height: 1; }
+.booking-confirm-page__result-copy { display: flex; gap: 6px; flex-direction: column; min-width: 0; }
+.booking-confirm-page__result-state { align-self: flex-start; display: inline-flex; }
+.booking-confirm-page__summary { margin-top: 2px; }
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .booking-confirm-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
 .booking-confirm-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }

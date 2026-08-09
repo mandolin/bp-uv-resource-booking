@@ -18,7 +18,8 @@
       <view v-else-if="demo.detailPhase.value === 'ready' && detail.kind === 'detail'" class="resource-detail-page__content">
         <u-image class="resource-detail-page__image" :src="venueImage || ''" :alt="venueName" size="large" shape="rounded" />
         <view class="resource-detail-page__source"><source-badge :source="detail.source" /><text>{{ runtimeLocale.t('detail.offline') }}</text></view>
-        <u-tag :text="resourceType" tone="primary" />
+        <!-- <lang><zh-CN>类型标签保持 HIA-uView 的受控语义，但在详情正文中按内容宽度收束，避免把分类误呈现为全宽状态栏。</zh-CN><en>Type tag retains HIA-uView's constrained semantics but contracts to content width in detail body, avoiding a category being presented as a full-width status bar.</en></lang> -->
+        <u-tag class="resource-detail-page__type" :text="resourceType" tone="primary" />
         <text class="resource-detail-page__title">{{ resourceName }}</text>
         <text class="resource-detail-page__venue">{{ venueName }} · {{ districtName }}</text>
         <text class="resource-detail-page__summary">{{ venueSummary }}</text>
@@ -202,7 +203,9 @@ onLoad(readRouteResource);
 /* <lang><zh-CN>详情页以主题表面、可读行距和 token 化圆角组织内容，不编码实时或行业状态色。</zh-CN><en>Detail uses theme surfaces, readable line height, and tokenized radius to organize content without encoding live or industry-state colors.</en></lang> */
 .resource-detail-page { padding: 16px; background: var(--u-sys-color-surface-subtle); }
 .resource-detail-page__content { display: flex; gap: 16px; flex-direction: column; }
-.resource-detail-page__image { width: 100%; height: 252px; }
+.resource-detail-page__image { display: block; width: 100%; height: 208px; }
+.resource-detail-page__image :deep(.u-image__native) { height: 100%; width: 100%; }
+.resource-detail-page__type { align-self: flex-start; display: inline-flex; }
 .resource-detail-page__source { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: var(--u-sys-color-text-secondary); font-size: 12px; }
 .resource-detail-page__title { color: var(--u-sys-color-text); font-size: 28px; font-weight: 700; line-height: 1.25; }
 .resource-detail-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
