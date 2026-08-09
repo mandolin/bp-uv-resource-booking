@@ -6,8 +6,8 @@
 
 ## 当前边界 / Current boundary
 
-- 核心数据来自仓内版本化 JSON；目录/详情读取以及预约创建、取消都经锁定的 HIA-uView-Biz async provider contract 到达唯一 local authority。默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
-- The core data comes from versioned in-repository JSON. Catalog/detail reads plus booking creation and cancellation reach the sole local authority through the locked HIA-uView-Biz async-provider contract. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
+- 核心数据来自仓内版本化 JSON；目录、详情、预约列表、创建、取消和改期六项业务操作全部经版本化 project/solution profile、capability gate 与 HIA-uView-Biz project facade 到达唯一 local adapter。默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
+- The core data comes from versioned in-repository JSON. Catalog, detail, reservation-list, create, cancel, and reschedule operations all reach the sole local adapter through versioned project/solution profiles, the capability gate, and the HIA-uView-Biz project facade. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
 
 - 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
 - There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
@@ -34,7 +34,7 @@ git submodule update --init --recursive
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
 | `src/vendor/HIA-uView` | `796fe0d839537900aade45b4a7a856721dfe4e4a` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线、按钮前置装饰以及原生按钮、搜索与提示 control 的宿主字体继承 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, button leading decorations, and host-font inheritance for native button, search, and alert controls |
-| `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Catalog/detail read and reservation write async-provider runtime / 目录/详情读取与预约写入 async-provider runtime |
+| `src/vendor/HIA-uView-Biz` | `838e0344adb4177327ced50792c2e5b5744b86f7` | 版本化 project/solution profile、capability/operation gate、确定性 source selection、统一 facade/doctor 与底层异步生命周期 / Versioned project/solution profiles, capability/operation gate, deterministic source selection, unified facade/doctor, and lower asynchronous lifecycle |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
 
@@ -71,6 +71,14 @@ The H5 build artifact has the static base `/bp-uv-resource-booking/`, matching t
 当前 source badge 明确显示“本地示例数据”。未来可经单独审阅增加 remote、virtual backend 或 optional public-API enhancement；必须保留 local JSON 作为可运行的主路径，并以明确设置和运行环境选择 source。详细边界见 [docs/architecture.md](docs/architecture.md)。
 
 The current source badge explicitly says “local demo data.” A future review may add a remote source, virtual backend, or optional public-API enhancement; local JSON must remain a runnable primary path, and source selection must be explicit and environment-aware. See [docs/architecture.md](docs/architecture.md) for the boundary.
+
+BP 业务源码只直接导入 `@hia-uview/biz-project-runtime` 的 project-facing surface。具体 profile、local adapter、JSON 数据和预约规则归本 BP；capability/operation 准入、source 选择、读写生命周期、统一 terminal outcome 与只读 doctor 归 Biz。页面与 state 不直接持有 adapter、底层 runtime 或 JSON dataset。
+
+BP business source directly imports only the project-facing surface of `@hia-uview/biz-project-runtime`. This BP owns its concrete profiles, local adapter, JSON data, and reservation rules; Biz owns capability/operation admission, source selection, read/write lifecycle, unified terminal outcomes, and the read-only doctor. Pages and state hold no adapter, lower runtime, or JSON dataset directly.
+
+可审计配置分别位于 `src/project/project.profile.json`、`solution.profile.json`、`capability-packages.json` 与 `anonymous-session.json`。它们只含版本化 JSON 数据；没有配置脚本、动态依赖、endpoint、token 或运行时发现。当前设置与两个已声明环境都只能选择 `local`。
+
+Auditable configuration lives in `src/project/project.profile.json`, `solution.profile.json`, `capability-packages.json`, and `anonymous-session.json`. They contain only versioned JSON data—no configuration script, dynamic dependency, endpoint, token, or runtime discovery. Current settings and both declared environments can select only `local`.
 
 ## 许可证 / License
 

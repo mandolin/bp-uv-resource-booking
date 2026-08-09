@@ -16,7 +16,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 // <lang><zh-CN>所有公开 source 输入均以路径、远端 URL 与精确 commit 三元组显式声明。</zh-CN><en>Every public source input is explicitly declared as a path, remote URL, and exact commit triple.</en></lang>
 const expectedInputs = Object.freeze([
   Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '796fe0d839537900aade45b4a7a856721dfe4e4a' }),
-  Object.freeze({ path: 'src/vendor/HIA-uView-Biz', remote: 'https://github.com/mandolin/HIA-uView-Biz.git', commit: '8ba7fa56c1bcfe29655c37a2ea387237289a570c' })
+  Object.freeze({ path: 'src/vendor/HIA-uView-Biz', remote: 'https://github.com/mandolin/HIA-uView-Biz.git', commit: '838e0344adb4177327ced50792c2e5b5744b86f7' })
 ]);
 
 /**
@@ -29,6 +29,18 @@ const expectedInputs = Object.freeze([
 function readGitHead(worktreePath) {
   // <lang><zh-CN>只查询 HEAD，不执行 checkout、fetch、pull、submodule update 或任何写操作。</zh-CN><en>Query only HEAD and perform no checkout, fetch, pull, submodule update, or write.</en></lang>
   return execFileSync('git', ['-C', worktreePath, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+}
+
+/**
+ * <lang><zh-CN>读取父仓 index 中声明的 submodule Git link commit。</zh-CN><en>Reads the submodule Git-link commit declared in the parent repository index.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>冻结的仓内 submodule 相对路径。</zh-CN><en>Frozen in-repository relative submodule path.</en></lang>
+ * @returns {string} <lang><zh-CN>父仓当前 index 中的完整 object ID。</zh-CN><en>Full object ID in the current parent-repository index.</en></lang>
+ * @lang zh-CN 同时核对 index 与 submodule worktree，避免只切换嵌套 HEAD 却忘记提交父仓 gitlink。
+ * @lang en Checking both index and submodule worktree prevents switching only the nested HEAD while forgetting the parent Git link.
+ */
+function readParentGitLink(relativePath) {
+  // <lang><zh-CN>固定调用父仓 `rev-parse :path`；relativePath 只来自源码中的受控清单。</zh-CN><en>Call the parent repository's fixed `rev-parse :path`; relativePath comes only from the controlled source list.</en></lang>
+  return execFileSync('git', ['-C', projectRoot, 'rev-parse', `:${relativePath}`], { encoding: 'utf8' }).trim();
 }
 
 /**
@@ -56,6 +68,11 @@ async function verifyInputs() {
     if (readGitHead(inputPath) !== expectedInput.commit) {
       throw new Error(`Unexpected source commit for ${expectedInput.path}.`);
     }
+
+    // <lang><zh-CN>父仓 index 的 Git link 也必须锁到同一完整提交，不能以脏 submodule checkout 冒充已提交输入。</zh-CN><en>The parent index Git link must pin the same full commit and cannot treat a dirty submodule checkout as a committed input.</en></lang>
+    if (readParentGitLink(expectedInput.path) !== expectedInput.commit) {
+      throw new Error(`Unexpected parent Git link for ${expectedInput.path}.`);
+    }
   }
 
   // <lang><zh-CN>微信小程序组件必须通过受限 easycom 从已锁定的 UI submodule 叶级 SFC 静态解析；这避免公共 barrel 使 compiler 漏掉组件 JS、JSON、WXML 或 WXSS。</zh-CN><en>WeChat Mini Program components must be statically resolved from leaf SFCs in the pinned UI submodule through bounded easycom; this prevents a public barrel from making the compiler miss component JS, JSON, WXML, or WXSS.</en></lang>
@@ -69,13 +86,59 @@ async function verifyInputs() {
   const packageManifest = JSON.parse(await readFile(resolve(projectRoot, 'package.json'), 'utf8'));
   const expectedLocalDependencies = Object.freeze({
     '@hia-uview/ui': 'file:src/vendor/HIA-uView/HIA-uView-UI',
-    '@hia-uview/biz-async-provider-runtime': 'file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime'
+    '@hia-uview/biz-project-runtime': 'file:src/vendor/HIA-uView-Biz/packages/project-runtime'
   });
 
   // <lang><zh-CN>逐项比较固定 file specifier，拒绝未声明 alias、registry 漂移或越出仓库的本机路径。</zh-CN><en>Compare each fixed file specifier, rejecting undeclared aliases, registry drift, or machine paths outside the repository.</en></lang>
   for (const [packageName, expectedSpecifier] of Object.entries(expectedLocalDependencies)) {
     if (packageManifest.dependencies?.[packageName] !== expectedSpecifier) {
       throw new Error(`Unexpected local package dependency for ${packageName}.`);
+    }
+  }
+
+  // <lang><zh-CN>BP 只把 project runtime 作为直接 Biz dependency；三个底层 package 仅以显式本地 override 满足该 package 的未发布 workspace 版本。</zh-CN><en>The BP keeps only the project runtime as its direct Biz dependency; three lower packages are explicit local overrides solely to satisfy that package's unpublished workspace versions.</en></lang>
+  const expectedBizOverrides = Object.freeze({
+    '@hia-uview/biz-async-provider-runtime@0.0.0': 'file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime',
+    '@hia-uview/biz-provider-port-runtime@0.0.0': 'file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime',
+    '@hia-uview/biz-solution-profile-runtime@0.0.0': 'file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime'
+  });
+
+  // <lang><zh-CN>逐项锁定 override，防止本地 source checkout 意外从 registry、父 workspace 或未固定 Git 路径补齐底层 runtime。</zh-CN><en>Pin each override so a local source checkout cannot accidentally satisfy lower runtimes from a registry, parent workspace, or unpinned Git path.</en></lang>
+  for (const [packageName, expectedSpecifier] of Object.entries(expectedBizOverrides)) {
+    if (packageManifest.pnpm?.overrides?.[packageName] !== expectedSpecifier) {
+      throw new Error(`Unexpected local package override for ${packageName}.`);
+    }
+  }
+
+  // <lang><zh-CN>禁止把底层 Biz runtime 重新列为 BP 的直接 dependency；公开采用边界必须保持 project-facing。</zh-CN><en>Forbid reintroducing lower Biz runtimes as direct BP dependencies; the public adoption boundary must remain project-facing.</en></lang>
+  for (const packageName of ['@hia-uview/biz-async-provider-runtime', '@hia-uview/biz-provider-port-runtime', '@hia-uview/biz-solution-profile-runtime']) {
+    if (Object.hasOwn(packageManifest.dependencies ?? {}, packageName)) {
+      throw new Error(`Unexpected direct lower-level Biz dependency for ${packageName}.`);
+    }
+  }
+
+  // <lang><zh-CN>锁定 project package 自身的三项内部依赖，确保 override 不是补偿未知或漂移的 dependency graph。</zh-CN><en>Pin the project package's own three internal dependencies so overrides do not compensate for an unknown or drifting dependency graph.</en></lang>
+  const projectRuntimeManifest = JSON.parse(await readFile(resolve(projectRoot, 'src/vendor/HIA-uView-Biz/packages/project-runtime/package.json'), 'utf8'));
+  const expectedProjectRuntimeDependencies = Object.freeze({
+    '@hia-uview/biz-async-provider-runtime': '0.0.0',
+    '@hia-uview/biz-provider-port-runtime': '0.0.0',
+    '@hia-uview/biz-solution-profile-runtime': '0.0.0'
+  });
+  if (JSON.stringify(projectRuntimeManifest.dependencies) !== JSON.stringify(expectedProjectRuntimeDependencies)) {
+    throw new Error('Unexpected project-runtime dependency graph.');
+  }
+
+  // <lang><zh-CN>构建 alias 必须覆盖 project package 及其三个底层静态依赖，并全部解析到同一 Biz submodule。</zh-CN><en>Build aliases must cover the project package and its three lower static dependencies, all resolving into the same Biz submodule.</en></lang>
+  const viteConfiguration = await readFile(resolve(projectRoot, 'vite.config.mjs'), 'utf8');
+  const expectedBizAliases = Object.freeze([
+    "{ find: '@hia-uview/biz-project-runtime', replacement: bizProjectRuntimeEntry }",
+    "{ find: '@hia-uview/biz-async-provider-runtime', replacement: bizAsyncProviderEntry }",
+    "{ find: '@hia-uview/biz-provider-port-runtime', replacement: bizProviderPortEntry }",
+    "{ find: '@hia-uview/biz-solution-profile-runtime', replacement: bizSolutionProfileEntry }"
+  ]);
+  for (const aliasDeclaration of expectedBizAliases) {
+    if (!viteConfiguration.includes(aliasDeclaration)) {
+      throw new Error('Missing locked Biz runtime alias.');
     }
   }
 

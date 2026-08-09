@@ -10,7 +10,7 @@
       <view class="reservation-reschedule-page">
         <!-- <lang><zh-CN>只有当前 confirmed 记录才可改期；取消、未知或刷新后不存在的 ID 明确进入恢复态。</zh-CN><en>Only current confirmed record can be rescheduled; cancelled, unknown, or post-refresh missing IDs explicitly enter recovery state.</en></lang> -->
         <view v-if="reservationDisplay && reservationDisplay.status === 'confirmed'" class="reservation-reschedule-page__content">
-          <source-badge :source="demo.catalogSource.value" />
+          <source-badge :source="demo.reservationSource.value" />
           <text class="reservation-reschedule-page__eyebrow">{{ runtimeLocale.t('reservation.reschedule') }}</text>
           <text class="reservation-reschedule-page__title">{{ reservationDisplay.resourceName }}</text>
           <text class="reservation-reschedule-page__venue">{{ reservationDisplay.venueName }}</text>
@@ -85,7 +85,7 @@ const dateOptions = computed(() => reservationDisplay.value
 /**
  * <lang><zh-CN>在路由记录可用后以原预约值或首个 allowlist 值同步两个选择。</zh-CN><en>Synchronizes both selections to old reservation values or first allowlist values after route record becomes available.</en></lang>
  * @param {object|null} nextReservation <lang><zh-CN>当前本地化预约视图或 `null`。</zh-CN><en>Current localized reservation view or `null`.</en></lang>
- * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>route ID 与 project reservation snapshot 均稳定后 resolve。</zh-CN><en>Resolves after both route ID and project reservation snapshot stabilize.</en></lang>
  * @lang zh-CN 同步不写入 state、不会提交改期；它只保持页面按钮与当前记录的声明值一致。
  * @lang en Synchronization writes no state and submits no reschedule; it only keeps page buttons consistent with current record’s declared values.
  */
@@ -114,9 +114,12 @@ watch(reservationDisplay, synchronizeSelections, { immediate: true });
  * @lang zh-CN 只接收字符串 ID；未知形状确定性进入空态，不能变成 provider 或资源查询。
  * @lang en Accept only a string ID; an unknown shape deterministically enters empty state and cannot become provider or resource query.
  */
-function readRouteReservation(query) {
+async function readRouteReservation(query) {
   // <lang><zh-CN>只读取精确 reservationId，不解析任何日期、时段、source 或命令字段。</zh-CN><en>Read only exact reservationId and parse no date, slot, source, or command field.</en></lang>
   routeReservationId.value = typeof query?.reservationId === 'string' ? query.reservationId : '';
+
+  // <lang><zh-CN>改期候选只能来自 reservation.list 的完整 card；不能从 URL 拼出资源、日期或时段。</zh-CN><en>A reschedule candidate can come only from a complete reservation.list card; resource, date, or slot cannot be constructed from the URL.</en></lang>
+  await demo.refreshReservations();
 }
 
 /**

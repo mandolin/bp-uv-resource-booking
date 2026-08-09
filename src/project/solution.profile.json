@@ -1,0 +1,9 @@
+{
+  "solutionProfileVersion": "1.0",
+  "kind": "solution-profile",
+  "id": "bp-uv-resource-booking.solution",
+  "channelProfileId": "bp-uv-resource-booking.uniapp",
+  "capabilityPackageIds": [
+    "bp-uv-resource-booking.reservation-manage"
+  ]
+}

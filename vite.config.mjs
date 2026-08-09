@@ -32,11 +32,32 @@ const uiRuntimeEntry = resolve(projectRoot, 'src/vendor/HIA-uView/HIA-uView-UI/s
 const uiStyleEntry = resolve(projectRoot, 'src/vendor/HIA-uView/HIA-uView-UI/src/style.css');
 
 /**
- * <lang><zh-CN>已锁定 Biz async provider runtime entry。</zh-CN><en>Locked Biz async-provider runtime entry.</en></lang>
- * @lang zh-CN BP 只使用其公开 ESM surface；不读取 Biz 私有工作区或未锁定的 package 输出。
- * @lang en The BP uses only its public ESM surface and reads no Biz private workspace or unlocked package output.
+ * <lang><zh-CN>已锁定 Biz project runtime entry。</zh-CN><en>Locked Biz project-runtime entry.</en></lang>
+ * @lang zh-CN BP 业务源码只直接使用该 project-facing ESM surface；其底层依赖仍由同一 Biz Git link 与显式 alias 固定。
+ * @lang en BP business source directly uses only this project-facing ESM surface; its lower-level dependencies remain pinned by the same Biz Git link and explicit aliases.
+ */
+const bizProjectRuntimeEntry = resolve(projectRoot, 'src/vendor/HIA-uView-Biz/packages/project-runtime/src/index.mjs');
+
+/**
+ * <lang><zh-CN>project runtime 所组合的已锁定 Biz async provider entry。</zh-CN><en>Locked Biz async-provider entry composed by the project runtime.</en></lang>
+ * @lang zh-CN 该 alias 只满足 project package 的静态依赖解析；BP 页面、state 与 adapter 不得直接导入它。
+ * @lang en This alias only resolves the project package's static dependency; BP pages, state, and adapters must not import it directly.
  */
 const bizAsyncProviderEntry = resolve(projectRoot, 'src/vendor/HIA-uView-Biz/packages/async-provider-runtime/src/index.mjs');
+
+/**
+ * <lang><zh-CN>project runtime 所组合的已锁定 Biz provider-port entry。</zh-CN><en>Locked Biz provider-port entry composed by the project runtime.</en></lang>
+ * @lang zh-CN 该路径属于同一受控 submodule，不从 registry 或父 workspace 解析。
+ * @lang en This path belongs to the same controlled submodule and resolves from neither a registry nor a parent workspace.
+ */
+const bizProviderPortEntry = resolve(projectRoot, 'src/vendor/HIA-uView-Biz/packages/provider-port-runtime/src/index.mjs');
+
+/**
+ * <lang><zh-CN>project runtime 所组合的已锁定 Biz solution-profile entry。</zh-CN><en>Locked Biz solution-profile entry composed by the project runtime.</en></lang>
+ * @lang zh-CN solution 与 capability gate 的实现和 project facade 使用完全相同的 Git provenance。
+ * @lang en The solution and capability-gate implementation shares exactly the same Git provenance as the project facade.
+ */
+const bizSolutionProfileEntry = resolve(projectRoot, 'src/vendor/HIA-uView-Biz/packages/solution-profile-runtime/src/index.mjs');
 
 /**
  * <lang><zh-CN>根据 UniApp target 确定可部署的静态 H5 base。</zh-CN><en>Determines the deployable static H5 base from the UniApp target.</en></lang>
@@ -56,7 +77,10 @@ export default defineConfig({
     alias: [
       { find: '@hia-uview/ui/style.css', replacement: uiStyleEntry },
       { find: '@hia-uview/ui', replacement: uiRuntimeEntry },
-      { find: '@hia-uview/biz-async-provider-runtime', replacement: bizAsyncProviderEntry }
+      { find: '@hia-uview/biz-project-runtime', replacement: bizProjectRuntimeEntry },
+      { find: '@hia-uview/biz-async-provider-runtime', replacement: bizAsyncProviderEntry },
+      { find: '@hia-uview/biz-provider-port-runtime', replacement: bizProviderPortEntry },
+      { find: '@hia-uview/biz-solution-profile-runtime', replacement: bizSolutionProfileEntry }
     ]
   }
 });

@@ -12,7 +12,7 @@
     "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs"
   },
   "dependencies": {
-    "@hia-uview/biz-async-provider-runtime": "file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime",
+    "@hia-uview/biz-project-runtime": "file:src/vendor/HIA-uView-Biz/packages/project-runtime",
     "@hia-uview/ui": "file:src/vendor/HIA-uView/HIA-uView-UI",
     "@dcloudio/uni-app": "3.0.0-5010520260709002",
     "@dcloudio/uni-h5": "3.0.0-5010520260709002",
@@ -32,5 +32,12 @@
   "engines": {
     "node": ">=22.0.0",
     "pnpm": ">=10.0.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "@hia-uview/biz-async-provider-runtime@0.0.0": "file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime",
+      "@hia-uview/biz-provider-port-runtime@0.0.0": "file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime",
+      "@hia-uview/biz-solution-profile-runtime@0.0.0": "file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime"
+    }
   }
 }

@@ -1,0 +1,9 @@
+{
+  "sessionVersion": "1.0",
+  "kind": "anonymous-mock-session",
+  "grantIds": [
+    "resource-booking.directory.read",
+    "resource-booking.reservation.create",
+    "resource-booking.reservation.manage"
+  ]
+}

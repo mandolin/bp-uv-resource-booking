@@ -11,7 +11,7 @@
       <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
       <u-loading-page v-if="demo.detailPhase.value === 'loading'" :message="runtimeLocale.t('detail.loading')" />
       <view v-else-if="demo.detailPhase.value === 'failure'" class="resource-detail-page__state">
-        <source-badge :source="demo.catalogSource.value" />
+        <source-badge :source="demo.detailSource.value" />
         <u-empty :title="runtimeLocale.t('detail.failureTitle')" :description="runtimeLocale.localize(demo.detailFailure.value?.message) || runtimeLocale.t('common.notAvailable')" :action-text="runtimeLocale.t('common.retry')" @action="retryDetail" />
         <u-button :label="runtimeLocale.t('common.goDiscover')" variant="secondary" block @click="backToDiscover" />
       </view>

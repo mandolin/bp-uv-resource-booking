@@ -130,9 +130,9 @@ function createDateOptions(dates) {
 }
 
 // <lang><zh-CN>每次 locale 变化时重建 selector 标签，但不改变已提交的稳定筛选值。</zh-CN><en>Rebuild selector labels whenever locale changes without changing committed stable filter values.</en></lang>
-const venueOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.venues));
-const resourceTypeOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.resourceTypes));
-const dateOptions = computed(() => createDateOptions(demo.catalogFilterOptions.dates));
+const venueOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.value.venues));
+const resourceTypeOptions = computed(() => createLocalizedOptions(demo.catalogFilterOptions.value.resourceTypes));
+const dateOptions = computed(() => createDateOptions(demo.catalogFilterOptions.value.dates));
 
 /**
  * <lang><zh-CN>为紧凑筛选触发器创建当前选择或通用类别的短标签。</zh-CN><en>Creates a short label of current selection or general category for a compact filter trigger.</en></lang>

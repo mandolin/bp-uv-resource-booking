@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@hia-uview/biz-async-provider-runtime@0.0.0': file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
+  '@hia-uview/biz-provider-port-runtime@0.0.0': file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime
+  '@hia-uview/biz-solution-profile-runtime@0.0.0': file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime
+
 importers:
 
   .:
@@ -14,12 +19,12 @@ importers:
       '@dcloudio/uni-h5':
         specifier: 3.0.0-5010520260709002
         version: 3.0.0-5010520260709002(postcss@8.5.25)(rollup@4.62.4)(vite@5.2.8(sass@1.77.8)(terser@5.49.0))(vue@3.4.21)
-      '@hia-uview/biz-async-provider-runtime':
-        specifier: file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
-        version: file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
+      '@hia-uview/biz-project-runtime':
+        specifier: file:src/vendor/HIA-uView-Biz/packages/project-runtime
+        version: file:src/vendor/HIA-uView-Biz/packages/project-runtime
       '@hia-uview/ui':
         specifier: file:src/vendor/HIA-uView/HIA-uView-UI
-        version: file:src/vendor/HIA-uView/HIA-uView-UI
+        version: file:src/vendor/HIA-uView/HIA-uView-UI(vue@3.4.21)
       '@vue/reactivity':
         specifier: 3.4.21
         version: 3.4.21
@@ -813,9 +818,23 @@ packages:
     resolution: {directory: src/vendor/HIA-uView-Biz/packages/async-provider-runtime, type: directory}
     engines: {node: '>=22.0.0'}
 
+  '@hia-uview/biz-project-runtime@file:src/vendor/HIA-uView-Biz/packages/project-runtime':
+    resolution: {directory: src/vendor/HIA-uView-Biz/packages/project-runtime, type: directory}
+    engines: {node: '>=22.0.0'}
+
+  '@hia-uview/biz-provider-port-runtime@file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime':
+    resolution: {directory: src/vendor/HIA-uView-Biz/packages/provider-port-runtime, type: directory}
+    engines: {node: '>=22.0.0'}
+
+  '@hia-uview/biz-solution-profile-runtime@file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime':
+    resolution: {directory: src/vendor/HIA-uView-Biz/packages/solution-profile-runtime, type: directory}
+    engines: {node: '>=22.0.0'}
+
   '@hia-uview/ui@file:src/vendor/HIA-uView/HIA-uView-UI':
     resolution: {directory: src/vendor/HIA-uView/HIA-uView-UI, type: directory}
     engines: {node: '>=22.0.0'}
+    peerDependencies:
+      vue: '>=3.4.0 <4.0.0'
 
   '@intlify/core-base@9.1.9':
     resolution: {integrity: sha512-x5T0p/Ja0S8hs5xs+ImKyYckVkL4CzcEXykVYYV6rcbXxJTe2o58IquSqX9bdncVKbRZP7GlBU1EcRaQEEJ+vw==}
@@ -3605,7 +3624,19 @@ snapshots:
 
   '@hia-uview/biz-async-provider-runtime@file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime': {}
 
-  '@hia-uview/ui@file:src/vendor/HIA-uView/HIA-uView-UI': {}
+  '@hia-uview/biz-project-runtime@file:src/vendor/HIA-uView-Biz/packages/project-runtime':
+    dependencies:
+      '@hia-uview/biz-async-provider-runtime': file:src/vendor/HIA-uView-Biz/packages/async-provider-runtime
+      '@hia-uview/biz-provider-port-runtime': file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime
+      '@hia-uview/biz-solution-profile-runtime': file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime
+
+  '@hia-uview/biz-provider-port-runtime@file:src/vendor/HIA-uView-Biz/packages/provider-port-runtime': {}
+
+  '@hia-uview/biz-solution-profile-runtime@file:src/vendor/HIA-uView-Biz/packages/solution-profile-runtime': {}
+
+  '@hia-uview/ui@file:src/vendor/HIA-uView/HIA-uView-UI(vue@3.4.21)':
+    dependencies:
+      vue: 3.4.21
 
   '@intlify/core-base@9.1.9':
     dependencies:

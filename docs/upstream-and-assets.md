@@ -5,7 +5,7 @@
 | 输入 / Input | 地址 / Location | 提交 / Commit | 许可证 / License | 使用方式 / Use |
 | --- | --- | --- | --- | --- |
 | HIA-uView | `src/vendor/HIA-uView` | `796fe0d839537900aade45b4a7a856721dfe4e4a` | MIT | 通过明确 `file:` package、静态 Easycom、完整样式入口、默认主题、locale provider bridge、package-owned types、小程序条件编译回退、`UImage.fluid`、`UTag.appearance=outline`、无宿主描边的 `USection` 操作、正确对齐的纵向 `USteps` 连接线、必须配合可见文字的 `UButton.leading` 装饰及原生按钮、搜索、提示 control 的宿主字体继承消费 UI；不深导入 UI runtime 私有状态 / Consumes UI through the explicit `file:` package, static Easycom, complete style entry, default theme, locale provider bridge, package-owned types, Mini Program conditional fallbacks, `UImage.fluid`, `UTag.appearance=outline`, host-chrome-free `USection` actions, correctly aligned vertical `USteps` connectors, `UButton.leading` decoration that must accompany visible text, and host-font inheritance for native button, search, and alert controls; it does not deep-import UI runtime private state |
-| HIA-uView-Biz | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | MIT | 通过明确 Vite alias 使用 async-provider runtime / async-provider runtime through an explicit Vite alias |
+| HIA-uView-Biz | `src/vendor/HIA-uView-Biz` | `838e0344adb4177327ced50792c2e5b5744b86f7` | MIT | BP 只直接消费 project-runtime；三个内部 runtime 由版本精确的本地 override 与同源 Vite alias 作为其传递依赖，业务源码不深导入 / BP directly consumes only project-runtime; three internal runtimes are its transitive dependencies through version-exact local overrides and same-provenance Vite aliases, with no deep import from business source |
 
 两个 submodule 均保留为 Git link。升级只能经单独审阅：更新 Git link、记录新 commit、重跑本仓测试与 H5/mp-weixin 构建，再审阅许可证/NOTICE 变化。
 

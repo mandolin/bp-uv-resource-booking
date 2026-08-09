@@ -38,7 +38,7 @@
           </u-card>
           <u-notice v-if="demo.bookingWriteFailure.value" visible tone="error" :message="runtimeLocale.localize(demo.bookingWriteFailure.value.message) || runtimeLocale.t('common.notAvailable')" />
           <view class="reservation-detail-page__source">
-            <source-badge :source="demo.catalogSource.value" />
+            <source-badge :source="demo.reservationSource.value" />
             <text>{{ runtimeLocale.t('reservation.localBoundary') }}</text>
           </view>
           <!-- <lang><zh-CN>只有 confirmed 记录可开启改期或取消；两个按钮都先产生页面意图，实际 mutation 始终经 state 的 Biz write seam。</zh-CN><en>Only a confirmed record can open reschedule or cancellation; both buttons first create page intent, while actual mutation always crosses state’s Biz write seam.</en></lang> -->
@@ -132,13 +132,16 @@ function reservationSteps(status) {
 /**
  * <lang><zh-CN>读取路由提供的候选预约 ID。</zh-CN><en>Reads candidate reservation ID supplied by route.</en></lang>
  * @param {Record<string, unknown>} query <lang><zh-CN>UniApp onLoad 提供的页面 query。</zh-CN><en>Page query supplied by UniApp onLoad.</en></lang>
- * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>route ID 与 project reservation snapshot 均稳定后 resolve。</zh-CN><en>Resolves after both route ID and project reservation snapshot stabilize.</en></lang>
  * @lang zh-CN 非字符串输入稳定为空，后续 computed 因此进入安全空态而非解析任意参数。
  * @lang en A non-string input deterministically becomes empty so later computed enters safe empty state instead of parsing arbitrary parameter.
  */
-function readRouteReservation(query) {
+async function readRouteReservation(query) {
   // <lang><zh-CN>只读取确切 reservationId 字段，不读取 source、token、日期或其他参数。</zh-CN><en>Read only exact reservationId field and read no source, token, date, or other parameter.</en></lang>
   routeReservationId.value = typeof query?.reservationId === 'string' ? query.reservationId : '';
+
+  // <lang><zh-CN>直接进入详情也必须经 reservation.list 取得 adapter-owned card，而不依赖先前页面留下的内存数据。</zh-CN><en>Direct entry to Detail must obtain an adapter-owned card through reservation.list rather than rely on memory left by a prior page.</en></lang>
+  await demo.refreshReservations();
 }
 
 /**

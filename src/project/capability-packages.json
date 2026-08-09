@@ -1,0 +1,26 @@
+[
+  {
+    "packageVersion": "1.0",
+    "kind": "solution-capability-package",
+    "id": "bp-uv-resource-booking.resource-directory-read",
+    "dependsOn": [],
+    "requiredModuleIds": ["bp-uv-resource-booking.resource-directory"],
+    "requiredGrantIds": ["resource-booking.directory.read"]
+  },
+  {
+    "packageVersion": "1.0",
+    "kind": "solution-capability-package",
+    "id": "bp-uv-resource-booking.reservation-create",
+    "dependsOn": ["bp-uv-resource-booking.resource-directory-read"],
+    "requiredModuleIds": ["bp-uv-resource-booking.reservation"],
+    "requiredGrantIds": ["resource-booking.reservation.create"]
+  },
+  {
+    "packageVersion": "1.0",
+    "kind": "solution-capability-package",
+    "id": "bp-uv-resource-booking.reservation-manage",
+    "dependsOn": ["bp-uv-resource-booking.reservation-create"],
+    "requiredModuleIds": ["bp-uv-resource-booking.reservation"],
+    "requiredGrantIds": ["resource-booking.reservation.manage"]
+  }
+]

@@ -36,7 +36,7 @@
           <!-- <lang><zh-CN>数据源行保持只读，只描述当前 source authority，不伪造 reset、后台或账号能力。</zh-CN><en>The source row remains read-only and only describes the current source authority without fabricating reset, backend, or account capabilities.</en></lang> -->
           <view class="profile-page__source">
             <view class="profile-page__setting-label"><u-icon name="◉" size="medium" tone="neutral" /><text>{{ runtimeLocale.t('profile.dataSource') }}</text></view>
-            <source-badge :source="demo.catalogSource.value" />
+            <source-badge :source="demo.reservationSource.value" />
           </view>
         </u-card>
 
@@ -165,8 +165,20 @@ function goReservations() {
   openPrimaryPage('reservations');
 }
 
-// <lang><zh-CN>个人信息页每次作为平台 tab 显示时校正选中态和当前 locale。</zh-CN><en>Whenever Profile is shown as a platform tab, correct its selection and current locale.</en></lang>
-onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey)));
+/**
+ * <lang><zh-CN>同步个人信息页 chrome，并经 project facade 刷新其预约统计输入。</zh-CN><en>Synchronizes Profile chrome and refreshes its reservation-statistics input through the project facade.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>预约 snapshot 复核完成后 resolve。</zh-CN><en>Resolves after reservation-snapshot reconciliation completes.</en></lang>
+ * @lang zh-CN 统计只由 reservation.list 的 cards 派生，不直接读取 local JSON 或 adapter state。
+ * @lang en Statistics derive only from reservation.list cards and directly read neither local JSON nor adapter state.
+ */
+async function handlePageShow() {
+  // <lang><zh-CN>平台 tab 与 locale 同步不等待业务读取，随后由 state 处理可恢复结果。</zh-CN><en>Platform-tab and locale synchronization does not wait for business data; state then handles the recoverable outcome.</en></lang>
+  syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
+  await demo.refreshReservations();
+}
+
+// <lang><zh-CN>个人信息页每次显示时通过相同 project-facing action 复核统计。</zh-CN><en>Reconcile statistics through the same project-facing action whenever Profile is shown.</en></lang>
+onShow(handlePageShow);
 </script>
 
 <style scoped>

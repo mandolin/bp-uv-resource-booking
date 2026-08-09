@@ -34,7 +34,7 @@
         </u-card>
         <!-- <lang><zh-CN>结果页继续披露唯一 local authority 与确认边界，避免成功图标被误读为真实支付或远端预约。</zh-CN><en>The result continues to disclose the sole local authority and confirmation boundary, preventing the success mark from being read as real payment or remote booking.</en></lang> -->
         <u-card :title="runtimeLocale.t('booking.authorityTitle')" :sub-title="runtimeLocale.t('booking.authorityLocal')" :padding="14">
-          <view class="booking-confirm-page__authority-row"><source-badge class="booking-confirm-page__source-badge" :source="detail.source" /><text>{{ runtimeLocale.t('booking.authorityDescription') }}</text></view>
+          <view class="booking-confirm-page__authority-row"><source-badge class="booking-confirm-page__source-badge" :source="demo.writeSource.value" /><text>{{ runtimeLocale.t('booking.authorityDescription') }}</text></view>
         </u-card>
         <u-alert-tips type="primary" :title="runtimeLocale.t('booking.confirmedBoundaryTitle')" :description="runtimeLocale.t('booking.confirmedDescription')" />
         <view class="booking-confirm-page__actions">

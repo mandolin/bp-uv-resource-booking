@@ -7,19 +7,9 @@
 // <lang><zh-CN>使用 Vue 最小 reactive primitives，不安装 global store plugin 或持久化插件。</zh-CN><en>Use minimum Vue reactive primitives and install no global-store or persistence plugin.</en></lang>
 import { computed, readonly, ref } from 'vue';
 
-// <lang><zh-CN>导入 local-first read provider、Biz write adapter 与版本化 domain 常量；三者均不连接后端。</zh-CN><en>Import local-first read provider, Biz write adapter, and versioned domain constant; none connects to a backend.</en></lang>
-import {
-  startLocalCatalogQuery,
-  startLocalResourceDetailQuery
-} from '../services/local-project-provider.mjs';
-import {
-  startLocalReservationWrite
-} from '../services/local-reservation-write-provider.mjs';
-import {
-  BOOKING_DOMAIN_VERSION,
-  createLocalCatalogFilterOptions
-} from '../domain/booking-domain.mjs';
-import localDataset from '../data/venues.json' with { type: 'json' };
+// <lang><zh-CN>业务状态只导入 project-facing composition root 与稳定 domain 版本；它不读取 adapter、底层 runtime 或 local JSON。</zh-CN><en>Business state imports only the project-facing composition root and stable domain version; it reads no adapter, lower runtime, or local JSON.</en></lang>
+import { resourceBookingProject } from '../project/resource-booking-project.mjs';
+import { BOOKING_DOMAIN_VERSION } from '../domain/booking-domain.mjs';
 
 /**
  * <lang><zh-CN>目录每页固定展示数量。</zh-CN><en>Fixed number of catalog entries per page.</en></lang>
@@ -36,11 +26,18 @@ const CATALOG_PAGE_SIZE = 2;
 const DEFAULT_CATALOG_FILTERS = Object.freeze({ venueId: '', resourceTypeId: '', date: '' });
 
 /**
- * <lang><zh-CN>从同一静态 dataset 生成页面可读的有限筛选选项。</zh-CN><en>Generates the finite filter options readable by pages from the same static dataset.</en></lang>
- * @lang zh-CN state 只公开 detached option value，不公开 dataset 本体或其可写引用。
- * @lang en State exposes only detached option values and exposes neither the dataset itself nor a writable reference to it.
+ * <lang><zh-CN>尚未产生 operation terminal 前使用的空 source fact。</zh-CN><en>Empty source fact used before an operation terminal exists.</en></lang>
+ * @lang zh-CN null 只表示“尚无调用事实”；SourceBadge 会使用保守 local-safe 文案，真正调用完成后由 facade terminal 替换。
+ * @lang en Null means only “no invocation fact yet”; SourceBadge uses conservative local-safe copy until a real facade terminal replaces it.
  */
-const catalogFilterOptions = createLocalCatalogFilterOptions(localDataset);
+const EMPTY_SOURCE_FACT = Object.freeze({ sourceId: null, authority: null, degradedReason: null });
+
+/**
+ * <lang><zh-CN>目录 operation 返回的有限筛选选项。</zh-CN><en>Finite filter options returned by the catalog operation.</en></lang>
+ * @lang zh-CN 初始空集合不读取 dataset；首次成功 catalog terminal 会用 adapter-owned detached projection 替换它。
+ * @lang en Initial empty collections read no dataset; the first successful catalog terminal replaces them with an adapter-owned detached projection.
+ */
+const catalogFilterOptions = ref({ venues: [], resourceTypes: [], dates: [] });
 
 /**
  * <lang><zh-CN>当前 catalog 请求的可取消 handle。</zh-CN><en>Cancellable handle of the current catalog request.</en></lang>
@@ -55,6 +52,13 @@ let activeCatalogHandle = null;
  * @lang en A new detail request first requests cancellation of old read; cancellation result maps only under provider contract and does not claim a remote stop.
  */
 let activeDetailHandle = null;
+
+/**
+ * <lang><zh-CN>当前预约列表读取的可取消 project handle。</zh-CN><en>Cancellable project handle of the current reservation-list read.</en></lang>
+ * @lang zh-CN 它只用于丢弃被替换的晚到结果，不暴露给页面、路由或 storage。
+ * @lang en It serves only to discard replaced late results and is exposed to no page, route, or storage.
+ */
+let activeReservationReadHandle = null;
 
 /**
  * <lang><zh-CN>当前预约 write 的可取消 handle。</zh-CN><en>Cancellable handle of the current reservation write.</en></lang>
@@ -110,7 +114,7 @@ const catalogPaging = ref({ page: 0, pageSize: CATALOG_PAGE_SIZE, total: 0, hasN
  * @lang zh-CN 当前只能为 local；字段保留为未来已审阅 source selector 的可发现性接口。
  * @lang en Current value can only be local; fields remain as discoverability interface for a future reviewed source selector.
  */
-const catalogSource = ref({ sourceId: 'bp-resource-booking.local-json', authority: 'local', degradedReason: null });
+const catalogSource = ref({ ...EMPTY_SOURCE_FACT });
 
 /**
  * <lang><zh-CN>目录非破坏性错误状态。</zh-CN><en>Non-destructive catalog error state.</en></lang>
@@ -148,11 +152,53 @@ const detailPhase = ref('idle');
 const detailFailure = ref(null);
 
 /**
- * <lang><zh-CN>当前运行时 demo 预约记录。</zh-CN><en>Current runtime demo reservation records.</en></lang>
- * @lang zh-CN 初始值从 checked-in mock 复制；后续确认只留在当前内存，不模拟本地持久化。
- * @lang en Initial value copies checked-in mock; later confirmations remain only in current memory and simulate no local persistence.
+ * <lang><zh-CN>最近一次详情读取的实际 source fact。</zh-CN><en>Actual source fact of the most recent detail read.</en></lang>
+ * @lang zh-CN 页面不再借用 catalog source；每种操作只呈现自身 terminal 的 authority 与降级事实。
+ * @lang en Pages no longer borrow catalog source; each operation presents authority and degradation from its own terminal.
  */
-const reservations = ref(JSON.parse(JSON.stringify(localDataset.mockReservations)));
+const detailSource = ref({ ...EMPTY_SOURCE_FACT });
+
+/**
+ * <lang><zh-CN>当前运行时 demo 预约记录。</zh-CN><en>Current runtime demo reservation records.</en></lang>
+ * @lang zh-CN 初始为空；显式 reservation.list 从 project adapter 取得完整 snapshot，后续 mutation 只留在当前内存。
+ * @lang en Initially empty; explicit reservation.list obtains a complete snapshot from the project adapter, while later mutations remain only in current memory.
+ */
+const reservations = ref([]);
+
+/**
+ * <lang><zh-CN>供预约列表、详情和受控改期页呈现的 adapter-owned 预约卡投影。</zh-CN><en>Adapter-owned reservation-card projections for list, detail, and controlled-reschedule pages.</en></lang>
+ * @lang zh-CN state 不再读取 local JSON 补充场馆或资源；list/write operation 必须交付完整 detached cards。
+ * @lang en State no longer reads local JSON to enrich venue or resource data; list/write operations must deliver complete detached cards.
+ */
+const reservationCards = ref([]);
+
+/**
+ * <lang><zh-CN>预约列表读取的有限阶段。</zh-CN><en>Finite phase of reservation-list reading.</en></lang>
+ * @lang zh-CN ready 只表示当前 project read 已确定完成，不表示真实库存或后端同步。
+ * @lang en Ready means only that the current project read completed deterministically, not that live inventory or backend synchronization exists.
+ */
+const reservationPhase = ref('idle');
+
+/**
+ * <lang><zh-CN>最近一次 reservation.list 的受限失败。</zh-CN><en>Bounded failure of the most recent reservation.list operation.</en></lang>
+ * @lang zh-CN 失败不清空已呈现 snapshot，并且不包含 request、adapter 异常或内部 source map。
+ * @lang en Failure does not clear a displayed snapshot and contains no request, adapter exception, or internal source map.
+ */
+const reservationFailure = ref(null);
+
+/**
+ * <lang><zh-CN>最近一次 reservation.list 或成功 write 所确认的 source fact。</zh-CN><en>Source fact confirmed by the most recent reservation.list or successful write.</en></lang>
+ * @lang zh-CN 该事实与预约卡同源，供列表、详情、改期与个人信息页使用。
+ * @lang en This fact shares provenance with reservation cards and serves list, detail, reschedule, and profile pages.
+ */
+const reservationSource = ref({ ...EMPTY_SOURCE_FACT });
+
+/**
+ * <lang><zh-CN>最近一次预约 write terminal 的实际 source fact。</zh-CN><en>Actual source fact of the most recent reservation-write terminal.</en></lang>
+ * @lang zh-CN success 与 failure 均可更新该受限事实，但它从不表示支付、库存或远端提交。
+ * @lang en Both success and failure may update this bounded fact, but it never represents payment, inventory, or remote submission.
+ */
+const writeSource = ref({ ...EMPTY_SOURCE_FACT });
 
 /**
  * <lang><zh-CN>预约确认流程的受限阶段。</zh-CN><en>Bounded phase of reservation-confirmation flow.</en></lang>
@@ -174,34 +220,6 @@ const bookingWriteFailure = ref(null);
  * @lang en Used by confirmation result page and stores no contact, phone, payment information, or real identity.
  */
 const lastConfirmedReservation = ref(null);
-
-/**
- * <lang><zh-CN>供预约列表、详情和受控改期页呈现的最小预约视图集合。</zh-CN><en>Minimum reservation-view collection for list, detail, and controlled-reschedule pages.</en></lang>
- * @lang zh-CN 视图只补充 local JSON 中已有的双语 venue/resource、静态图片 ID 与声明可用性；页面必须通过 runtime locale 投影它们，不读取或推断联系人、价格、支付或身份资料。
- * @lang en Views add only existing bilingual venue/resource, static image ID, and declared availability from local JSON; pages must project them through runtime locale and read or infer no contact, price, payment, or identity detail.
- */
-const reservationCards = computed(() => reservations.value.map((reservation) => {
-  // <lang><zh-CN>按当前记录的有限 venue ID 找到其静态展示记录；未知 ID 保持受限 fallback。</zh-CN><en>Find the static presentation record by current finite venue ID; an unknown ID retains a bounded fallback.</en></lang>
-  const venue = localDataset.venues.find((candidateVenue) => candidateVenue.id === reservation.venueId);
-
-  // <lang><zh-CN>只在已找到 venue 内查找 resource，避免全局任意字段匹配。</zh-CN><en>Find the resource only inside a found venue, avoiding global arbitrary-field matching.</en></lang>
-  const resource = venue?.resources.find((candidateResource) => candidateResource.id === reservation.resourceId);
-
-  // <lang><zh-CN>输出新展示对象，防止页面通过嵌套引用改写 local JSON 或运行时预约记录。</zh-CN><en>Output a new presentation object, preventing a page from mutating local JSON or runtime reservations through nested references.</en></lang>
-  return {
-    id: reservation.id,
-    date: reservation.date,
-    time: reservation.time,
-    status: reservation.status,
-    venueId: reservation.venueId,
-    resourceId: reservation.resourceId,
-    venueImageId: venue?.imageId ?? '',
-    venueName: venue?.name ?? { 'zh-Hans': '示例场馆', en: 'Demo venue' },
-    resourceName: resource?.name ?? { 'zh-Hans': '示例资源', en: 'Demo resource' },
-    availableDates: resource ? [...resource.availableDates] : [],
-    availableSlots: resource ? [...resource.availableSlots] : []
-  };
-}));
 
 /**
  * <lang><zh-CN>根据当前分页事实判断能否继续加载。</zh-CN><en>Determines whether loading may continue from current pagination facts.</en></lang>
@@ -268,8 +286,15 @@ async function loadCatalog({ append, keyword, filters }) {
   // <lang><zh-CN>新请求开始前清除旧 failure，但不在 append 时清空已有 entries。</zh-CN><en>Clear old failure before new request but do not clear existing entries during append.</en></lang>
   catalogFailure.value = null;
 
-  // <lang><zh-CN>从 explicit local provider 获取可取消 handle，输入只含有限 paging/keyword/filter 值。</zh-CN><en>Obtain cancellable handle from explicit local provider; input contains only finite paging/keyword/filter values.</en></lang>
-  const requestHandle = startLocalCatalogQuery(requestedPage, CATALOG_PAGE_SIZE, catalogKeyword.value, requestedFilters);
+  // <lang><zh-CN>通过唯一 project-facing facade 启动 catalog operation；state 不选择 adapter 或 authority。</zh-CN><en>Start the catalog operation through the sole project-facing facade; state selects neither adapter nor authority.</en></lang>
+  const requestHandle = resourceBookingProject.queryResourceCatalog({
+    page: requestedPage,
+    pageSize: CATALOG_PAGE_SIZE,
+    keyword: catalogKeyword.value,
+    venueId: requestedFilters.venueId,
+    resourceTypeId: requestedFilters.resourceTypeId,
+    date: requestedFilters.date
+  });
 
   // <lang><zh-CN>将当前 handle 保留为私有取消目标，不放入响应式页面状态。</zh-CN><en>Retain current handle as private cancellation target and do not place it in reactive page state.</en></lang>
   activeCatalogHandle = requestHandle;
@@ -287,6 +312,8 @@ async function loadCatalog({ append, keyword, filters }) {
 
   // <lang><zh-CN>失败保存给页面；append 保留 entries，首次失败由页面显示完整 recoverable state。</zh-CN><en>Store failure for page; append retains entries while initial failure displays full recoverable state.</en></lang>
   if (outcome.kind === 'failure') {
+    // <lang><zh-CN>失败仍保留 runtime 给出的 actual source，避免 badge 借用旧成功或硬编码 local。</zh-CN><en>Failure still retains the actual source supplied by the runtime, preventing the badge from borrowing stale success or hard-coded local.</en></lang>
+    if (outcome.source) catalogSource.value = { ...outcome.source };
     catalogFailure.value = outcome;
     catalogPhase.value = append ? 'ready' : 'failure';
     return;
@@ -294,6 +321,11 @@ async function loadCatalog({ append, keyword, filters }) {
 
   // <lang><zh-CN>append 连接新 page，刷新替换 page=1；均创建新数组避免共享 provider value。</zh-CN><en>Append concatenates new page while refresh replaces page one; both create new arrays to avoid sharing provider value.</en></lang>
   catalogEntries.value = append ? [...catalogEntries.value, ...outcome.entries] : [...outcome.entries];
+
+  // <lang><zh-CN>筛选选项只采用 catalog operation 的 adapter-owned projection，不从 JSON 或旧页面状态重建。</zh-CN><en>Adopt filter options only from the catalog operation's adapter-owned projection and rebuild them from neither JSON nor stale page state.</en></lang>
+  if (outcome.filterOptions && Array.isArray(outcome.filterOptions.venues) && Array.isArray(outcome.filterOptions.resourceTypes) && Array.isArray(outcome.filterOptions.dates)) {
+    catalogFilterOptions.value = JSON.parse(JSON.stringify(outcome.filterOptions));
+  }
 
   // <lang><zh-CN>保存结果中的分页/source 事实，供页脚和 source badge 直接呈现。</zh-CN><en>Store pagination/source facts from result for direct footer and source-badge presentation.</en></lang>
   catalogPaging.value = { page: outcome.page, pageSize: outcome.pageSize, total: outcome.total, hasNext: outcome.hasNext };
@@ -343,8 +375,8 @@ export async function loadResourceDetail(resourceId) {
   detailFailure.value = null;
   detailPhase.value = 'loading';
 
-  // <lang><zh-CN>启动明确 local detail read；resource ID 不成为 URL 或文件路径。</zh-CN><en>Start explicit local detail read; resource ID becomes no URL or file path.</en></lang>
-  const requestHandle = startLocalResourceDetailQuery(resourceId);
+  // <lang><zh-CN>通过 project composition root 启动详情 operation；resource ID 不成为 URL、文件路径或 adapter selector。</zh-CN><en>Start the detail operation through the project composition root; resource ID becomes no URL, file path, or adapter selector.</en></lang>
+  const requestHandle = resourceBookingProject.readResourceDetail(resourceId);
 
   // <lang><zh-CN>保留私有 handle 以识别和丢弃被替换请求的晚到结果。</zh-CN><en>Retain private handle to recognize and discard late results of replaced request.</en></lang>
   activeDetailHandle = requestHandle;
@@ -362,6 +394,8 @@ export async function loadResourceDetail(resourceId) {
 
   // <lang><zh-CN>失败只显示受限 failure，成功则替换唯一 selected detail。</zh-CN><en>Display only bounded failure on failure; replace sole selected detail on success.</en></lang>
   if (outcome.kind === 'failure') {
+    // <lang><zh-CN>详情失败 source 与目录 source 分离，供详情页准确披露当前 operation。</zh-CN><en>Keep detail-failure source separate from catalog source so the detail page accurately discloses its current operation.</en></lang>
+    if (outcome.source) detailSource.value = { ...outcome.source };
     detailFailure.value = outcome;
     selectedDetail.value = null;
     detailPhase.value = 'failure';
@@ -370,7 +404,61 @@ export async function loadResourceDetail(resourceId) {
 
   // <lang><zh-CN>写入纯 detail 与 ready phase；source 已随 outcome 受限携带。</zh-CN><en>Write pure detail and ready phase; bounded source already accompanies outcome.</en></lang>
   selectedDetail.value = outcome;
+  detailSource.value = { ...outcome.source };
   detailPhase.value = 'ready';
+}
+
+/**
+ * <lang><zh-CN>通过 project facade 显式刷新当前运行时预约列表。</zh-CN><en>Explicitly refreshes the current-runtime reservation list through the project facade.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>列表状态稳定后 resolve。</zh-CN><en>Resolves after list state stabilizes.</en></lang>
+ * @lang zh-CN reservation.list 与三项 write 共用同一 adapter snapshot；页面不会读取 JSON seed 或自行补充卡片字段。
+ * @lang en reservation.list shares one adapter snapshot with all three writes; pages read no JSON seed and enrich no card fields themselves.
+ */
+export async function refreshReservations() {
+  // <lang><zh-CN>取消被新刷新替换的旧 read，并只用 handle identity 丢弃其晚到 terminal。</zh-CN><en>Cancel an old read replaced by a new refresh and discard its late terminal only by handle identity.</en></lang>
+  activeReservationReadHandle?.cancel();
+
+  // <lang><zh-CN>保留已有卡片进入 loading，避免刷新期间把可读 snapshot 清空。</zh-CN><en>Enter loading while retaining existing cards, avoiding clearing a readable snapshot during refresh.</en></lang>
+  reservationPhase.value = 'loading';
+  reservationFailure.value = null;
+
+  // <lang><zh-CN>list operation 不接收页面筛选或任意 payload；source selection 完全来自 project profile。</zh-CN><en>The list operation accepts no page filter or arbitrary payload; source selection comes entirely from the project profile.</en></lang>
+  const requestHandle = resourceBookingProject.listReservations();
+  activeReservationReadHandle = requestHandle;
+
+  // <lang><zh-CN>等待 facade 映射后的 bounded terminal；source exception 不会直接 reject 到页面层。</zh-CN><en>Await the facade-mapped bounded terminal; a source exception does not reject directly into the page layer.</en></lang>
+  const outcome = await requestHandle.promise;
+
+  // <lang><zh-CN>较新的 refresh 已接管时静默丢弃当前晚到结果。</zh-CN><en>Silently discard this late result when a newer refresh has taken ownership.</en></lang>
+  if (activeReservationReadHandle !== requestHandle) {
+    return;
+  }
+
+  // <lang><zh-CN>完成当前读取并释放私有 handle。</zh-CN><en>Complete the current read and release the private handle.</en></lang>
+  activeReservationReadHandle = null;
+
+  // <lang><zh-CN>保留任何 terminal 的实际 source fact；failure 不伪装为 local success。</zh-CN><en>Retain the actual source fact of every terminal; failure is not presented as local success.</en></lang>
+  if (outcome?.source) {
+    reservationSource.value = { ...outcome.source };
+  }
+
+  // <lang><zh-CN>runtime/business failure 保留旧 snapshot，并进入可发现失败阶段。</zh-CN><en>A runtime or business failure retains the old snapshot and enters a discoverable failure phase.</en></lang>
+  if (outcome.kind === 'failure') {
+    reservationFailure.value = outcome;
+    reservationPhase.value = 'failure';
+    return;
+  }
+
+  // <lang><zh-CN>只接受 reservation.list 的完整 canonical shape，拒绝把 malformed success 写入页面状态。</zh-CN><en>Accept only the complete canonical reservation.list shape and reject writing malformed success into page state.</en></lang>
+  if (outcome.kind !== 'reservations' || !adoptReservationSnapshot(outcome)) {
+    reservationFailure.value = createStateBookingFailure('provider-unavailable', '示例预约列表暂时不可用，请稍后重试。', 'The demo reservation list is temporarily unavailable; try again later.');
+    reservationPhase.value = 'failure';
+    return;
+  }
+
+  // <lang><zh-CN>完整 snapshot 已采用后进入 ready；不推导真实同步、库存或持久化状态。</zh-CN><en>Enter ready after adopting a complete snapshot; infer no live synchronization, inventory, or persistence state.</en></lang>
+  reservationPhase.value = 'ready';
+  reservationFailure.value = null;
 }
 
 /**
@@ -446,35 +534,46 @@ function createNextReservationCommandId() {
  * @lang en State derives no mutation from page input, old array, or local patch; only a complete provider-delivered snapshot may replace it.
  */
 function adoptReservationSnapshot(outcome) {
-  // <lang><zh-CN>先确认返回包含数组，防止 malformed success 覆盖现有可见预约。</zh-CN><en>Confirm an array exists first, preventing malformed success from overwriting visible reservations.</en></lang>
-  if (!Array.isArray(outcome?.reservations)) {
+  // <lang><zh-CN>同时要求 raw snapshot 与 adapter-owned cards，防止 state 重新读取 dataset 或接受半份成功。</zh-CN><en>Require both the raw snapshot and adapter-owned cards, preventing state from rereading the dataset or accepting a partial success.</en></lang>
+  if (!Array.isArray(outcome?.reservations) || !Array.isArray(outcome?.reservationCards)) {
     // <lang><zh-CN>保持原 state，交由调用方产生有界失败。</zh-CN><en>Retain original state and let caller produce bounded failure.</en></lang>
     return false;
   }
 
-  // <lang><zh-CN>JSON 复制隔离 adapter outcome，页面无法通过结果引用回写 provider snapshot。</zh-CN><en>JSON-copy adapter outcome so pages cannot write back to provider snapshot through result reference.</en></lang>
+  // <lang><zh-CN>JSON 复制隔离 adapter outcome，页面无法通过结果引用回写 provider snapshot 或卡片投影。</zh-CN><en>JSON-copy the adapter outcome so pages cannot write back to the provider snapshot or card projections through result references.</en></lang>
   reservations.value = JSON.parse(JSON.stringify(outcome.reservations));
+  reservationCards.value = JSON.parse(JSON.stringify(outcome.reservationCards));
+
+  // <lang><zh-CN>预约投影随同完整 snapshot 采用其 actual source，使列表/详情 badge 与可见数据保持同源。</zh-CN><en>Adopt the actual source together with the complete snapshot so list/detail badges share provenance with visible data.</en></lang>
+  if (outcome.source) {
+    reservationSource.value = { ...outcome.source };
+  }
 
   // <lang><zh-CN>明确返回采用成功。</zh-CN><en>Explicitly return successful adoption.</en></lang>
   return true;
 }
 
 /**
- * <lang><zh-CN>通过唯一 Biz write adapter 提交一条预约 command。</zh-CN><en>Submits one reservation command through the sole Biz write adapter.</en></lang>
- * @param {object} command <lang><zh-CN>state 构造的有限 plain-data command。</zh-CN><en>Finite plain-data command constructed by state.</en></lang>
+ * <lang><zh-CN>通过唯一 Biz project facade 提交一条预约 command。</zh-CN><en>Submits one reservation command through the sole Biz project facade.</en></lang>
+ * @param {'create'|'cancel'|'reschedule'} operation <lang><zh-CN>state 选择的固定 write operation。</zh-CN><en>Fixed write operation selected by state.</en></lang>
+ * @param {object} command <lang><zh-CN>state 构造的精确 plain-data command。</zh-CN><en>Exact plain-data command constructed by state.</en></lang>
  * @returns {Promise<object>} <lang><zh-CN>canonical outcome 或受限并发失败。</zh-CN><en>A canonical outcome or bounded concurrency failure.</en></lang>
  * @lang zh-CN 同一时刻只允许一个 write；这避免页面双击把不同 command ID 误作为两笔可接受的独立写入。
  * @lang en Only one write is allowed at a time; this prevents page double click from treating different command IDs as two acceptable independent writes.
  */
-async function submitReservationWrite(command) {
+async function submitReservationWrite(operation, command) {
   // <lang><zh-CN>已有 write 未完成时不创建第二个 provider invocation 或命令。</zh-CN><en>When a write is pending, create no second provider invocation or command.</en></lang>
   if (activeReservationWriteHandle) {
     // <lang><zh-CN>返回可发现冲突，状态和 provider snapshot 均不改变。</zh-CN><en>Return a discoverable conflict and change neither state nor provider snapshot.</en></lang>
     return createStateBookingFailure('conflict', '正在处理上一项示例预约操作，请稍候。', 'The previous demo booking operation is still being processed.');
   }
 
-  // <lang><zh-CN>启动已锁定 Biz runtime 的唯一 write seam，state 不直接运行 domain mutation。</zh-CN><en>Start the sole write seam of locked Biz runtime; state runs no domain mutation directly.</en></lang>
-  const requestHandle = startLocalReservationWrite(command);
+  // <lang><zh-CN>只从三个已声明方法中选择 operation；command 自身不能携带自由 dispatch 名称。</zh-CN><en>Select only among three declared methods; the command itself cannot carry a free-dispatch name.</en></lang>
+  const requestHandle = operation === 'create'
+    ? resourceBookingProject.createReservation(command)
+    : operation === 'cancel'
+      ? resourceBookingProject.cancelReservation(command)
+      : resourceBookingProject.rescheduleReservation(command);
 
   // <lang><zh-CN>保留私有 handle，仅用于防止并发提交；不暴露给模板或 storage。</zh-CN><en>Retain private handle only to prevent concurrent submit; expose it to neither template nor storage.</en></lang>
   activeReservationWriteHandle = requestHandle;
@@ -484,6 +583,11 @@ async function submitReservationWrite(command) {
 
   // <lang><zh-CN>完成后清理当前 handle，使下一条用户显式操作可启动新的 command。</zh-CN><en>Clear current handle after completion so next explicit user action may start a new command.</en></lang>
   activeReservationWriteHandle = null;
+
+  // <lang><zh-CN>保存 write terminal 的实际 source fact；未知或失败仍保留其明确 authority，而不伪装为成功。</zh-CN><en>Store the write terminal's actual source fact; unknown or failure retains its explicit authority rather than posing as success.</en></lang>
+  if (outcome?.source) {
+    writeSource.value = { ...outcome.source };
+  }
 
   // <lang><zh-CN>将受限 outcome 原样交回 action；只有 action 决定对应页面 phase 和 snapshot adoption。</zh-CN><en>Return bounded outcome unchanged to action; only action decides page phase and snapshot adoption.</en></lang>
   return outcome;
@@ -516,14 +620,13 @@ export async function confirmLocalReservation() {
   // <lang><zh-CN>从已验证草稿和 provider-read detail 提取有限原始值，命令不携带整份 detail 或页面对象。</zh-CN><en>Take finite primitives from validated draft and provider-read detail; command carries no complete detail or page object.</en></lang>
   const command = {
     commandId: createNextReservationCommandId(),
-    operation: 'create',
     resourceId: detail.resource.id,
     date: draft.date,
     time: draft.time
   };
 
   // <lang><zh-CN>唯一 write helper 负责通过 Biz runtime 发送、隔离并等待 command。</zh-CN><en>The sole write helper sends, isolates, and awaits command through Biz runtime.</en></lang>
-  const outcome = await submitReservationWrite(command);
+  const outcome = await submitReservationWrite('create', command);
 
   // <lang><zh-CN>business/provider failure 不采用 snapshot；确认页可保持当前选择并给出恢复提示。</zh-CN><en>On business/provider failure adopt no snapshot; confirmation page retains current selection and can show recovery guidance.</en></lang>
   if (outcome.kind === 'failure') {
@@ -560,12 +663,11 @@ export async function cancelLocalReservation(reservationId) {
   // <lang><zh-CN>构造固定 cancel command，不在 state 直接遍历或改写预约集合。</zh-CN><en>Construct fixed cancel command and neither traverse nor mutate reservation collection in state directly.</en></lang>
   const command = {
     commandId: createNextReservationCommandId(),
-    operation: 'cancel',
     reservationId
   };
 
   // <lang><zh-CN>等待唯一 Biz write boundary 的 canonical outcome。</zh-CN><en>Await canonical outcome of sole Biz write boundary.</en></lang>
-  const outcome = await submitReservationWrite(command);
+  const outcome = await submitReservationWrite('cancel', command);
 
   // <lang><zh-CN>失败保留原集合并保存可发现失败。</zh-CN><en>On failure retain original collection and store discoverable failure.</en></lang>
   if (outcome.kind === 'failure') {
@@ -600,14 +702,13 @@ export async function rescheduleLocalReservation(reservationId, date, time) {
   // <lang><zh-CN>构造唯一有限 reschedule command，资源从旧记录由 adapter 决定而非页面输入。</zh-CN><en>Construct the sole finite reschedule command; adapter determines resource from old record rather than page input.</en></lang>
   const command = {
     commandId: createNextReservationCommandId(),
-    operation: 'reschedule',
     reservationId,
     date,
     time
   };
 
   // <lang><zh-CN>等待固定 local authority 的 Biz write terminal outcome。</zh-CN><en>Await Biz write terminal outcome of fixed local authority.</en></lang>
-  const outcome = await submitReservationWrite(command);
+  const outcome = await submitReservationWrite('reschedule', command);
 
   // <lang><zh-CN>failure 不改变 state，避免将未知/冲突误显示为旧预约已取消。</zh-CN><en>Failure changes no state, avoiding display of unknown/conflict as if old reservation had been cancelled.</en></lang>
   if (outcome.kind === 'failure') {
@@ -643,7 +744,7 @@ export function useBookingDemo() {
     catalogPhase: readonly(catalogPhase),
     catalogKeyword: readonly(catalogKeyword),
     catalogFilters: readonly(catalogFilters),
-    catalogFilterOptions,
+    catalogFilterOptions: readonly(catalogFilterOptions),
     catalogPaging: readonly(catalogPaging),
     catalogSource: readonly(catalogSource),
     catalogFailure: readonly(catalogFailure),
@@ -652,14 +753,20 @@ export function useBookingDemo() {
     bookingDraft: readonly(bookingDraft),
     detailPhase: readonly(detailPhase),
     detailFailure: readonly(detailFailure),
+    detailSource: readonly(detailSource),
     reservations: readonly(reservations),
     reservationCards: readonly(reservationCards),
+    reservationPhase: readonly(reservationPhase),
+    reservationFailure: readonly(reservationFailure),
+    reservationSource: readonly(reservationSource),
     bookingPhase: readonly(bookingPhase),
     bookingWriteFailure: readonly(bookingWriteFailure),
+    writeSource: readonly(writeSource),
     lastConfirmedReservation: readonly(lastConfirmedReservation),
     refreshCatalog,
     loadNextCatalogPage,
     loadResourceDetail,
+    refreshReservations,
     prepareLocalBooking,
     confirmLocalReservation,
     cancelLocalReservation,

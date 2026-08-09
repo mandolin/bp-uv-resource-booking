@@ -9,9 +9,9 @@
     <runtime-page-shell :title="runtimeLocale.t('title.reservations')">
       <view class="reservations-page">
         <!-- <lang><zh-CN>来源标记紧邻页面筛选，明确列表内容仍是当前运行时的本地示例，而不是账户订单。</zh-CN><en>The source badge sits next to the page filter, making clear that list content remains current-runtime local demo data rather than account orders.</en></lang> -->
-        <view class="reservations-page__source"><source-badge :source="demo.catalogSource.value" /></view>
-        <!-- <lang><zh-CN>取消写入失败始终由 state 的受限 outcome 显式展示；页面不猜测其是否已经提交或回退。</zh-CN><en>A cancellation write failure is always explicitly displayed from state bounded outcome; page does not guess whether it submitted or rolled back.</en></lang> -->
-        <u-notice v-if="demo.bookingWriteFailure.value" visible tone="error" :message="runtimeLocale.localize(demo.bookingWriteFailure.value.message) || runtimeLocale.t('common.notAvailable')" />
+        <view class="reservations-page__source"><source-badge :source="demo.reservationSource.value" /></view>
+        <!-- <lang><zh-CN>列表读取或写入失败始终由 state 的受限 outcome 显式展示；页面不猜测其是否已提交、降级或回退。</zh-CN><en>A list-read or write failure is always explicitly displayed from state bounded outcome; the page does not guess whether it submitted, degraded, or rolled back.</en></lang> -->
+        <u-notice v-if="visibleFailure" visible tone="error" :message="runtimeLocale.localize(visibleFailure.message) || runtimeLocale.t('common.notAvailable')" />
         <u-tabs v-model="activeTab" :items="reservationTabs" />
         <text class="reservations-page__hint">{{ runtimeLocale.t('reservation.cancelHint') }}</text>
         <u-empty
@@ -69,7 +69,7 @@ import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtim
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
-// <lang><zh-CN>预约页只读取共享 state 的卡片结果，并调用其既有受限 local cancellation action。</zh-CN><en>Reservations reads only shared state's card result and invokes its existing bounded local cancellation action.</en></lang>
+// <lang><zh-CN>预约页只读取共享 state 的 project-owned 卡片结果，并调用其受限 cancellation action。</zh-CN><en>Reservations reads only shared state's project-owned card results and invokes its bounded cancellation action.</en></lang>
 const demo = useBookingDemo();
 
 // <lang><zh-CN>页面使用唯一 shared runtime locale，以本地化 tab、状态、步骤和领域字段。</zh-CN><en>The page uses the sole shared runtime locale to localize tabs, statuses, steps, and domain fields.</en></lang>
@@ -83,6 +83,9 @@ const reservationTabs = computed(() => Object.freeze([
   Object.freeze({ value: 'active', label: runtimeLocale.t('reservation.tabActive') }),
   Object.freeze({ value: 'cancelled', label: runtimeLocale.t('reservation.tabCancelled') })
 ]));
+
+// <lang><zh-CN>写失败优先于当前列表读取失败；二者都已由 project facade 脱敏且不会回显 adapter 异常。</zh-CN><en>A write failure takes precedence over the current list-read failure; both are redacted by the project facade and echo no adapter exception.</en></lang>
+const visibleFailure = computed(() => demo.bookingWriteFailure.value ?? demo.reservationFailure.value);
 
 // <lang><zh-CN>卡片数据保留字段对象；可见筛选只在有限 status 上进行，名称在模板调用受控 `localize`。</zh-CN><en>Card data retains field objects; visibility filters only finite statuses, while names are localized through controlled `localize` in the template.</en></lang>
 const visibleReservations = computed(() => demo.reservationCards.value
@@ -215,8 +218,20 @@ function goDiscover() {
   openPrimaryPage('discover');
 }
 
-// <lang><zh-CN>预约页每次作为平台 tab 显示时同步常驻底栏的选中态与单一 locale。</zh-CN><en>Whenever Reservations is shown as a platform tab, synchronize the persistent bottom bar's selection and single locale.</en></lang>
-onShow(() => syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey)));
+/**
+ * <lang><zh-CN>同步预约页 chrome，并从 project facade 复核共享 adapter snapshot。</zh-CN><en>Synchronizes Reservations chrome and reconciles the shared adapter snapshot through the project facade.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>预约列表 terminal 被 state 采用后 resolve。</zh-CN><en>Resolves after state adopts the reservation-list terminal.</en></lang>
+ * @lang zh-CN 页面不读取 JSON seed；每次显示都通过 reservation.list 获得实际 source 与完整 cards。
+ * @lang en The page reads no JSON seed; every show obtains actual source and complete cards through reservation.list.
+ */
+async function handlePageShow() {
+  // <lang><zh-CN>先同步固定 tab/locale chrome，再执行可独立失败的业务读取。</zh-CN><en>Synchronize fixed tab/locale chrome first, then perform the independently recoverable business read.</en></lang>
+  syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
+  await demo.refreshReservations();
+}
+
+// <lang><zh-CN>预约页每次作为平台 tab 显示时执行同一 project-facing 复核。</zh-CN><en>Run the same project-facing reconciliation whenever Reservations is shown as a platform tab.</en></lang>
+onShow(handlePageShow);
 </script>
 
 <style scoped>

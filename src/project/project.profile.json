@@ -1,0 +1,78 @@
+{
+  "projectProfileVersion": "1.0",
+  "kind": "project-profile",
+  "id": "bp-uv-resource-booking.project",
+  "solutionProfileId": "bp-uv-resource-booking.solution",
+  "channelProfileId": "bp-uv-resource-booking.uniapp",
+  "operationSelections": [
+    {
+      "operationId": "resource.catalog.query",
+      "capabilityPackageId": "bp-uv-resource-booking.resource-directory-read",
+      "kind": "read",
+      "contract": { "id": "resource-booking.catalog", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoWriteAdapterId": null
+    },
+    {
+      "operationId": "resource.detail.read",
+      "capabilityPackageId": "bp-uv-resource-booking.resource-directory-read",
+      "kind": "read",
+      "contract": { "id": "resource-booking.detail", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoWriteAdapterId": null
+    },
+    {
+      "operationId": "reservation.list",
+      "capabilityPackageId": "bp-uv-resource-booking.reservation-manage",
+      "kind": "read",
+      "contract": { "id": "resource-booking.reservation-list", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoWriteAdapterId": null
+    },
+    {
+      "operationId": "reservation.create",
+      "capabilityPackageId": "bp-uv-resource-booking.reservation-create",
+      "kind": "write",
+      "contract": { "id": "resource-booking.reservation-create", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": [],
+      "autoWriteAdapterId": "bp-uv-resource-booking.local"
+    },
+    {
+      "operationId": "reservation.cancel",
+      "capabilityPackageId": "bp-uv-resource-booking.reservation-manage",
+      "kind": "write",
+      "contract": { "id": "resource-booking.reservation-cancel", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": [],
+      "autoWriteAdapterId": "bp-uv-resource-booking.local"
+    },
+    {
+      "operationId": "reservation.reschedule",
+      "capabilityPackageId": "bp-uv-resource-booking.reservation-manage",
+      "kind": "write",
+      "contract": { "id": "resource-booking.reservation-reschedule", "version": "1.0" },
+      "retry": { "maxAttempts": 1 },
+      "sourceAdapterIds": ["bp-uv-resource-booking.local"],
+      "autoReadAdapterIds": [],
+      "autoWriteAdapterId": "bp-uv-resource-booking.local"
+    }
+  ],
+  "sourceSelection": {
+    "defaultMode": "local",
+    "settingModes": ["local"],
+    "environmentModes": [
+      { "environmentId": "development.local", "mode": "local" },
+      { "environmentId": "preview.local", "mode": "local" }
+    ]
+  },
+  "portIds": []
+}
