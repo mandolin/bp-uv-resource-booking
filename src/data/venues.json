@@ -2,6 +2,69 @@
   "datasetVersion": "1.0",
   "venues": [
     {
+      "id": "harbor-reading-hall",
+      "name": {
+        "zh-Hans": "澄港阅览与学习馆",
+        "en": "Harbor Reading and Study Hall"
+      },
+      "summary": {
+        "zh-Hans": "面向安静阅读、协作学习和小型交流的开放公共空间。",
+        "en": "An open public space for quiet reading, collaborative study, and small discussions."
+      },
+      "district": {
+        "zh-Hans": "澄港片区",
+        "en": "Harbor district"
+      },
+      "imageId": "harbor-reading-hall",
+      "resources": [
+        {
+          "id": "harbor-quiet-reading",
+          "typeId": "study-space",
+          "name": {
+            "zh-Hans": "安静阅览区",
+            "en": "Quiet Reading Area"
+          },
+          "type": {
+            "zh-Hans": "学习空间",
+            "en": "Study space"
+          },
+          "capacity": 32,
+          "availableDates": ["2026-08-08", "2026-08-09", "2026-08-10"],
+          "availableSlots": ["09:00", "10:00", "13:00", "15:00"]
+        },
+        {
+          "id": "harbor-shared-study-table",
+          "typeId": "study-space",
+          "name": {
+            "zh-Hans": "共享学习桌",
+            "en": "Shared Study Table"
+          },
+          "type": {
+            "zh-Hans": "学习空间",
+            "en": "Study space"
+          },
+          "capacity": 8,
+          "availableDates": ["2026-08-08", "2026-08-10"],
+          "availableSlots": ["09:00", "11:00", "14:00", "16:00"]
+        },
+        {
+          "id": "harbor-discussion-room",
+          "typeId": "shared-space",
+          "name": {
+            "zh-Hans": "小组交流室",
+            "en": "Discussion Room"
+          },
+          "type": {
+            "zh-Hans": "共享空间",
+            "en": "Shared space"
+          },
+          "capacity": 12,
+          "availableDates": ["2026-08-09", "2026-08-10"],
+          "availableSlots": ["10:00", "13:00", "15:00"]
+        }
+      ]
+    },
+    {
       "id": "riverside-sports-hall",
       "name": {
         "zh-Hans": "滨河综合运动馆",
@@ -94,69 +157,6 @@
           "capacity": 48,
           "availableDates": ["2026-08-08", "2026-08-10"],
           "availableSlots": ["10:00", "15:00", "19:00"]
-        }
-      ]
-    },
-    {
-      "id": "harbor-reading-hall",
-      "name": {
-        "zh-Hans": "澄港阅览与学习馆",
-        "en": "Harbor Reading and Study Hall"
-      },
-      "summary": {
-        "zh-Hans": "面向安静阅读、协作学习和小型交流的开放公共空间。",
-        "en": "An open public space for quiet reading, collaborative study, and small discussions."
-      },
-      "district": {
-        "zh-Hans": "澄港片区",
-        "en": "Harbor district"
-      },
-      "imageId": "harbor-reading-hall",
-      "resources": [
-        {
-          "id": "harbor-quiet-reading",
-          "typeId": "study-space",
-          "name": {
-            "zh-Hans": "安静阅览区",
-            "en": "Quiet Reading Area"
-          },
-          "type": {
-            "zh-Hans": "学习空间",
-            "en": "Study space"
-          },
-          "capacity": 32,
-          "availableDates": ["2026-08-08", "2026-08-09", "2026-08-10"],
-          "availableSlots": ["09:00", "10:00", "13:00", "15:00"]
-        },
-        {
-          "id": "harbor-shared-study-table",
-          "typeId": "study-space",
-          "name": {
-            "zh-Hans": "共享学习桌",
-            "en": "Shared Study Table"
-          },
-          "type": {
-            "zh-Hans": "学习空间",
-            "en": "Study space"
-          },
-          "capacity": 8,
-          "availableDates": ["2026-08-08", "2026-08-10"],
-          "availableSlots": ["09:00", "11:00", "14:00", "16:00"]
-        },
-        {
-          "id": "harbor-discussion-room",
-          "typeId": "shared-space",
-          "name": {
-            "zh-Hans": "小组交流室",
-            "en": "Discussion Room"
-          },
-          "type": {
-            "zh-Hans": "共享空间",
-            "en": "Shared space"
-          },
-          "capacity": 12,
-          "availableDates": ["2026-08-09", "2026-08-10"],
-          "availableSlots": ["10:00", "13:00", "15:00"]
         }
       ]
     },

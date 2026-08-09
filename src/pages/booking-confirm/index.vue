@@ -21,36 +21,55 @@
             <u-tag class="booking-confirm-page__result-state" :text="runtimeLocale.t('reservation.confirmed')" tone="primary" />
           </view>
         </view>
-        <source-badge :source="detail.source" />
-        <u-card class="booking-confirm-page__summary" :title="runtimeLocale.t('booking.selectionTitle')" shadow>
+        <!-- <lang><zh-CN>预约编号来自本次 local write 的稳定有限 ID，仅帮助用户在当前演示运行时识别记录。</zh-CN><en>The booking reference comes from the stable finite ID of this local write and only helps users identify the record in the current demo runtime.</en></lang> -->
+        <u-card class="booking-confirm-page__reference" :title="runtimeLocale.t('booking.referenceLabel')" :padding="14">
+          <text class="booking-confirm-page__reference-value">{{ confirmedReservation.id }}</text>
+        </u-card>
+        <u-card class="booking-confirm-page__summary" :title="runtimeLocale.t('booking.selectionTitle')" :padding="14">
           <u-cell :label="runtimeLocale.t('booking.venueLabel')" :value="confirmedReservation.venueName" />
           <u-cell :label="runtimeLocale.t('booking.resourceLabel')" :value="confirmedReservation.resourceName" />
           <u-cell :label="runtimeLocale.t('booking.dateLabel')" :value="runtimeLocale.formatDate(confirmedReservation.date)" />
           <u-cell :label="runtimeLocale.t('booking.timeLabel')" :value="confirmedReservation.time" />
+          <u-cell :label="runtimeLocale.t('booking.capacityLabel')" :value="capacityLabel" />
         </u-card>
-        <u-notice visible tone="info" :message="runtimeLocale.t('booking.confirmedDescription')" />
+        <!-- <lang><zh-CN>结果页继续披露唯一 local authority 与确认边界，避免成功图标被误读为真实支付或远端预约。</zh-CN><en>The result continues to disclose the sole local authority and confirmation boundary, preventing the success mark from being read as real payment or remote booking.</en></lang> -->
+        <u-card :title="runtimeLocale.t('booking.authorityTitle')" :sub-title="runtimeLocale.t('booking.authorityLocal')" :padding="14">
+          <view class="booking-confirm-page__authority-row"><source-badge class="booking-confirm-page__source-badge" :source="detail.source" /><text>{{ runtimeLocale.t('booking.authorityDescription') }}</text></view>
+        </u-card>
+        <u-alert-tips type="primary" :title="runtimeLocale.t('booking.confirmedBoundaryTitle')" :description="runtimeLocale.t('booking.confirmedDescription')" />
         <view class="booking-confirm-page__actions">
-          <u-button :label="runtimeLocale.t('booking.viewReservation')" block @click="openConfirmedReservationDetail" />
-          <u-button :label="runtimeLocale.t('booking.returnHome')" variant="secondary" block @click="returnHome" />
+          <u-button :label="runtimeLocale.t('booking.viewReservation')" block size="lg" @click="openConfirmedReservationDetail" />
+          <u-button :label="runtimeLocale.t('booking.returnHome')" variant="secondary" block size="lg" @click="returnHome" />
         </view>
       </view>
       <view v-else-if="hasBookingDraft" class="booking-confirm-page__content">
-        <source-badge :source="detail.source" />
-        <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('booking.eyebrow') }}</text>
-        <text class="booking-confirm-page__title">{{ resourceName }}</text>
-        <text class="booking-confirm-page__venue">{{ venueName }} · {{ districtName }}</text>
+        <!-- <lang><zh-CN>确认页顶部先说明固定 local authority；它不会在提交失败时切换 source 或伪装为真实预约。</zh-CN><en>The confirmation page first states the fixed local authority; it never switches source after submission failure or presents itself as a real booking.</en></lang> -->
+        <u-card class="booking-confirm-page__authority" :title="runtimeLocale.t('booking.authorityTitle')" :sub-title="runtimeLocale.t('booking.authorityLocal')" :padding="14">
+          <view class="booking-confirm-page__authority-row"><source-badge class="booking-confirm-page__source-badge" :source="detail.source" /><text>{{ runtimeLocale.t('booking.authorityDescription') }}</text></view>
+        </u-card>
         <!-- <lang><zh-CN>确认页只回显详情页已验证选择；它不重新开放任意日期/时段输入或将草稿写入 route。</zh-CN><en>Confirmation only echoes selection validated by detail; it reopens no arbitrary date/slot input and writes no draft into route.</en></lang> -->
-        <u-card :title="runtimeLocale.t('booking.selectionTitle')">
+        <u-card :title="runtimeLocale.t('booking.selectionTitle')" :padding="14">
           <u-cell :label="runtimeLocale.t('booking.venueLabel')" :value="venueName" />
           <u-cell :label="runtimeLocale.t('booking.resourceLabel')" :value="resourceName" />
           <u-cell :label="runtimeLocale.t('booking.dateLabel')" :value="selectedDateLabel" />
           <u-cell :label="runtimeLocale.t('booking.timeLabel')" :value="bookingDraft.time" />
+          <u-cell :label="runtimeLocale.t('booking.capacityLabel')" :value="capacityLabel" />
+          <u-cell :label="runtimeLocale.t('booking.districtLabel')" :value="districtName" />
+        </u-card>
+
+        <!-- <lang><zh-CN>预约人区只显示明确的 mock session，不采集姓名、手机、证件或其他真实身份字段。</zh-CN><en>The booker region displays only the explicit mock session and collects no name, phone, credential, or other real-identity field.</en></lang> -->
+        <u-card :title="runtimeLocale.t('booking.guestTitle')" :padding="14">
+          <u-cell :label="runtimeLocale.t('booking.guestLabel')" :value="runtimeLocale.t('booking.demoGuest')" />
+          <u-cell :label="runtimeLocale.t('booking.sessionLabel')" :value="runtimeLocale.t('booking.mockSession')" />
         </u-card>
         <u-notice v-if="resultMessage" visible :tone="resultTone" :message="resultMessage" />
-        <u-notice visible tone="info" :message="runtimeLocale.t('booking.localNotice')" />
         <!-- <lang><zh-CN>此按钮只调用已锁定 Biz write adapter 的 state action；页面不直接改写预约、调用 domain 或模拟后端。</zh-CN><en>This button calls only the state action backed by locked Biz write adapter; page directly mutates no reservation, calls no domain, and simulates no backend.</en></lang> -->
-        <u-button :label="runtimeLocale.t('booking.confirmLocal')" block :loading="demo.bookingPhase.value === 'submitting'" @click="confirmBooking" />
+        <view class="booking-confirm-page__confirm-actions">
+          <u-button :label="runtimeLocale.t('common.cancel')" variant="secondary" block size="lg" @click="reviewAvailability" />
+          <u-button :label="runtimeLocale.t('booking.confirmLocal')" block size="lg" :loading="demo.bookingPhase.value === 'submitting'" @click="confirmBooking" />
+        </view>
         <u-button v-if="resultTone === 'error'" :label="runtimeLocale.t('booking.reviewAvailability')" variant="secondary" block @click="reviewAvailability" />
+        <u-alert-tips type="primary" :title="runtimeLocale.t('booking.boundaryTitle')" :description="runtimeLocale.t('booking.localNotice')" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('booking.emptyTitle')" :description="runtimeLocale.t('booking.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
       </view>
@@ -88,6 +107,9 @@ const hasBookingDraft = computed(() => detail.value.kind === 'detail'
 const resourceName = computed(() => runtimeLocale.localize(detail.value.resource?.name));
 const venueName = computed(() => runtimeLocale.localize(detail.value.venue?.name));
 const districtName = computed(() => runtimeLocale.localize(detail.value.venue?.district));
+
+// <lang><zh-CN>容量标签只描述资源声明的总容量，不能解释为实时余量或本次预约人数。</zh-CN><en>The capacity label describes only declared total resource capacity and cannot be interpreted as live remaining places or booking party size.</en></lang>
+const capacityLabel = computed(() => runtimeLocale.t('resource.capacity', { capacity: detail.value.resource?.capacity ?? 0 }));
 
 // <lang><zh-CN>日期只格式化详情已验证并放入草稿的 ISO 值；不从系统时间、远端日历或动态脚本派生。</zh-CN><en>Date formats only ISO value validated by detail and placed in draft; it derives from no system clock, remote calendar, or dynamic script.</en></lang>
 const selectedDateLabel = computed(() => runtimeLocale.formatDate(bookingDraft.value.date));
@@ -196,17 +218,24 @@ function backToDiscover() {
 </script>
 
 <style scoped>
-/* <lang><zh-CN>确认页以清晰的表单分组、受控结果标记和主题卡片组织 local flow，不模拟支付、会员或真实订单视觉。</zh-CN><en>Confirmation uses clear form grouping, controlled result mark, and theme cards to organize local flow without simulating payment, membership, or real-order visuals.</en></lang> */
-.booking-confirm-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
-.booking-confirm-page__content { display: flex; gap: 16px; flex-direction: column; }
-.booking-confirm-page__result { gap: 18px; padding-top: 8px; }
-.booking-confirm-page__result-header { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 112px; padding: 8px 0; text-align: left; }
-.booking-confirm-page__result-mark { display: flex; align-items: center; justify-content: center; flex: 0 0 64px; height: 64px; width: 64px; border-radius: 50%; background: var(--u-sys-color-action-primary); color: var(--u-sys-color-on-action-primary); font-size: 36px; font-weight: 700; line-height: 1; }
+/* <lang><zh-CN>确认页以设计板中的白色分组卡、克制留白和明确双操作组织 local flow，不模拟支付、会员或真实订单视觉。</zh-CN><en>Confirmation uses the board's white grouped cards, restrained spacing, and explicit paired actions for the local flow without simulating payment, membership, or a real order.</en></lang> */
+.booking-confirm-page { min-height: 100%; padding: 16px 16px 28px; background: var(--u-sys-color-surface-subtle); }
+.booking-confirm-page__content { display: flex; gap: 14px; flex-direction: column; }
+.booking-confirm-page__result { gap: 14px; }
+.booking-confirm-page__result-header { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 104px; padding: 6px 0; text-align: left; }
+.booking-confirm-page__result-mark { display: flex; align-items: center; justify-content: center; flex: 0 0 66px; height: 66px; width: 66px; border-radius: 50%; background: var(--u-comp-alert-tips-success-border); color: var(--u-sys-color-surface); font-size: 38px; font-weight: 700; line-height: 1; }
 .booking-confirm-page__result-copy { display: flex; gap: 6px; flex-direction: column; min-width: 0; }
 .booking-confirm-page__result-state { align-self: flex-start; display: inline-flex; }
-.booking-confirm-page__summary { margin-top: 2px; }
+.booking-confirm-page__reference-value { color: var(--u-sys-color-action-primary); font-size: 21px; font-weight: 700; letter-spacing: .02em; overflow-wrap: anywhere; }
+.booking-confirm-page__authority-row { display: flex; align-items: center; gap: 10px; color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
+.booking-confirm-page__source-badge { flex: 0 0 auto; }
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.booking-confirm-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
-.booking-confirm-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
+.booking-confirm-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display); font-size: 27px; font-weight: 700; }
 .booking-confirm-page__actions { display: flex; gap: 10px; flex-direction: column; }
+.booking-confirm-page__confirm-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; }
+
+/* <lang><zh-CN>极窄屏把确认双操作改为纵向，避免英文主按钮被压缩到无法阅读。</zh-CN><en>Extremely narrow screens stack the confirmation actions so the English primary label is not compressed beyond readability.</en></lang> */
+@media (max-width: 340px) {
+  .booking-confirm-page__confirm-actions { grid-template-columns: 1fr; }
+}
 </style>

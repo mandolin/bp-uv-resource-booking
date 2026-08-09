@@ -12,25 +12,32 @@
   bottom: 0;
   left: 0;
   display: flex;
-  gap: 4px;
+  align-items: flex-start;
   box-sizing: border-box;
-  min-height: 57px;
-  padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
-  border-top: 1px solid #f7f9fc;
+  min-height: calc(62px + env(safe-area-inset-bottom));
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  border-top: 1px solid #e8edf3;
   background: #ffffff;
 }
 
-/* <lang><zh-CN>每项保留均分宽度、44px 最小触控高度和文字选中态，不加载图标、字体或图片。</zh-CN><en>Each item retains equal width, a 44px minimum touch target, and a textual selected state, loading no icon, font, or image.</en></lang> */
+/* <lang><zh-CN>每项均分宽度并以 24px 线性图标、12px 文字和 50px 触控高度构成稳定纵向导航，不依赖固定字符宽度。</zh-CN><en>Each item receives equal width and forms stable vertical navigation from a 24px line icon, 12px text, and a 50px touch height without relying on fixed character widths.</en></lang> */
 .bp-custom-tabbar__item {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
   min-width: 0;
-  min-height: 44px;
+  min-height: 50px;
   margin: 0;
-  padding: 8px 4px;
+  padding: 3px 2px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: #27364a;
+  font-family: inherit;
   font-size: 12px;
   line-height: normal;
 }
@@ -38,17 +45,31 @@
 /* <lang><zh-CN>移除微信 button 的默认伪元素边框，避免与 HIA-uView 风格产生双边框。</zh-CN><en>Remove WeChat button's default pseudo-element border, avoiding a double border against the HIA-uView visual contract.</en></lang> */
 .bp-custom-tabbar__item::after { border: 0; }
 
-/* <lang><zh-CN>选中态同时使用表面、前景与字重，不只依赖颜色差异。</zh-CN><en>The selected state uses surface, foreground, and weight together rather than relying on color alone.</en></lang> */
+/* <lang><zh-CN>按压态只降低透明度作为短暂反馈，不生成与设计板不符的持续 pill 或色块。</zh-CN><en>The pressed state only lowers opacity for transient feedback and creates no persistent pill or surface block that conflicts with the design board.</en></lang> */
+.bp-custom-tabbar__item--pressed { opacity: 0.68; }
+
+/* <lang><zh-CN>选中态由钴蓝图标、文字与字重共同表达；背景保持白色，不使用 pill。</zh-CN><en>The selected state is expressed by the cobalt icon, label, and weight together; the background remains white and uses no pill.</en></lang> */
 .bp-custom-tabbar__item--active {
-  background: #f7f9fc;
+  background: transparent;
   color: #0047ab;
   font-weight: 600;
+}
+
+/* <lang><zh-CN>图标的 24px 几何框在四项之间保持一致；颜色由已选择的本地 SVG 资产确定。</zh-CN><en>The icon's 24px geometry remains consistent across all four items; the selected local SVG asset determines its color.</en></lang> */
+.bp-custom-tabbar__icon {
+  display: block;
+  flex: none;
+  width: 24px;
+  height: 24px;
 }
 
 /* <lang><zh-CN>单行标签在小屏空间不足时截断，不改变实际 locale 文案。</zh-CN><en>The single-line label truncates when small-screen space is insufficient without changing actual locale copy.</en></lang> */
 .bp-custom-tabbar__label {
   display: block;
+  max-width: 100%;
   overflow: hidden;
+  font-size: 12px;
+  line-height: 16px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

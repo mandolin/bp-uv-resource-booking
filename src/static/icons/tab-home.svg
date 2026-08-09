@@ -1,0 +1,8 @@
+<!-- <lang><zh-CN>本仓原创的首页未选中线性图标；不包含第三方字体、商标或可读文字。</zh-CN><en>Repository-original unselected Home line icon; contains no third-party font, trademark, or readable text.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27364a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <title>Home</title>
+  <desc>Outline of a house for the Home tab.</desc>
+  <path d="M3.5 10.6 12 3.7l8.5 6.9" />
+  <path d="M5.4 9.4v10.2h13.2V9.4" />
+  <path d="M9.4 19.6v-5.7h5.2v5.7" />
+</svg>

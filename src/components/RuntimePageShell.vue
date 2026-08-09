@@ -5,10 +5,19 @@
 <template>
   <!-- <lang><zh-CN>根壳提供统一背景和最小视口高度；页面业务内容只通过默认 slot 进入。</zh-CN><en>The root shell provides a shared background and minimum viewport height; page business content enters only through the default slot.</en></lang> -->
   <view class="runtime-page-shell">
-    <!-- <lang><zh-CN>sticky header 先占用 UniApp 状态栏变量，再由 `u-navbar` 显示响应式单语言标题和可选返回文字。</zh-CN><en>The sticky header first reserves UniApp's status-bar variable, then `u-navbar` displays the reactive single-language title and optional back copy.</en></lang> -->
+    <!-- <lang><zh-CN>sticky header 先占用 UniApp 状态栏变量；页面可通过受控 header slot 提供已审阅品牌栏，未提供时继续由 `u-navbar` 显示单语言标题和可选返回文字。</zh-CN><en>The sticky header first reserves UniApp's status-bar variable; a page may supply a reviewed brand bar through the bounded header slot, while `u-navbar` continues to render the single-language title and optional back copy by default.</en></lang> -->
     <view class="runtime-page-shell__header">
       <view class="runtime-page-shell__status-bar" />
-      <u-navbar visible :title="title" :left-text="backText" @left-click="handleBack" />
+      <slot name="header">
+        <u-navbar visible :title="title">
+          <template #left>
+            <!-- <lang><zh-CN>二级页通过 navbar 的公开 left slot 提供纯箭头 control；可见图形由 CSS 绘制，完整本地化语义保留在 aria-label。</zh-CN><en>Secondary pages provide a chevron-only control through the navbar's public left slot; CSS draws the visible shape while aria-label retains the complete localized meaning.</en></lang> -->
+            <button v-if="props.back" class="runtime-page-shell__back" type="button" :aria-label="backText" @click="handleBack">
+              <view class="runtime-page-shell__back-icon" aria-hidden="true" />
+            </button>
+          </template>
+        </u-navbar>
+      </slot>
     </view>
 
     <!-- <lang><zh-CN>页面内容保持调用方所有权；壳不读取目录、预约、身份或数据 source。</zh-CN><en>Page content remains caller-owned; the shell reads no catalog, booking, identity, or data source.</en></lang> -->
@@ -30,8 +39,8 @@ defineOptions({ name: 'RuntimePageShell' });
 
 /**
  * <lang><zh-CN>页面壳的第一方受控输入。</zh-CN><en>First-party controlled inputs for the page shell.</en></lang>
- * @lang zh-CN 已本地化 title 与返回开关由六个静态页面源码提供；不接受业务对象、远端 manifest 或 route query。
- * @lang en The localized title and back switch are supplied by six static page sources; no business object, remote manifest, or route query is accepted.
+ * @lang zh-CN 已本地化 title 与返回开关由已声明页面源码提供；可选 header slot 仍由同一第一方页面拥有，不接受业务对象、远端 manifest 或 route query。
+ * @lang en The localized title and back switch are supplied by declared page sources; an optional header slot remains owned by the same first-party page and accepts no business object, remote manifest, or route query.
  */
 const props = defineProps({
   // <lang><zh-CN>页面直接提供当前 locale 的 title，壳不再依赖跨自定义组件的复合 key 属性桥接。</zh-CN><en>The page supplies the current-locale title directly, so the shell no longer depends on bridging a compound key prop across custom components.</en></lang>
@@ -66,6 +75,10 @@ function handleBack() {
 .runtime-page-shell__header { position: sticky; z-index: var(--bp-shell-header-z); top: 0; background: var(--u-sys-color-surface); }
 /* <lang><zh-CN>UniApp 的状态栏变量在 H5 为零、在支持宿主为实际高度；不读取设备标识或同步系统 API。</zh-CN><en>UniApp's status-bar variable is zero on H5 and the actual height on supporting hosts; no device identifier or synchronous system API is read.</en></lang> */
 .runtime-page-shell__status-bar { height: var(--status-bar-height); min-height: var(--status-bar-height); background: var(--u-sys-color-surface); }
+/* <lang><zh-CN>返回 control 清除宿主 button 外观并保留 40px 触控面；内部双边框形成与视觉板一致的轻量 chevron，不依赖字符字形或外部图标。</zh-CN><en>The back control removes host button chrome while retaining a 40px touch target; two inner borders form the board-aligned lightweight chevron without relying on a text glyph or external icon.</en></lang> */
+.runtime-page-shell__back { display: flex; align-items: center; justify-content: center; height: 40px; width: 40px; margin: 0; padding: 0; appearance: none; background: transparent; border: 0; border-radius: 0; color: var(--u-comp-navbar-control-foreground); }
+.runtime-page-shell__back::after { border: 0; }
+.runtime-page-shell__back-icon { box-sizing: border-box; height: 11px; width: 11px; border-bottom: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(45deg); }
 /* <lang><zh-CN>body 取得剩余空间；具体 padding、表单和列表仍由页面拥有。</zh-CN><en>The body takes remaining space; concrete padding, forms, and lists remain page-owned.</en></lang> */
 .runtime-page-shell__body { flex: 1; min-width: 0; }
 /* <lang><zh-CN>微信自定义组件样式隔离可能阻断 app-level token 继承；以下条件编译字面值与 `uni.scss` 默认值保持一致，只补足页面壳自身的表面与层级。</zh-CN><en>WeChat custom-component style isolation may block inheritance of app-level tokens; the following conditional literal values match `uni.scss` defaults and supplement only the page shell's own surfaces and layers.</en></lang> */
@@ -73,5 +86,6 @@ function handleBack() {
 .runtime-page-shell { background: #f7f9fc; }
 .runtime-page-shell__header { z-index: 20; background: #ffffff; }
 .runtime-page-shell__status-bar { background: #ffffff; }
+.runtime-page-shell__back { color: #0047ab; }
 /* #endif */
 </style>

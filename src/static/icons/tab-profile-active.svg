@@ -1,0 +1,7 @@
+<!-- <lang><zh-CN>本仓原创的个人信息选中线性图标；钴蓝人像只表达当前 tab。</zh-CN><en>Repository-original selected Profile line icon; the cobalt person outline expresses only the current tab.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0047ab" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <title>Selected Profile</title>
+  <desc>Cobalt person outline for the selected Profile tab.</desc>
+  <circle cx="12" cy="8" r="3.7" />
+  <path d="M4.8 20.2c.4-4.2 3-6.4 7.2-6.4s6.8 2.2 7.2 6.4" />
+</svg>

@@ -1,67 +1,79 @@
 <!--
-@lang zh-CN 首页呈现已审阅的城市公共资源预约入口、source badge、精选资源和明确恢复状态；不包含真实定位、身份、支付、远端请求或行业会员信息。
-@lang en Home presents the reviewed civic-resource-booking entry, source badge, featured resources, and explicit recovery states; it includes no real location, identity, payment, remote request, or industry membership information.
+@lang zh-CN 首页按已审阅视觉板呈现品牌栏、欢迎信息、原创主图、双入口、单项精选资源和数据来源说明；不包含搜索、真实定位、身份、支付、远端请求或行业会员信息。
+@lang en Home follows the reviewed visual board with a brand bar, welcome copy, original hero image, two entries, one featured resource, and a data-source explanation; it includes no search, real location, identity, payment, remote request, or industry membership information.
 -->
 <template>
-  <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView 的 locale context 与 BP runtime 文案/领域投影保持一致。</zh-CN><en>The provider directly wraps the page, keeping HIA-uView locale context aligned with BP runtime copy and domain projection.</en></lang> -->
+  <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView locale context、BP runtime 文案和领域投影始终使用同一种运行时语言。</zh-CN><en>The provider directly wraps the page so the HIA-uView locale context, BP runtime copy, and domain projection always use one runtime language.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <!-- <lang><zh-CN>页面壳用 HIA-uView 呈现同一 locale 的标题；四项主导航由平台管理 custom tabBar 常驻呈现。</zh-CN><en>The page shell uses HIA-uView to render the same-locale title; platform-managed custom tabBar persistently renders the four primary navigation items.</en></lang> -->
+    <!-- <lang><zh-CN>首页使用应用自管品牌栏；其余页面继续使用 RuntimePageShell 的默认 HIA-uView navbar，平台 custom tabBar 仍常驻。</zh-CN><en>Home supplies an application-owned brand bar; other pages continue using RuntimePageShell's default HIA-uView navbar while the platform custom tab bar remains persistent.</en></lang> -->
     <runtime-page-shell :title="runtimeLocale.t('title.home')">
+      <template #header>
+        <!-- <lang><zh-CN>品牌与 source badge 保持同一可发现层级；微信条件样式为右侧原生胶囊预留空间。</zh-CN><en>Brand and source badge stay at one discoverable level; WeChat-specific styling reserves space for the native capsule on the right.</en></lang> -->
+        <view class="home-page__brand-bar">
+          <text class="home-page__brand">{{ runtimeLocale.t('app.brand') }}</text>
+          <source-badge :source="demo.catalogSource.value" />
+        </view>
+      </template>
+
       <view class="home-page">
-      <!-- <lang><zh-CN>hero 使用原创项目内场馆图，不使用外部照片或地图服务。</zh-CN><en>Hero uses an original in-project venue image and no external photograph or map service.</en></lang> -->
-      <view class="home-page__hero">
-        <u-image :src="heroImage" :alt="runtimeLocale.t('app.brand')" size="large" shape="rounded" />
-        <view class="home-page__hero-copy">
-          <text class="home-page__eyebrow">{{ runtimeLocale.t('home.eyebrow') }}</text>
+        <!-- <lang><zh-CN>欢迎标题与说明独立位于主图之前，拒绝使用渐变覆盖层压缩文字或改变图片可读性。</zh-CN><en>The welcome heading and description sit independently before the hero image, avoiding a gradient overlay that compresses copy or changes image readability.</en></lang> -->
+        <view class="home-page__intro">
           <text class="home-page__title">{{ runtimeLocale.t('home.title') }}</text>
           <text class="home-page__subtitle">{{ runtimeLocale.t('home.subtitle') }}</text>
         </view>
-      </view>
 
-      <!-- <lang><zh-CN>source 状态始终可发现，避免把 local/降级事实藏进设置页。</zh-CN><en>Source state remains discoverable and does not hide local/degradation facts in a settings page.</en></lang> -->
-      <view class="home-page__source"><source-badge :source="demo.catalogSource.value" /><text>{{ runtimeLocale.t('home.offline') }}</text></view>
-      <u-search v-model="keyword" :placeholder="runtimeLocale.t('home.searchPlaceholder')" @search="handleSearch" @clear="handleClear" />
-
-      <!-- <lang><zh-CN>两个入口只复用当前本地目录 flow，不提前声明日历服务、实时库存或写入流程。</zh-CN><en>The two entries reuse only the current local catalog flow and do not declare a calendar service, live inventory, or a write flow early.</en></lang> -->
-      <view class="home-page__shortcuts">
-        <u-button :label="runtimeLocale.t('home.chooseDate')" variant="secondary" block @click="browseResources" />
-        <u-button :label="runtimeLocale.t('home.browseVenues')" block @click="browseResources" />
-      </view>
-
-      <!-- <lang><zh-CN>加载、首次错误、空结果和 ready list 显式互斥呈现，保持可恢复状态可见。</zh-CN><en>Loading, initial failure, empty result, and ready list are explicitly mutually exclusive so recoverable state remains visible.</en></lang> -->
-      <u-loading-page v-if="demo.catalogPhase.value === 'loading'" :message="runtimeLocale.t('home.loading')" />
-      <view v-else-if="demo.catalogPhase.value === 'failure'" class="home-page__state">
-        <u-notice visible tone="error" :message="runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
-        <u-button :label="runtimeLocale.t('common.reload')" block @click="handleRetry" />
-      </view>
-      <u-empty
-        v-else-if="demo.catalogPhase.value === 'ready' && demo.catalogEntries.value.length === 0"
-        :title="runtimeLocale.t('home.emptyTitle')"
-        :description="runtimeLocale.t('home.emptyDescription')"
-        :action-text="runtimeLocale.t('common.clearSearch')"
-        @action="handleClear"
-      />
-      <view v-else>
-        <!-- <lang><zh-CN>`u-section` 只承担标题层级；列表作为相邻块级区域，避免 section 的并列 slot 布局压缩资源卡片。</zh-CN><en>`u-section` owns only title hierarchy; the list is an adjacent block region, avoiding section's sibling-slot layout compressing resource cards.</en></lang> -->
-        <u-section :title="runtimeLocale.t('home.sectionFeatured')" />
-        <!-- <lang><zh-CN>每个卡片只收到当前 canonical entry，并把查看意图交回页面导航。</zh-CN><en>Each card receives only the current canonical entry and returns the view intent to page navigation.</en></lang> -->
-        <view class="home-page__list">
-          <resource-card v-for="entry in demo.catalogEntries.value" :key="entry.id" :entry="entry" @view="openDetail" />
+        <!-- <lang><zh-CN>主图使用仓内登记的中性公共阅览空间资产，并通过 UImage 的公开 fluid 契约填满页面拥有的固定几何。</zh-CN><en>The hero uses the registered neutral public-reading-space asset and fills page-owned fixed geometry through UImage's public fluid contract.</en></lang> -->
+        <view class="home-page__hero">
+          <u-image :src="heroImage" :alt="runtimeLocale.t('home.heroAlt')" fluid shape="rounded" />
         </view>
-        <!-- <lang><zh-CN>页脚同时显示加载数、明确页次和 append retry，不使用不可发现的无限滚动。</zh-CN><en>Footer shows loaded count, explicit page state, and append retry together without undiscoverable infinite scrolling.</en></lang> -->
-        <view class="home-page__footer">
-          <text>{{ pageFacts }}</text>
-          <u-loadmore :status="footerStatus" :more-text="runtimeLocale.t('load.more')" :loading-text="runtimeLocale.t('load.loading')" :nomore-text="runtimeLocale.t('load.nomore')" :error-text="runtimeLocale.t('load.error')" @loadmore="handleLoadMore" />
+
+        <!-- <lang><zh-CN>两个入口均使用 HIA-uView UButton；第一方图标只是可见装饰，文字继续承担完整操作语义。</zh-CN><en>Both entries use HIA-uView UButton; first-party icons are visible decoration while text continues to carry the complete action meaning.</en></lang> -->
+        <view class="home-page__shortcuts">
+          <u-button :label="runtimeLocale.t('home.chooseDate')" size="lg" block @click="browseResources">
+            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-calendar-light.svg" mode="aspectFit" /></template>
+          </u-button>
+          <u-button :label="runtimeLocale.t('home.browseVenues')" variant="secondary" size="lg" block @click="browseResources">
+            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-venue-primary.svg" mode="aspectFit" /></template>
+          </u-button>
         </view>
-      </view>
+
+        <!-- <lang><zh-CN>加载、失败、空结果和精选项显式互斥；首页只呈现一个精选入口，不复用发现页的完整分页目录。</zh-CN><en>Loading, failure, empty, and featured states are explicitly exclusive; Home presents one featured entry rather than reusing Discover's complete paged catalog.</en></lang> -->
+        <u-loading-page v-if="demo.catalogPhase.value === 'loading'" :message="runtimeLocale.t('home.loading')" />
+        <view v-else-if="demo.catalogPhase.value === 'failure'" class="home-page__state">
+          <u-notice visible tone="error" :message="runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
+          <u-button :label="runtimeLocale.t('common.reload')" block @click="handleRetry" />
+        </view>
+        <u-empty
+          v-else-if="!featuredEntry"
+          :title="runtimeLocale.t('home.emptyTitle')"
+          :description="runtimeLocale.t('home.emptyDescription')"
+          :action-text="runtimeLocale.t('common.goDiscover')"
+          @action="browseResources"
+        />
+        <view v-else class="home-page__featured">
+          <!-- <lang><zh-CN>区块右侧提供明确“查看全部”入口；精选卡整体报告查看意图，没有第二个重复详情按钮。</zh-CN><en>The section exposes an explicit View all entry; the whole featured card reports view intent and contains no duplicate details button.</en></lang> -->
+          <u-section :title="runtimeLocale.t('home.sectionFeatured')" :right-text="runtimeLocale.t('common.viewAll')" @right-click="browseResources" />
+          <resource-card :entry="featuredEntry" layout="featured" @view="openDetail" />
+        </view>
+
+        <!-- <lang><zh-CN>来源说明使用 HIA-uView UAlertTips 的标题与说明结构，始终公开本地示例边界。</zh-CN><en>The source explanation uses HIA-uView UAlertTips title-and-description structure and always discloses the local-demo boundary.</en></lang> -->
+        <u-alert-tips
+          class="home-page__data-notice"
+          show
+          type="primary"
+          :title="runtimeLocale.t('home.dataNoticeTitle')"
+          :description="runtimeLocale.t('home.dataNoticeDescription')"
+        />
       </view>
     </runtime-page-shell>
   </u-config-provider>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
-import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
+// <lang><zh-CN>Vue 仅用于受控派生值和首次挂载；页面不建立第二个业务 store。</zh-CN><en>Vue is used only for bounded derived values and first mount; the page creates no second business store.</en></lang>
+import { computed, onMounted } from 'vue';
+// <lang><zh-CN>平台生命周期只处理明确的下拉刷新和主导航 chrome 同步。</zh-CN><en>Platform lifecycles handle only explicit pull refresh and primary-navigation chrome synchronization.</en></lang>
+import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
@@ -70,149 +82,117 @@ import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtim
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
 
-// <lang><zh-CN>首页只持有共享 demo 的受限公开 surface，不直接读取 dataset、provider host 或 request handle。</zh-CN><en>Home holds only the shared demo's bounded public surface and reads neither dataset, provider host, nor request handle directly.</en></lang>
+// <lang><zh-CN>首页只持有共享 demo 的受限公开 surface，不读取 dataset、provider host 或 request handle。</zh-CN><en>Home holds only the shared demo's bounded public surface and reads neither dataset, provider host, nor request handle.</en></lang>
 const demo = useBookingDemo();
 
-// <lang><zh-CN>读取唯一共享 locale surface，所有用户可见静态文本和领域投影均从此处获得。</zh-CN><en>Read the sole shared locale surface; every user-visible static copy and domain projection is obtained here.</en></lang>
+// <lang><zh-CN>唯一共享 locale surface 为所有静态文案和领域投影提供当前单语言。</zh-CN><en>The sole shared locale surface supplies the current single language for all static copy and domain projection.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
-// <lang><zh-CN>输入框草稿在用户明确搜索前不改变当前结果查询。</zh-CN><en>Input draft changes no current result query before an explicit user search.</en></lang>
-const keyword = ref('');
+// <lang><zh-CN>hero 使用资产 allowlist 中的中性阅览空间；未知 ID 时 UImage 显示受控 fallback。</zh-CN><en>The hero uses the neutral reading space from the asset allowlist; UImage shows its controlled fallback for an unknown ID.</en></lang>
+const heroImage = getVenueImage('harbor-reading-hall');
 
-// <lang><zh-CN>hero 使用已登记的原创资产；未知 ID 时 UImage 显示中性 fallback。</zh-CN><en>Hero uses a registered original asset; UImage displays a neutral fallback for an unknown ID.</en></lang>
-const heroImage = getVenueImage('riverside-sports-hall');
+// <lang><zh-CN>首页精选只读取当前 canonical page 的第一项，不复制领域对象或猜测第二项排序。</zh-CN><en>Home feature reads only the first item of the current canonical page and neither duplicates a domain object nor guesses a secondary ordering.</en></lang>
+const featuredEntry = computed(() => demo.catalogEntries.value[0] ?? null);
 
-// <lang><zh-CN>将 state 映射为 ULoadmore 有限状态，append failure 保留列表并提供可点重试。</zh-CN><en>Map state to finite ULoadmore status; append failure retains the list and provides a retry control.</en></lang>
-const footerStatus = computed(() => {
-  if (demo.catalogPhase.value === 'appending') return 'loading';
-  if (demo.catalogFailure.value && demo.catalogEntries.value.length > 0) return 'error';
-  return demo.catalogPaging.value.hasNext ? 'more' : 'nomore';
-});
-
-// <lang><zh-CN>页脚事实只消费 provider 已返回的安全分页值，不猜测总量或下一页。</zh-CN><en>Footer facts consume only safe paging values returned by the provider and guess neither total nor next page.</en></lang>
-const pageFacts = computed(() => runtimeLocale.t('common.pageFacts', {
-  loaded: demo.catalogEntries.value.length,
-  total: demo.catalogPaging.value.total,
-  page: demo.catalogPaging.value.page
-}));
+// <lang><zh-CN>当前目录只要含关键字或任何发现页筛选，就需要在首页恢复无筛选的 profile 默认视图。</zh-CN><en>The current catalog needs the profile-default unfiltered Home view whenever it contains a keyword or any Discover filter.</en></lang>
+const catalogNeedsHomeReset = computed(() => demo.catalogKeyword.value.length > 0 || Object.values(demo.catalogFilters.value).some((value) => value.length > 0));
 
 /**
- * <lang><zh-CN>确保首次进入首页时加载 page=1。</zh-CN><en>Ensures page one loads on first entry to Home.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>首次加载完成后 resolve。</zh-CN><en>Resolves after initial loading completes.</en></lang>
- * @lang zh-CN 避免每次 tab show 重复请求；刷新/搜索通过明确 action 另行触发。
- * @lang en Avoids duplicate requests on every tab show; refresh/search trigger separately through explicit actions.
+ * @lang zh-CN 确保首页持有无搜索、无筛选的目录第一页。
+ * @lang en Ensures Home owns an unsearched, unfiltered first catalog page.
+ * @returns {Promise<void>} <lang><zh-CN>目录无需改变或刷新稳定后 resolve。</zh-CN><en>Resolves when the catalog needs no change or after refresh stabilizes.</en></lang>
  */
-async function ensureInitialCatalog() {
-  // <lang><zh-CN>只在 idle 状态启动首次读取，保留已有 ready/error 状态供用户操作。</zh-CN><en>Start first read only while idle and retain existing ready/error state for user action.</en></lang>
-  if (demo.catalogPhase.value === 'idle') await demo.refreshCatalog('');
+async function ensureHomeCatalog() {
+  // <lang><zh-CN>首次进入或从发现页带回筛选时显式恢复默认目录；已有无筛选结果则避免重复读取。</zh-CN><en>Explicitly restore the default catalog on first entry or after returning with Discover filters; retain existing unfiltered results without duplicate reads.</en></lang>
+  if (demo.catalogPhase.value === 'idle' || catalogNeedsHomeReset.value) await demo.refreshCatalog('');
 }
 
 /**
- * <lang><zh-CN>提交当前搜索草稿。</zh-CN><en>Submits the current search draft.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>替换 page=1 后 resolve。</zh-CN><en>Resolves after replacing page one.</en></lang>
- * @lang zh-CN 搜索只过滤 local JSON，不调用 remote API 或存储关键字。
- * @lang en Search filters local JSON only and calls no remote API or stores no keyword.
+ * @lang zh-CN 重试无搜索、无筛选的本地目录首页。
+ * @lang en Retries the unsearched, unfiltered local catalog first page.
+ * @returns {Promise<void>} <lang><zh-CN>刷新稳定后 resolve。</zh-CN><en>Resolves after refresh stabilizes.</en></lang>
  */
-async function handleSearch() {
-  // <lang><zh-CN>将草稿作为明确输入传给 refresh action。</zh-CN><en>Pass draft as explicit input to the refresh action.</en></lang>
-  await demo.refreshCatalog(keyword.value);
-}
-
-/**
- * <lang><zh-CN>清空搜索并恢复全部 local catalog。</zh-CN><en>Clears search and restores the complete local catalog.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>page=1 刷新完成后 resolve。</zh-CN><en>Resolves after page-one refresh completes.</en></lang>
- * @lang zh-CN 清空只影响当前内存草稿和列表，不写入 preference 或 storage。
- * @lang en Clearing affects only the current in-memory draft/list and writes no preference or storage.
- */
-async function handleClear() {
-  // <lang><zh-CN>先同步清除输入，再显式替换 catalog 首页。</zh-CN><en>Clear input synchronously first, then explicitly replace the catalog first page.</en></lang>
-  keyword.value = '';
+async function handleRetry() {
+  // <lang><zh-CN>首页错误恢复不复用发现页草稿，避免隐藏条件导致精选项变化。</zh-CN><en>Home error recovery never reuses a Discover draft, preventing hidden conditions from changing the featured entry.</en></lang>
   await demo.refreshCatalog('');
 }
 
 /**
- * <lang><zh-CN>从 footer 或触底追加下一页。</zh-CN><en>Appends the next page from footer or reach-bottom.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>追加完成或无需追加后 resolve。</zh-CN><en>Resolves after append completes or is unnecessary.</en></lang>
- * @lang zh-CN action 委托 state 的 hasNext/loading gate，不自行猜测分页。
- * @lang en Action delegates to state's hasNext/loading gate and guesses no pagination itself.
- */
-async function handleLoadMore() {
-  // <lang><zh-CN>使用唯一 append action，确保失败时保留已显示 entries。</zh-CN><en>Use the sole append action, ensuring displayed entries remain on failure.</en></lang>
-  await demo.loadNextCatalogPage();
-}
-
-/**
- * <lang><zh-CN>重试当前 local catalog 查询。</zh-CN><en>Retries the current local catalog query.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>刷新完成后 resolve。</zh-CN><en>Resolves after refresh completes.</en></lang>
- * @lang zh-CN 首次失败回到 page=1；append failure 的 footer 使用相同 append action。
- * @lang en Initial failure returns to page one; append failure footer uses the same append action.
- */
-async function handleRetry() {
-  // <lang><zh-CN>用当前草稿重做明确 page=1 查询。</zh-CN><en>Redo the explicit page-one query using the current draft.</en></lang>
-  await demo.refreshCatalog(keyword.value);
-}
-
-/**
- * <lang><zh-CN>导航到一个资源详情页。</zh-CN><en>Navigates to one resource-detail page.</en></lang>
- * @param {string} resourceId <lang><zh-CN>card emit 的有限资源 ID。</zh-CN><en>Finite resource ID emitted by a card.</en></lang>
+ * @lang zh-CN 导航到当前精选资源的详情页。
+ * @lang en Navigates to the current featured resource details.
+ * @param {string} resourceId <lang><zh-CN>ResourceCard 发出的有限资源 ID。</zh-CN><en>Finite resource ID emitted by ResourceCard.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN 资源 ID 来自当前 canonical entry；它不是 URL、remote endpoint 或任意外部输入。
- * @lang en Resource ID comes from the current canonical entry; it is not a URL, remote endpoint, or arbitrary external input.
  */
 function openDetail(resourceId) {
-  // <lang><zh-CN>使用 UniApp 本地页面导航，不添加 query 以外的用户或 source 数据。</zh-CN><en>Use UniApp local page navigation and add no user or source data beyond the query.</en></lang>
+  // <lang><zh-CN>ID 来自 canonical entry，并在成为 query 前编码；页面不附带 source 或用户字段。</zh-CN><en>The ID comes from a canonical entry and is encoded before becoming a query; the page appends no source or user field.</en></lang>
   uni.navigateTo({ url: `/pages/resource-detail/index?resourceId=${encodeURIComponent(resourceId)}` });
 }
 
 /**
- * <lang><zh-CN>转到发现 tab 浏览当前本地目录。</zh-CN><en>Moves to the Discover tab to browse the current local catalog.</en></lang>
+ * @lang zh-CN 转到发现主页面浏览完整目录。
+ * @lang en Moves to the Discover primary page to browse the complete catalog.
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN 日期入口在 P57 只复用目录入口，不创建实际日历选择或写入流程。
- * @lang en In P57, the date entry only reuses the catalog entry and creates no real calendar selection or write flow.
  */
 function browseResources() {
-  // <lang><zh-CN>使用应用壳固定主页面路由，保留 module store 中共享 catalog 的当前可见状态。</zh-CN><en>Use the application shell's fixed primary-page route and retain the shared catalog's currently visible module-store state.</en></lang>
+  // <lang><zh-CN>日期和场馆入口当前共享同一个安全目录入口，不提前声明日历库存或写入。</zh-CN><en>Date and venue entries currently share one safe catalog entry and declare no calendar inventory or write operation early.</en></lang>
   openPrimaryPage('discover');
 }
 
-// <lang><zh-CN>首次挂载调用幂等 ensure helper，保证加载只由页面显式启动。</zh-CN><en>First mount calls the idempotent ensure helper, ensuring loading starts only explicitly from the page.</en></lang>
-onMounted(ensureInitialCatalog);
+// <lang><zh-CN>首次挂载执行幂等目录检查，数据加载仍由页面显式启动。</zh-CN><en>First mount runs the idempotent catalog check while data loading remains explicitly page-initiated.</en></lang>
+onMounted(ensureHomeCatalog);
 
 /**
- * <lang><zh-CN>同步首页的常驻 tab chrome，并确保首次目录读取。</zh-CN><en>Synchronizes Home's persistent tab chrome and ensures the initial catalog read.</en></lang>
- * @returns {Promise<void>} <lang><zh-CN>幂等目录检查完成后 resolve。</zh-CN><en>Resolves after the idempotent catalog check completes.</en></lang>
- * @lang zh-CN 微信 custom-tab-bar 在页面显示时校正选中态和 locale；H5 等宿主同步已声明 platform tab labels。
- * @lang en The WeChat custom tab bar corrects selection and locale when the page is shown; hosts such as H5 synchronize declared platform-tab labels.
+ * @lang zh-CN 同步首页常驻 tab chrome，并恢复首页默认目录范围。
+ * @lang en Synchronizes Home's persistent tab chrome and restores Home's default catalog scope.
+ * @returns {Promise<void>} <lang><zh-CN>目录检查完成后 resolve。</zh-CN><en>Resolves after the catalog check completes.</en></lang>
  */
 async function handlePageShow() {
-  // <lang><zh-CN>只把固定首页 value 与共享 runtime translator 交给受限 chrome bridge。</zh-CN><en>Pass only the fixed Home value and shared runtime translator to the bounded chrome bridge.</en></lang>
+  // <lang><zh-CN>只把固定首页 value 与共享 translator 交给受限 chrome bridge。</zh-CN><en>Pass only the fixed Home value and shared translator to the bounded chrome bridge.</en></lang>
   syncPrimaryTabChrome('home', runtimeLocale.locale.value, (messageKey) => runtimeLocale.t(messageKey));
-  // <lang><zh-CN>保持原有幂等首次读取，不因 tab 生命周期改变数据行为。</zh-CN><en>Retain the original idempotent first read without changing data behavior for tab lifecycle.</en></lang>
-  await ensureInitialCatalog();
+  // <lang><zh-CN>从发现页返回时清除其筛选投影，保证首页精选不随隐藏状态漂移。</zh-CN><en>Clear Discover's filter projection when returning so Home's feature does not drift with hidden state.</en></lang>
+  await ensureHomeCatalog();
 }
 
-// <lang><zh-CN>每次平台 tab 显示首页时同步常驻底栏并复用目录状态。</zh-CN><en>Synchronize the persistent bottom bar and reuse catalog state whenever the platform tab shows Home.</en></lang>
+// <lang><zh-CN>每次平台 tab 显示首页时同步常驻底栏和默认目录范围。</zh-CN><en>Synchronize the persistent bottom bar and default catalog scope whenever the platform tab shows Home.</en></lang>
 onShow(handlePageShow);
 
-// <lang><zh-CN>下拉刷新显式替换 page=1，结束平台 loading 只是 UI 清理，不代表远端网络状态。</zh-CN><en>Pull refresh explicitly replaces page one; ending platform loading is UI cleanup only and represents no remote network state.</en></lang>
-onPullDownRefresh(async () => { await handleSearch(); uni.stopPullDownRefresh(); });
-
-// <lang><zh-CN>触底只委托 append action；无 next page 时 state 会安全无操作。</zh-CN><en>Reach bottom delegates only to the append action; state safely no-ops when no next page exists.</en></lang>
-onReachBottom(handleLoadMore);
+// <lang><zh-CN>下拉刷新只重读无筛选本地第一页；finally 始终清理平台 loading，不把它解释为网络状态。</zh-CN><en>Pull refresh rereads only the unfiltered local first page; finally always clears platform loading without interpreting it as network state.</en></lang>
+onPullDownRefresh(async () => {
+  try {
+    // <lang><zh-CN>显式调用首页恢复 action，保持失败边界与按钮重试一致。</zh-CN><en>Call the explicit Home recovery action, keeping failure boundaries aligned with button retry.</en></lang>
+    await handleRetry();
+  } finally {
+    // <lang><zh-CN>平台刷新动画在成功与失败时都结束，业务状态仍由 demo surface 呈现。</zh-CN><en>The platform refresh animation ends on both success and failure while the demo surface continues to present business state.</en></lang>
+    uni.stopPullDownRefresh();
+  }
+});
 </script>
 
 <style scoped>
-/* <lang><zh-CN>首页复用 theme token，保持 H5 与小程序内的可读边距、表面和主色层级。</zh-CN><en>Home reuses theme tokens, retaining readable spacing, surfaces, and primary-color hierarchy on H5 and Mini Program.</en></lang> */
-.home-page { padding: var(--bp-page-block) var(--bp-page-inline) 28px; background: var(--u-sys-color-surface-subtle); }
-.home-page__hero { position: relative; overflow: hidden; margin-bottom: 14px; border-radius: var(--bp-card-radius); box-shadow: var(--bp-card-shadow); }
-.home-page__hero :deep(.u-image) { width: 100%; height: 236px; }
-.home-page__hero-copy { position: absolute; inset: auto 0 0; display: flex; gap: 6px; flex-direction: column; padding: 42px 18px 18px; color: #fff; background: linear-gradient(180deg, transparent, rgb(0 27 46 / 82%)); }
-.home-page__eyebrow { font-size: 12px; letter-spacing: .08em; }
-.home-page__title { font-size: 24px; font-weight: 700; line-height: 1.3; }
-.home-page__subtitle { font-size: 13px; opacity: .92; }
-.home-page__source { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; color: var(--u-sys-color-text-secondary); font-size: 12px; }
-.home-page__shortcuts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 18px; }
-.home-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
-.home-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 12px; }
-.home-page__footer { display: flex; gap: 8px; flex-direction: column; align-items: center; padding: 12px 0 20px; color: var(--u-sys-color-text-secondary); font-size: 12px; }
+/* <lang><zh-CN>首页采用设计板的紧凑纵向节奏，并为固定 custom tabBar 与安全区留出完整滚动空间。</zh-CN><en>Home adopts the board's compact vertical rhythm and reserves complete scroll space for the fixed custom tab bar and safe area.</en></lang> */
+.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline) calc(var(--bp-shell-tabbar-height) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); color: var(--u-sys-color-text); }
+/* <lang><zh-CN>品牌栏是首页唯一顶部标题层；其宽度与高度稳定，不生成第二个居中标题。</zh-CN><en>The brand bar is Home's sole top-title layer; its width and height remain stable and create no second centered heading.</en></lang> */
+.home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 var(--bp-page-inline); overflow: hidden; background: var(--u-sys-color-surface); }
+.home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "Songti SC", STSong, SimSun, serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+/* <lang><zh-CN>欢迎语使用系统可用的中文展示字体 fallback；正文仍采用统一无衬线字体栈。</zh-CN><en>Welcome copy uses the system-available Chinese display-font fallback while body copy retains the shared sans-serif stack.</en></lang> */
+.home-page__intro { display: flex; flex-direction: column; gap: 6px; }
+.home-page__title { display: block; max-width: 330px; font-family: var(--bp-font-display, "Songti SC", STSong, SimSun, serif); font-size: 26px; font-weight: 700; line-height: 1.38; letter-spacing: .01em; }
+.home-page__subtitle { display: block; color: var(--u-sys-color-text-secondary); font-size: 14px; line-height: 1.55; }
+/* <lang><zh-CN>页面拥有 216px hero 几何，UImage 仅通过 fluid 填满，图片不再依靠深层选择器或覆盖文案。</zh-CN><en>The page owns 216px hero geometry and UImage only fills it through fluid, with no deep selector or overlaid copy.</en></lang> */
+.home-page__hero { height: 216px; margin-top: 14px; overflow: hidden; border-radius: 16px; box-shadow: var(--bp-card-shadow); }
+/* <lang><zh-CN>双入口等宽排列，主操作在左，图标与文字保持单行居中。</zh-CN><en>The two entries share equal width with the primary action on the left, keeping icon and copy centered on one line.</en></lang> */
+.home-page__shortcuts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+.home-page__shortcut-icon { display: block; flex: 0 0 24px; height: 24px; width: 24px; }
+.home-page__state { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
+.home-page__featured { margin-top: 22px; }
+.home-page__featured > .resource-card { margin-top: 10px; }
+/* <lang><zh-CN>来源说明通过组件根的公开 class 呈现视觉板中的浅蓝信息表面；不穿透或改写 UAlertTips 的内部结构。</zh-CN><en>The source explanation uses the component root's public class to render the board's pale-blue information surface without piercing or rewriting UAlertTips internals.</en></lang> */
+.home-page__data-notice { margin-top: 18px; background: var(--u-comp-notice-info-surface); border-color: var(--u-comp-notice-info-border); border-radius: var(--bp-card-radius); color: var(--u-comp-notice-info-foreground); }
+/* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；只预留固定安全空间，不读取设备或窗口信息。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; reserve fixed safe space without reading device or window information.</en></lang> */
+/* #ifdef MP-WEIXIN */
+.home-page__brand-bar { padding-right: 116px; background: #ffffff; }
+.home-page { background: #f7f9fc; color: #001b2e; }
+.home-page__brand { color: #0047ab; }
+.home-page__subtitle { color: #27364a; }
+/* #endif */
 </style>

@@ -8,21 +8,16 @@
     <!-- <lang><zh-CN>页面壳用 HIA-uView navbar 呈现当前 locale，常驻 custom tabBar 通过页面 onShow 同步同一语言与选中态。</zh-CN><en>The page shell renders the current locale through HIA-uView navbar, while the persistent custom tab bar synchronizes the same language and selection on page show.</en></lang> -->
     <runtime-page-shell :title="runtimeLocale.t('title.discover')">
       <view class="discover-page">
-      <view class="discover-page__heading">
-        <text class="discover-page__eyebrow">{{ runtimeLocale.t('discover.eyebrow') }}</text>
-        <text class="discover-page__title">{{ runtimeLocale.t('discover.title') }}</text>
-        <source-badge :source="demo.catalogSource.value" />
-      </view>
+      <!-- <lang><zh-CN>发现页只保留 navbar 的单一标题层；搜索紧随其后，不重复营销标题或 eyebrow。</zh-CN><en>Discover retains only the navbar's single title layer; search follows immediately with no duplicate marketing heading or eyebrow.</en></lang> -->
       <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @search="handleSearch" @clear="handleClear" />
       <!-- <lang><zh-CN>三项紧凑触发器复用 HIA-uView button 与 action-sheet：按钮只打开有限本地选项，选择面板提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>Three compact triggers reuse HIA-uView buttons and action sheet: a button only opens finite local options, while selection replaces page one and appended pages never mix a draft.</en></lang> -->
       <view class="discover-page__filters">
         <view class="discover-page__filter-actions">
           <!-- <lang><zh-CN>每个动作只传固定筛选类别，不把标签、事件或页面对象当作查询输入。</zh-CN><en>Each action passes only a fixed filter kind and never treats a label, event, or page object as query input.</en></lang> -->
-          <u-button :label="venueTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('venue')" />
+          <u-button :label="venueTriggerLabel" size="sm" block @click="openFilterSheet('venue')" />
           <u-button :label="resourceTypeTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('resourceType')" />
           <u-button :label="dateTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('date')" />
         </view>
-        <text class="discover-page__filters-hint">{{ runtimeLocale.t('discover.filtersHint') }}</text>
       </view>
       <!-- <lang><zh-CN>底部面板只呈现当前有限 option 集合；页面收到 select intent 后才更新 filter 和目录。</zh-CN><en>The bottom sheet presents only the current finite option collection; the page updates filter and catalog only after receiving a select intent.</en></lang> -->
       <u-action-sheet
@@ -65,7 +60,6 @@ import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
-import SourceBadge from '../../components/SourceBadge.vue';
 import { syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
@@ -359,14 +353,10 @@ onReachBottom(handleLoadMore);
 </script>
 
 <style scoped>
-/* <lang><zh-CN>发现页使用设计稿的清晰标题、搜索与纵向卡片层级，分页状态始终位于列表末尾。</zh-CN><en>Discover uses the design's clear heading, search, and vertical-card hierarchy, with pagination state always at list end.</en></lang> */
-.discover-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
-.discover-page__heading { display: flex; gap: 7px; flex-direction: column; margin-bottom: 16px; }
-.discover-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.discover-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
+/* <lang><zh-CN>发现页从 navbar 后直接进入搜索、筛选与封面目录，并为固定 tabBar 预留完整底部空间。</zh-CN><en>Discover moves directly from the navbar into search, filters, and the cover catalog while reserving full bottom space for the fixed tab bar.</en></lang> */
+.discover-page { min-height: 100%; padding: 16px 16px calc(var(--bp-shell-tabbar-height) + 42px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); }
 .discover-page__filters { display: flex; gap: 8px; flex-direction: column; margin-top: 14px; }
 .discover-page__filter-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.discover-page__filters-hint { color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
 .discover-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
 .discover-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 16px; }
 .discover-page__footer { display: flex; gap: 8px; flex-direction: column; align-items: center; padding: 8px 0 20px; color: var(--u-sys-color-text-secondary); font-size: 12px; }

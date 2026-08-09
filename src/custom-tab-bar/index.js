@@ -11,10 +11,42 @@ Component({
     selected: 'home',
     locale: 'zh-Hans',
     items: [
-      { value: 'home', labelZh: '首页', labelEn: 'Home', pagePath: '/pages/home/index' },
-      { value: 'discover', labelZh: '发现', labelEn: 'Discover', pagePath: '/pages/discover/index' },
-      { value: 'reservations', labelZh: '我的预约', labelEn: 'My bookings', pagePath: '/pages/reservations/index' },
-      { value: 'profile', labelZh: '个人信息', labelEn: 'Profile', pagePath: '/pages/profile/index' }
+      // <lang><zh-CN>首页项只指向仓内的两张原创图标与固定主页路由，选中态不依赖运行时着色。</zh-CN><en>The Home item points only to two in-repository original icons and a fixed primary route; its selected state does not depend on runtime tinting.</en></lang>
+      {
+        value: 'home',
+        labelZh: '首页',
+        labelEn: 'Home',
+        pagePath: '/pages/home/index',
+        icon: '/static/icons/tab-home.svg',
+        activeIcon: '/static/icons/tab-home-active.svg'
+      },
+      // <lang><zh-CN>发现项使用静态指南针图标对，它不接收位置或地图数据。</zh-CN><en>The Discover item uses a static compass-icon pair and accepts no location or map data.</en></lang>
+      {
+        value: 'discover',
+        labelZh: '发现',
+        labelEn: 'Discover',
+        pagePath: '/pages/discover/index',
+        icon: '/static/icons/tab-discover.svg',
+        activeIcon: '/static/icons/tab-discover-active.svg'
+      },
+      // <lang><zh-CN>预约项使用静态日历图标对，图标本身不读取或表示真实库存。</zh-CN><en>The bookings item uses a static calendar-icon pair; the icon itself reads or represents no live inventory.</en></lang>
+      {
+        value: 'reservations',
+        labelZh: '我的预约',
+        labelEn: 'My bookings',
+        pagePath: '/pages/reservations/index',
+        icon: '/static/icons/tab-reservations.svg',
+        activeIcon: '/static/icons/tab-reservations-active.svg'
+      },
+      // <lang><zh-CN>个人信息项使用静态人像轮廓图标对，不读取真实头像或身份信息。</zh-CN><en>The Profile item uses a static person-outline icon pair and reads no real avatar or identity information.</en></lang>
+      {
+        value: 'profile',
+        labelZh: '个人信息',
+        labelEn: 'Profile',
+        pagePath: '/pages/profile/index',
+        icon: '/static/icons/tab-profile.svg',
+        activeIcon: '/static/icons/tab-profile-active.svg'
+      }
     ]
   },
 

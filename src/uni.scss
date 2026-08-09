@@ -8,11 +8,21 @@
 
 /* <lang><zh-CN>BP 容器 token 不重定义品牌或状态色，保持可迁移页面对 HIA-uView 主题的继承。</zh-CN><en>BP container tokens do not redefine brand or state colors, preserving page portability through inheritance from the HIA-uView theme.</en></lang> */
 :root {
+  --bp-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  --bp-font-display: "Songti SC", STSong, SimSun, "Times New Roman", serif;
   --bp-page-inline: 16px;
   --bp-page-block: 16px;
-  --bp-card-radius: var(--u-comp-card-radius);
+  --bp-card-radius: 14px;
   --bp-card-shadow: var(--u-comp-card-shadow);
-  --bp-shell-tabbar-height: 57px;
+  --bp-shell-tabbar-height: 64px;
   --bp-shell-header-z: 20;
   --bp-shell-tabbar-z: 30;
+}
+
+/* <lang><zh-CN>页面、原生表单 control 与按钮显式共享系统无衬线字体栈，避免宿主默认字体造成中英文页面字形和行高漂移；不下载或捆绑字体。</zh-CN><en>Pages, native form controls, and buttons explicitly share a system sans-serif stack, preventing host defaults from drifting glyphs and line height between Chinese and English; no font is downloaded or bundled.</en></lang> */
+page,
+button,
+input,
+textarea {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
 }

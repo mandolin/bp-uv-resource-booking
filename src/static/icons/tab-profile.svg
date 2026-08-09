@@ -1,0 +1,7 @@
+<!-- <lang><zh-CN>本仓原创的个人信息未选中线性图标；人像轮廓不表示真实头像或认证身份。</zh-CN><en>Repository-original unselected Profile line icon; the person outline represents no real avatar or authenticated identity.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#27364a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <title>Profile</title>
+  <desc>Person outline for the Profile tab.</desc>
+  <circle cx="12" cy="8" r="3.7" />
+  <path d="M4.8 20.2c.4-4.2 3-6.4 7.2-6.4s6.8 2.2 7.2 6.4" />
+</svg>

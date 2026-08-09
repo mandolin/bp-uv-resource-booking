@@ -1,0 +1,9 @@
+<!--
+@lang zh-CN 首页“浏览场馆”按钮使用的第一方原创钴蓝线性公共建筑图标；仅作本地可见装饰，不承载操作名称。
+@lang en First-party original cobalt line public-building icon for Home's “Browse venues” button; it is local visible decoration and does not carry the action name.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <title>Venue / 场馆</title>
+  <path d="M4 20.5h16M6 20.5v-11l6-4 6 4v11M9 20.5v-7h6v7" stroke="#0047ab" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M9 10h.01M12 10h.01M15 10h.01" stroke="#0047ab" stroke-width="2.2" stroke-linecap="round" />
+</svg>

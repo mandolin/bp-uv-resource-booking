@@ -13,7 +13,15 @@
     aria-selected="{{item.value === selected}}"
     data-value="{{item.value}}"
     bindtap="handleSelect"
+    hover-class="bp-custom-tabbar__item--pressed"
   >
+    <!-- <lang><zh-CN>图标仅补充视觉导航线索；完整的可读名称仍由同一 button 内的 locale label 提供。</zh-CN><en>The icon only supplements the visual navigation cue; the complete readable name still comes from the locale label in the same button.</en></lang> -->
+    <image
+      class="bp-custom-tabbar__icon"
+      src="{{item.value === selected ? item.activeIcon : item.icon}}"
+      mode="aspectFit"
+      aria-hidden="true"
+    />
     <!-- <lang><zh-CN>只在已支持的 en/zh-Hans 静态文案之间选择，不拼接双语或显示内部 key。</zh-CN><en>Select only between supported static en/zh-Hans copy and never concatenate languages or display an internal key.</en></lang> -->
     <text class="bp-custom-tabbar__label">{{locale === 'en' ? item.labelEn : item.labelZh}}</text>
   </button>

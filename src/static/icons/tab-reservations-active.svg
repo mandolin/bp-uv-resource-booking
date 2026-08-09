@@ -1,0 +1,8 @@
+<!-- <lang><zh-CN>本仓原创的预约选中线性图标；钴蓝日历只表达当前主页。</zh-CN><en>Repository-original selected bookings line icon; the cobalt calendar expresses only the current primary page.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0047ab" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+  <title>Selected My bookings</title>
+  <desc>Cobalt outline calendar for the selected My bookings tab.</desc>
+  <rect x="3.7" y="5.3" width="16.6" height="15" rx="2.2" />
+  <path d="M7.6 3.5v3.6M16.4 3.5v3.6M3.7 9.4h16.6" />
+  <path d="M8 13h2M14 13h2M8 16.6h2M14 16.6h2" />
+</svg>

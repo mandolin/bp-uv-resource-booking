@@ -66,19 +66,27 @@
     "list": [
       {
         "pagePath": "pages/home/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "static/icons/tab-home.svg",
+        "selectedIconPath": "static/icons/tab-home-active.svg"
       },
       {
         "pagePath": "pages/discover/index",
-        "text": "发现"
+        "text": "发现",
+        "iconPath": "static/icons/tab-discover.svg",
+        "selectedIconPath": "static/icons/tab-discover-active.svg"
       },
       {
         "pagePath": "pages/reservations/index",
-        "text": "我的预约"
+        "text": "我的预约",
+        "iconPath": "static/icons/tab-reservations.svg",
+        "selectedIconPath": "static/icons/tab-reservations-active.svg"
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "个人信息"
+        "text": "个人信息",
+        "iconPath": "static/icons/tab-profile.svg",
+        "selectedIconPath": "static/icons/tab-profile-active.svg"
       }
     ]
   },

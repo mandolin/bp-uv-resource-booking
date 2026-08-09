@@ -70,7 +70,7 @@ test('catalog filter options are detached, finite, and derived from declared ava
 
   // <lang><zh-CN>修改 option 标签不会写回原始 JSON 场馆名称。</zh-CN><en>Mutating an option label must not write back to the original JSON venue name.</en></lang>
   assert.throws(() => { filterOptions.venues[0].label.en = 'Must not mutate'; }, TypeError);
-  assert.equal(localDataset.venues[0].name.en, 'Riverside Sports Hall');
+  assert.equal(localDataset.venues[0].name.en, 'Harbor Reading and Study Hall');
 });
 
 test('detail exposes only declared slots and booking accepts only those slots', () => {

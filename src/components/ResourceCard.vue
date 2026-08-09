@@ -1,42 +1,47 @@
 <!--
 @component ResourceCard
-@lang zh-CN 呈现一个 local provider 已返回的资源目录 entry 和显式查看意图；所有领域字段经共享 runtime locale 投影，不执行导航、请求、预约或图片发现。
-@lang en Presents one resource-catalog entry returned by the local provider and an explicit view intent; every domain field is projected through shared runtime locale, and it executes no navigation, request, booking, or image discovery.
+@lang zh-CN 呈现一个 local provider 返回的 canonical 资源摘要；首页使用横向精选布局，发现页使用封面优先布局，整张卡片只报告查看意图，不执行导航、请求、预约或图片发现。
+@lang en Presents one canonical resource summary returned by the local provider; Home uses a horizontal featured layout and Discover uses a cover-first layout, while the whole card reports view intent only and performs no navigation, request, booking, or image discovery.
 -->
 <template>
-  <!-- <lang><zh-CN>card 采用设计稿的横向摘要比例：原创 image、资源类型、名称和下一时段同属无副作用展示层，不把 card 本身变成隐式导航。</zh-CN><en>Card uses the board's horizontal summary proportion: original image, resource type, name, and next slot remain a side-effect-free presentation layer, and the card itself never becomes implicit navigation.</en></lang> -->
-  <u-card :class="['resource-card', `resource-card--${cardLayout}`]" :padding="12" shadow>
-    <view class="resource-card__content">
-      <!-- <lang><zh-CN>图片来自有限 asset map；固定缩略图几何使不同场馆封面不改变目录行高；alt 使用场馆而非单个 resource 名称，说明封面所描述的真实视觉对象。</zh-CN><en>Image comes from finite asset map; fixed thumbnail geometry prevents venue covers from changing catalog row height; alt names the venue rather than one resource because it describes the actual visual subject.</en></lang> -->
-      <u-image class="resource-card__image" :src="imageUrl || ''" :alt="venueName" size="large" shape="rounded" />
+  <!-- <lang><zh-CN>HIA-uView UCard 提供受控表面；页面组件只在其默认 slot 内安排领域事实，不创建第二套卡片基础组件。</zh-CN><en>HIA-uView UCard provides the controlled surface; the page component arranges domain facts only inside its default slot and creates no second card primitive.</en></lang> -->
+  <u-card :class="['resource-card', `resource-card--${cardLayout}`]" :padding="0" shadow>
+    <!-- <lang><zh-CN>整张摘要是唯一查看 control，避免独立详情按钮与卡片本体产生重复主操作。</zh-CN><en>The whole summary is the sole view control, avoiding duplicate primary actions between a details button and the card body.</en></lang> -->
+    <view class="resource-card__control" role="button" :aria-label="displayTitle" @click="handleView">
+      <!-- <lang><zh-CN>图片容器拥有明确几何，UImage 通过公开 fluid prop 填满；不使用跨组件深层选择器。</zh-CN><en>The image container owns explicit geometry and UImage fills it through the public fluid prop; no cross-component deep selector is used.</en></lang> -->
+      <view class="resource-card__image-shell">
+        <u-image :src="imageUrl || ''" :alt="venueName" fluid shape="rounded" />
+      </view>
+
       <view class="resource-card__body">
-        <!-- <lang><zh-CN>名称与场馆始终相邻，先建立用户识别资源所需的主次层级。</zh-CN><en>Name and venue stay adjacent, establishing the primary and secondary hierarchy needed to identify a resource.</en></lang> -->
+        <!-- <lang><zh-CN>可见主标题只使用较短的资源名称，场馆作为相邻次级事实；整卡 aria-label 仍组合两者，避免中英文长名称互相挤压。</zh-CN><en>The visible primary title uses the shorter resource name while the venue remains the adjacent secondary fact; the whole-card aria-label still combines both, preventing long Chinese or English names from crowding one another.</en></lang> -->
         <text class="resource-card__title">{{ resourceName }}</text>
         <text class="resource-card__venue">{{ venueName }}</text>
-        <!-- <lang><zh-CN>中性标签不使用行业标签库，领域文本均通过受控 localize helper 投影。</zh-CN><en>Neutral tags use no industry-tag registry, and all domain text is projected through the constrained localize helper.</en></lang> -->
-        <view class="resource-card__meta"><u-tag :text="resourceType" tone="primary" /><text>{{ districtName }}</text></view>
-        <!-- <lang><zh-CN>下一时段只作示例可用性提示，不声明实时库存或锁定。</zh-CN><en>Next slot is only a demo availability hint and declares no live inventory or lock.</en></lang> -->
-        <text class="resource-card__slot">{{ nextSlotLabel }}</text>
+
+        <!-- <lang><zh-CN>容量与下一时段使用 HIA-uView UIcon 的可见 label 组合；它们只说明 local JSON，不声明实时库存。</zh-CN><en>Capacity and next slot use visible labels composed by HIA-uView UIcon; they describe local JSON only and declare no live inventory.</en></lang> -->
+        <view class="resource-card__facts">
+          <u-icon name="○" :label="capacityLabel" size="small" tone="neutral" />
+          <u-icon name="◷" :label="nextSlotLabel" size="small" tone="neutral" />
+        </view>
       </view>
     </view>
-    <template #footer>
-      <!-- <lang><zh-CN>紧凑动作明确保留查看意图；页面拥有导航和详情读取。</zh-CN><en>Compact action explicitly retains the view intent; the page owns navigation and detail reading.</en></lang> -->
-      <u-button :label="runtimeLocale.t('common.viewDetails')" variant="secondary" size="sm" @click="emit('view', props.entry.id)" />
-    </template>
   </u-card>
 </template>
 
 <script setup>
+// <lang><zh-CN>computed 只把受限 entry 投影为当前 locale 文案，不建立派生缓存服务。</zh-CN><en>Computed values only project the bounded entry into current-locale copy and create no derived cache service.</en></lang>
 import { computed } from 'vue';
 import { getVenueImage } from '../data/asset-map.mjs';
 import { useRuntimeLocale } from '../localization/runtime-locale.mjs';
 
-// <lang><zh-CN>组件名保持项目语义，不定义可复用业务 registry 或路由策略。</zh-CN><en>Component name retains project semantics and defines no reusable business registry or route policy.</en></lang>
-defineOptions({ name: 'resource-card' });
+// <lang><zh-CN>稳定组件名用于调试和模板识别，不注册全局业务组件或路由。</zh-CN><en>The stable component name supports debugging and template identification and registers no global business component or route.</en></lang>
+defineOptions({ name: 'ResourceCard' });
 
-// <lang><zh-CN>entry 是已映射的 canonical catalog entry；layout 仅选择两种已审阅的信息密度，组件不读取整个 dataset 或 source provider。</zh-CN><en>Entry is an already mapped canonical catalog entry; layout selects only two reviewed information densities, and the component reads neither the whole dataset nor source provider.</en></lang>
+// <lang><zh-CN>entry 是 canonical catalog entry；layout 只选择两种已审阅的信息密度。</zh-CN><en>Entry is a canonical catalog entry; layout selects only two reviewed information densities.</en></lang>
 const props = defineProps({
+  // <lang><zh-CN>调用方必须提供 provider 已映射的单项资源；组件不接受 dataset 或 source handle。</zh-CN><en>The caller must provide one provider-mapped resource; the component accepts neither dataset nor source handle.</en></lang>
   entry: { type: Object, required: true },
+  // <lang><zh-CN>布局只允许首页精选和发现目录两种稳定分支。</zh-CN><en>Layout allows only the stable Home-featured and Discover-catalog branches.</en></lang>
   layout: {
     type: String,
     default: 'featured',
@@ -44,43 +49,63 @@ const props = defineProps({
   }
 });
 
-// <lang><zh-CN>view 是唯一事件，代表本地用户意图而非路由或网络操作。</zh-CN><en>View is the sole event and represents local user intent rather than route or network operation.</en></lang>
+// <lang><zh-CN>view 是唯一事件，表示本地用户意图而非已完成导航或网络操作。</zh-CN><en>View is the sole event and represents local user intent rather than completed navigation or network work.</en></lang>
 const emit = defineEmits(['view']);
 
-// <lang><zh-CN>读取唯一共享 runtime locale，使所有领域字段选择当前单一显示语言。</zh-CN><en>Read the sole shared runtime locale so every domain field selects the current single display language.</en></lang>
+// <lang><zh-CN>读取唯一共享 runtime locale，避免领域名称形成中英混排。</zh-CN><en>Read the sole shared runtime locale to prevent mixed-language domain names.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
-// <lang><zh-CN>未知 layout 稳定回退为首页精选比例，避免外部字符串成为 CSS 类或改变资源内容。</zh-CN><en>An unknown layout deterministically falls back to Home's featured proportion, preventing an external string from becoming a CSS class or changing resource content.</en></lang>
+// <lang><zh-CN>未知 layout 稳定回退首页精选比例，拒绝任意字符串成为样式分支。</zh-CN><en>An unknown layout deterministically falls back to the Home-featured proportion, rejecting arbitrary strings as style branches.</en></lang>
 const cardLayout = computed(() => props.layout === 'catalog' ? 'catalog' : 'featured');
 
-// <lang><zh-CN>各领域字段在模板之外统一投影，避免 `zh-Hans` 直取或单个字段形成双语拼接。</zh-CN><en>Project each domain field outside the template, avoiding direct `zh-Hans` access or bilingual concatenation in one field.</en></lang>
+// <lang><zh-CN>领域字段分别经共享 localize helper 选择当前语言，不直取 `zh-Hans` 或拼接双语值。</zh-CN><en>Domain fields separately use the shared localize helper to select the current language and never directly read `zh-Hans` or concatenate bilingual values.</en></lang>
 const resourceName = computed(() => runtimeLocale.localize(props.entry.name));
 const venueName = computed(() => runtimeLocale.localize(props.entry.venueName));
-const resourceType = computed(() => runtimeLocale.localize(props.entry.type));
-const districtName = computed(() => runtimeLocale.localize(props.entry.district));
 
-// <lang><zh-CN>下一时段为空时使用静态资源 fallback，不把空值、undefined 或技术 ID 显示给用户。</zh-CN><en>When next slot is empty, use a static-resource fallback and never display an empty value, undefined, or technical ID to users.</en></lang>
+// <lang><zh-CN>主标题只组合两个已经本地化的安全名称，并使用中性分隔符。</zh-CN><en>The primary title combines only two already-localized safe names with a neutral separator.</en></lang>
+const displayTitle = computed(() => `${venueName.value} · ${resourceName.value}`);
+
+// <lang><zh-CN>容量使用受控数字占位；无效值回退到零，不显示 undefined 或技术字段。</zh-CN><en>Capacity uses a bounded numeric placeholder; an invalid value falls back to zero and never displays undefined or a technical field.</en></lang>
+const capacityLabel = computed(() => runtimeLocale.t('resource.capacity', {
+  capacity: Number.isFinite(props.entry.capacity) ? props.entry.capacity : 0
+}));
+
+// <lang><zh-CN>下一时段为空时使用静态 fallback，不猜测实时可用性。</zh-CN><en>An empty next slot uses static fallback and never guesses live availability.</en></lang>
 const nextSlotLabel = computed(() => runtimeLocale.t('resource.nextSlot', {
   slot: props.entry.nextAvailableSlot || runtimeLocale.t('resource.viewFallback')
 }));
 
-// <lang><zh-CN>根据受限 image ID 读取仓内原创 asset URL；未知值只导致空 URL。</zh-CN><en>Read in-repository original asset URL through bounded image ID; an unknown value only produces empty URL.</en></lang>
+// <lang><zh-CN>图片只从有限 asset-map ID 读取；未知值产生空 URL，不回退网络。</zh-CN><en>The image is read only through a finite asset-map ID; an unknown value yields an empty URL with no network fallback.</en></lang>
 const imageUrl = computed(() => getVenueImage(props.entry.imageId));
+
+/**
+ * @lang zh-CN 将整卡点击报告为当前资源的查看意图。
+ * @lang en Reports a whole-card click as view intent for the current resource.
+ * @returns {void} <lang><zh-CN>无返回值；仅 emit canonical ID。</zh-CN><en>No return value; emits only the canonical ID.</en></lang>
+ */
+function handleView() {
+  // <lang><zh-CN>组件不解释路由目标，只把 provider 已给出的 ID 交还页面。</zh-CN><en>The component interprets no route target and only returns the provider-supplied ID to the page.</en></lang>
+  emit('view', props.entry.id);
+}
 </script>
 
 <style scoped>
-/* <lang><zh-CN>卡片内部使用固定缩略图和弹性正文，复现目录的紧凑横向节奏；仅消费公共系统 token，不编码业务状态颜色。</zh-CN><en>Card internals use a fixed thumbnail and flexible body to reproduce the compact horizontal catalog rhythm; they consume only public system tokens and encode no business-state color.</en></lang> */
-.resource-card__content { display: flex; align-items: stretch; gap: 12px; min-width: 0; }
-.resource-card__image { flex: 0 0 112px; height: 112px; width: 112px; }
-.resource-card__image :deep(.u-image__native) { height: 100%; width: 100%; }
-.resource-card__body { display: flex; flex: 1; gap: 5px; flex-direction: column; min-width: 0; }
-.resource-card__title { color: var(--u-sys-color-text); font-size: 16px; font-weight: 700; line-height: 1.3; }
-.resource-card__venue { color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.35; }
-.resource-card__meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto; color: var(--u-sys-color-text-secondary); font-size: 12px; }
-.resource-card__slot { display: block; color: var(--u-sys-color-text); font-size: 13px; }
-/* <lang><zh-CN>目录版将同一受控资源事实改为设计稿所需的封面优先层级；它不改变卡片事件、按钮或数据读取。</zh-CN><en>The catalog variant rearranges the same bounded resource facts into the board's cover-first hierarchy; it changes no card event, button, or data read.</en></lang> */
-.resource-card--catalog .resource-card__content { gap: 10px; flex-direction: column; }
-.resource-card--catalog .resource-card__image { flex: 0 0 auto; height: 148px; width: 100%; }
-.resource-card--catalog .resource-card__body { gap: 6px; }
-.resource-card--catalog .resource-card__meta { margin-top: 0; }
+/* <lang><zh-CN>卡片根裁切公开 UImage，并保持设计板较柔和的应用级圆角；它不覆盖 UCard 内部选择器。</zh-CN><en>The card root clips the public UImage and retains the board's softer application-level radius without overriding UCard internals.</en></lang> */
+.resource-card { overflow: hidden; border-radius: var(--bp-card-radius); }
+.resource-card__control { display: flex; align-items: stretch; min-width: 0; cursor: pointer; }
+/* <lang><zh-CN>首页精选图固定占卡宽约四成，避免 fixed UImage 尺寸挤入正文。</zh-CN><en>The Home-featured image occupies about two-fifths of the card width, preventing a fixed UImage size from intruding into copy.</en></lang> */
+.resource-card__image-shell { flex: 0 0 42%; height: 118px; overflow: hidden; }
+.resource-card__body { box-sizing: border-box; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; padding: 12px 12px 11px; }
+.resource-card__title { display: -webkit-box; overflow: hidden; color: var(--u-sys-color-text); font-size: 16px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.resource-card__venue { overflow: hidden; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.resource-card__facts { display: flex; flex-direction: column; gap: 2px; margin-top: auto; min-width: 0; }
+/* <lang><zh-CN>发现目录版采用全宽封面和下置正文；与首页共用同一事实与点击语义。</zh-CN><en>The Discover-catalog variant uses a full-width cover and body below while sharing the same facts and click meaning with Home.</en></lang> */
+.resource-card--catalog .resource-card__control { flex-direction: column; }
+.resource-card--catalog .resource-card__image-shell { flex: 0 0 auto; height: 172px; width: 100%; }
+.resource-card--catalog .resource-card__body { gap: 6px; min-height: 126px; padding: 13px 14px 14px; }
+.resource-card--catalog .resource-card__facts { flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; }
+/* #ifdef MP-WEIXIN */
+.resource-card__title { color: #001b2e; }
+.resource-card__venue { color: #27364a; }
+/* #endif */
 </style>

@@ -16,27 +16,61 @@
         <u-button :label="runtimeLocale.t('common.goDiscover')" variant="secondary" block @click="backToDiscover" />
       </view>
       <view v-else-if="demo.detailPhase.value === 'ready' && detail.kind === 'detail'" class="resource-detail-page__content">
-        <u-image class="resource-detail-page__image" :src="venueImage || ''" :alt="venueName" size="large" shape="rounded" />
-        <view class="resource-detail-page__source"><source-badge :source="detail.source" /><text>{{ runtimeLocale.t('detail.offline') }}</text></view>
-        <!-- <lang><zh-CN>类型标签保持 HIA-uView 的受控语义，但在详情正文中按内容宽度收束，避免把分类误呈现为全宽状态栏。</zh-CN><en>Type tag retains HIA-uView's constrained semantics but contracts to content width in detail body, avoiding a category being presented as a full-width status bar.</en></lang> -->
-        <u-tag class="resource-detail-page__type" :text="resourceType" tone="primary" />
-        <text class="resource-detail-page__title">{{ resourceName }}</text>
-        <text class="resource-detail-page__venue">{{ venueName }} · {{ districtName }}</text>
-        <text class="resource-detail-page__summary">{{ venueSummary }}</text>
-        <!-- <lang><zh-CN>日期和时段都只来自当前资源的明确 local allowlist；按钮选择由页面拥有，组件不推断库存。</zh-CN><en>Both dates and slots come only from current resource’s explicit local allowlists; the page owns button selection and the component infers no inventory.</en></lang> -->
-        <u-card :title="runtimeLocale.t('detail.availableDates')" :sub-title="runtimeLocale.t('detail.chooseDate')">
-          <view class="resource-detail-page__choices">
-            <u-button v-for="date in availableDates" :key="date.value" :label="date.label" :variant="selectedDate === date.value ? 'primary' : 'secondary'" size="sm" @click="selectDate(date.value)" />
+        <!-- <lang><zh-CN>显式尺寸容器拥有详情封面的几何，内部 HIA-uView `UImage fluid` 只负责填充；这样避免百分比高度覆盖页面类后因缺少父高度而折叠。</zh-CN><en>An explicitly sized container owns the detail-cover geometry while the inner HIA-uView `UImage fluid` only fills it; this prevents percentage height from overriding the page class and collapsing without a parent height.</en></lang> -->
+        <view class="resource-detail-page__image-frame">
+          <u-image :src="venueImage || ''" :alt="venueName" fluid />
+        </view>
+
+        <!-- <lang><zh-CN>资源身份区把主标题、来源与静态元信息放在封面之后，视觉层级与已批准详情设计一致，但不虚构开放时间、距离或实时库存。</zh-CN><en>The resource identity region places the main title, source, and static metadata after the cover, matching the approved detail hierarchy without fabricating opening hours, distance, or live inventory.</en></lang> -->
+        <view class="resource-detail-page__identity">
+          <view class="resource-detail-page__heading-row">
+            <view class="resource-detail-page__heading-copy">
+              <text class="resource-detail-page__title">{{ venueName }} · {{ resourceName }}</text>
+              <text class="resource-detail-page__summary">{{ venueSummary }}</text>
+            </view>
+            <source-badge :source="detail.source" />
           </view>
-        </u-card>
-        <u-card :title="runtimeLocale.t('detail.availableSlots')" :sub-title="runtimeLocale.t('detail.chooseSlot')">
-          <view class="resource-detail-page__choices">
-            <u-button v-for="slot in detail.resource.availableSlots" :key="slot" :label="slot" :variant="selectedTime === slot ? 'primary' : 'secondary'" size="sm" @click="selectTime(slot)" />
+          <view class="resource-detail-page__metadata">
+            <view class="resource-detail-page__meta-item"><u-icon name="◉" size="small" tone="neutral" /><text>{{ capacityLabel }}</text></view>
+            <view class="resource-detail-page__meta-item"><u-icon name="◇" size="small" tone="neutral" /><text>{{ resourceType }}</text></view>
+            <view class="resource-detail-page__meta-item"><u-icon name="⌖" size="small" tone="neutral" /><text>{{ districtName }}</text></view>
           </view>
-        </u-card>
+        </view>
+
+        <!-- <lang><zh-CN>日期和时段只来自当前资源的有限 local allowlist；页面拥有选择，HIA-uView 按钮仅呈现和发出 click 意图。</zh-CN><en>Dates and times come only from the current resource's finite local allowlist; the page owns selection while HIA-uView buttons only present and emit click intent.</en></lang> -->
+        <view class="resource-detail-page__selection-section">
+          <view class="resource-detail-page__section-heading">
+            <text class="resource-detail-page__section-title">{{ runtimeLocale.t('detail.availableDates') }}</text>
+            <text class="resource-detail-page__section-help">{{ runtimeLocale.t('detail.chooseDate') }}</text>
+          </view>
+          <view class="resource-detail-page__choices resource-detail-page__choices--dates">
+            <u-button v-for="date in availableDates" :key="date.value" class="resource-detail-page__date-button" :label="date.label" :variant="selectedDate === date.value ? 'primary' : 'secondary'" size="sm" @click="selectDate(date.value)" />
+          </view>
+        </view>
+
+        <view class="resource-detail-page__selection-section">
+          <view class="resource-detail-page__section-heading">
+            <text class="resource-detail-page__section-title">{{ runtimeLocale.t('detail.availableSlots') }}</text>
+            <text class="resource-detail-page__section-help">{{ runtimeLocale.t('detail.chooseSlot') }}</text>
+          </view>
+          <view class="resource-detail-page__choices resource-detail-page__choices--slots">
+            <u-button v-for="slot in detail.resource.availableSlots" :key="slot" class="resource-detail-page__slot-button" :label="runtimeLocale.t('detail.bookableSlot', { slot })" :variant="selectedTime === slot ? 'primary' : 'secondary'" size="sm" @click="selectTime(slot)" />
+          </view>
+        </view>
+
         <u-notice v-if="selectionFailure" visible tone="error" :message="runtimeLocale.localize(selectionFailure.message) || runtimeLocale.t('common.notAvailable')" />
+        <u-button :label="runtimeLocale.t('detail.continueBooking')" block size="lg" :disabled="!selectedDate || !selectedTime" @click="continueBooking" />
+
+        <!-- <lang><zh-CN>可选增强与核心预约区分隔；当前只披露未启用状态，不启动公共 API、定位或隐式 fallback。</zh-CN><en>Optional enhancements are separated from core booking; the current view only discloses their disabled state and starts no public API, location, or implicit fallback.</en></lang> -->
+        <view class="resource-detail-page__enhancements">
+          <u-card :title="runtimeLocale.t('detail.weatherTitle')" :sub-title="runtimeLocale.t('detail.optionalEnhancement')" :padding="12">
+            <text class="resource-detail-page__enhancement-copy">{{ runtimeLocale.t('detail.weatherUnavailable') }}</text>
+          </u-card>
+          <u-card :title="runtimeLocale.t('detail.holidayTitle')" :sub-title="runtimeLocale.t('detail.optionalEnhancement')" :padding="12">
+            <text class="resource-detail-page__enhancement-copy">{{ runtimeLocale.t('detail.holidayUnavailable') }}</text>
+          </u-card>
+        </view>
         <u-notice visible tone="info" :message="runtimeLocale.t('detail.bookingNotice')" />
-        <u-button :label="runtimeLocale.t('detail.continueBooking')" block :disabled="!selectedDate || !selectedTime" @click="continueBooking" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('detail.emptyTitle')" :description="runtimeLocale.t('detail.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
       </view>
@@ -103,6 +137,9 @@ const venueSummary = computed(() => runtimeLocale.localize(detail.value.venue?.s
 const availableDates = computed(() => detail.value.kind === 'detail'
   ? detail.value.resource.availableDates.map((value) => Object.freeze({ value, label: runtimeLocale.formatDate(value) }))
   : []);
+
+// <lang><zh-CN>容量标签只投影当前 detail 的数值，不把容量解释为剩余名额或实时可用量。</zh-CN><en>The capacity label projects only the current detail's numeric value and never interprets capacity as remaining places or live availability.</en></lang>
+const capacityLabel = computed(() => runtimeLocale.t('resource.capacity', { capacity: detail.value.resource?.capacity ?? 0 }));
 
 // <lang><zh-CN>图片只经已登记 asset map 读取，未知 ID 不会变成网络或文件路径。</zh-CN><en>The image is read only through the registered asset map; an unknown ID cannot become a network or file path.</en></lang>
 const venueImage = computed(() => detail.value.venue ? getVenueImage(detail.value.venue.imageId) : null);
@@ -200,16 +237,30 @@ onLoad(readRouteResource);
 </script>
 
 <style scoped>
-/* <lang><zh-CN>详情页以主题表面、可读行距和 token 化圆角组织内容，不编码实时或行业状态色。</zh-CN><en>Detail uses theme surfaces, readable line height, and tokenized radius to organize content without encoding live or industry-state colors.</en></lang> */
-.resource-detail-page { padding: 16px; background: var(--u-sys-color-surface-subtle); }
-.resource-detail-page__content { display: flex; gap: 16px; flex-direction: column; }
-.resource-detail-page__image { display: block; width: 100%; height: 208px; }
-.resource-detail-page__image :deep(.u-image__native) { height: 100%; width: 100%; }
-.resource-detail-page__type { align-self: flex-start; display: inline-flex; }
-.resource-detail-page__source { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; color: var(--u-sys-color-text-secondary); font-size: 12px; }
-.resource-detail-page__title { color: var(--u-sys-color-text); font-size: 28px; font-weight: 700; line-height: 1.25; }
-.resource-detail-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
-.resource-detail-page__summary { color: var(--u-sys-color-text); font-size: 15px; line-height: 1.7; }
+/* <lang><zh-CN>详情页用紧凑的移动端纵向节奏还原已批准视觉板；所有颜色、字体族与组件表面均来自现有 token。</zh-CN><en>Detail restores the approved board through a compact mobile vertical rhythm; every color, font family, and component surface comes from existing tokens.</en></lang> */
+.resource-detail-page { min-height: 100%; background: var(--u-sys-color-surface); }
+.resource-detail-page__content { display: flex; gap: 18px; flex-direction: column; padding: 0 16px 28px; }
+.resource-detail-page__image-frame { height: 236px; margin: 0 -16px; overflow: hidden; background: var(--u-sys-color-surface-subtle); }
+.resource-detail-page__identity { display: flex; gap: 12px; flex-direction: column; }
+.resource-detail-page__heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.resource-detail-page__heading-copy { display: flex; flex: 1; gap: 7px; flex-direction: column; min-width: 0; }
+.resource-detail-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display); font-size: 25px; font-weight: 700; line-height: 1.25; }
+.resource-detail-page__summary { color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.55; }
+.resource-detail-page__metadata { display: flex; gap: 8px 16px; flex-wrap: wrap; }
+.resource-detail-page__meta-item { display: flex; align-items: center; gap: 5px; color: var(--u-sys-color-text-secondary); font-size: 13px; }
+.resource-detail-page__selection-section { display: flex; gap: 10px; flex-direction: column; }
+.resource-detail-page__section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.resource-detail-page__section-title { color: var(--u-sys-color-text); font-size: 17px; font-weight: 700; }
+.resource-detail-page__section-help { color: var(--u-sys-color-text-secondary); font-size: 12px; text-align: right; }
 .resource-detail-page__choices { display: flex; gap: 8px; flex-wrap: wrap; }
-.resource-detail-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
+.resource-detail-page__date-button { flex: 1 1 92px; }
+.resource-detail-page__slot-button { flex: 1 1 128px; }
+.resource-detail-page__enhancements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.resource-detail-page__enhancement-copy { color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
+.resource-detail-page__state { display: flex; gap: 12px; flex-direction: column; padding: 16px; }
+
+/* <lang><zh-CN>窄屏把可选增强改为单列，避免英语文案压缩到不可读宽度。</zh-CN><en>On narrow screens, optional enhancements become one column so English copy is not compressed into an unreadable width.</en></lang> */
+@media (max-width: 360px) {
+  .resource-detail-page__enhancements { grid-template-columns: 1fr; }
+}
 </style>

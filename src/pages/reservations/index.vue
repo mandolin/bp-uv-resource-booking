@@ -8,39 +8,52 @@
     <!-- <lang><zh-CN>页面壳用 HIA-uView 呈现当前单语言标题，平台常驻主导航与页面自有预约筛选 tab 保持职责分离。</zh-CN><en>The page shell uses HIA-uView for the current single-language title, keeping platform-persistent primary navigation separate from page-owned reservation-filter tabs.</en></lang> -->
     <runtime-page-shell :title="runtimeLocale.t('title.reservations')">
       <view class="reservations-page">
-      <view class="reservations-page__heading">
-        <text class="reservations-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
-        <text class="reservations-page__title">{{ runtimeLocale.t('reservation.title') }}</text>
-        <text class="reservations-page__description">{{ runtimeLocale.t('reservation.description') }}</text>
-      </view>
-      <!-- <lang><zh-CN>取消写入失败始终由 state 的受限 outcome 显式展示；页面不猜测其是否已经提交或回退。</zh-CN><en>A cancellation write failure is always explicitly displayed from state bounded outcome; page does not guess whether it submitted or rolled back.</en></lang> -->
-      <u-notice v-if="demo.bookingWriteFailure.value" visible tone="error" :message="runtimeLocale.localize(demo.bookingWriteFailure.value.message) || runtimeLocale.t('common.notAvailable')" />
-      <u-tabs v-model="activeTab" :items="reservationTabs" />
-      <u-empty
-        v-if="visibleReservations.length === 0"
-        :title="runtimeLocale.t('reservation.emptyTitle')"
-        :description="runtimeLocale.t('reservation.emptyDescription')"
-        :action-text="runtimeLocale.t('common.goDiscover')"
-        @action="goDiscover"
-      />
-      <u-list v-else class="reservations-page__list">
-        <!-- <lang><zh-CN>每条记录仅以有限 action array 提供取消入口；页面而非组件拥有二次确认与状态写回。</zh-CN><en>Each record exposes cancellation through a finite action array only; the page, not the component, owns second confirmation and state write-back.</en></lang> -->
-        <u-swipe-action v-for="reservation in visibleReservations" :key="reservation.id" :open="openReservationId === reservation.id" :actions="reservation.status === 'confirmed' ? cancelActions : []" :close-text="runtimeLocale.t('common.close')" @update:open="handleSwipeOpen(reservation.id, $event)" @action="handleSwipeAction(reservation.id, $event)">
-          <u-card :title="reservation.resourceName" :sub-title="reservation.venueName">
-            <view class="reservations-page__record">
-              <text>{{ runtimeLocale.formatDate(reservation.date) }} · {{ reservation.time }}</text>
-              <u-tag :text="reservationStatusLabel(reservation.status)" :tone="reservation.status === 'confirmed' ? 'primary' : 'neutral'" />
+        <!-- <lang><zh-CN>来源标记紧邻页面筛选，明确列表内容仍是当前运行时的本地示例，而不是账户订单。</zh-CN><en>The source badge sits next to the page filter, making clear that list content remains current-runtime local demo data rather than account orders.</en></lang> -->
+        <view class="reservations-page__source"><source-badge :source="demo.catalogSource.value" /></view>
+        <!-- <lang><zh-CN>取消写入失败始终由 state 的受限 outcome 显式展示；页面不猜测其是否已经提交或回退。</zh-CN><en>A cancellation write failure is always explicitly displayed from state bounded outcome; page does not guess whether it submitted or rolled back.</en></lang> -->
+        <u-notice v-if="demo.bookingWriteFailure.value" visible tone="error" :message="runtimeLocale.localize(demo.bookingWriteFailure.value.message) || runtimeLocale.t('common.notAvailable')" />
+        <u-tabs v-model="activeTab" :items="reservationTabs" />
+        <text class="reservations-page__hint">{{ runtimeLocale.t('reservation.cancelHint') }}</text>
+        <u-empty
+          v-if="visibleReservations.length === 0"
+          :title="runtimeLocale.t('reservation.emptyTitle')"
+          :description="runtimeLocale.t('reservation.emptyDescription')"
+          :action-text="runtimeLocale.t('common.goDiscover')"
+          @action="goDiscover"
+        />
+        <u-list v-else class="reservations-page__list">
+          <!-- <lang><zh-CN>每张 HIA-uView 卡片把图片、可审计字段与受控操作放在同一视觉表面；操作按钮只改变页面意图，仍不直接修改记录。</zh-CN><en>Each HIA-uView card keeps its image, auditable fields, and controlled actions on one visual surface; action buttons change only page intent and still do not mutate a record directly.</en></lang> -->
+          <u-card v-for="reservation in visibleReservations" :key="reservation.id" class="reservation-card" :padding="0" shadow>
+            <view class="reservation-card__layout">
+              <u-image class="reservation-card__image" :src="reservation.venueImage || ''" :alt="reservation.resourceName" fluid shape="rounded" />
+              <view class="reservation-card__body">
+                <text class="reservation-card__title">{{ reservation.venueName }} · {{ reservation.resourceName }}</text>
+                <view class="reservation-card__fact">
+                  <u-icon name="▣" size="small" tone="neutral" />
+                  <text>{{ runtimeLocale.formatDate(reservation.date) }}</text>
+                </view>
+                <view class="reservation-card__fact">
+                  <u-icon name="◷" size="small" tone="neutral" />
+                  <text>{{ reservation.time }}</text>
+                </view>
+                <view class="reservation-card__status">
+                  <text class="reservation-card__status-dot" />
+                  <text>{{ reservationStatusLabel(reservation.status) }}</text>
+                </view>
+                <view class="reservation-card__links">
+                  <u-button size="sm" variant="text" :label="runtimeLocale.t('common.viewDetails')" @click="openReservationDetail(reservation.id)" />
+                  <u-button v-if="reservation.status === 'confirmed'" size="sm" variant="text" :label="openReservationId === reservation.id ? runtimeLocale.t('common.closeActions') : runtimeLocale.t('common.actions')" @click="toggleReservationActions(reservation.id)" />
+                </view>
+              </view>
             </view>
-            <u-button size="sm" variant="text" :label="runtimeLocale.t('common.viewDetails')" @click="openReservationDetail(reservation.id)" />
-            <u-steps :current="reservation.status === 'confirmed' ? 1 : 2" direction="horizontal" :steps="reservationSteps(reservation.status)" />
-            <view v-if="reservation.status === 'confirmed'" class="reservations-page__actions">
-              <text class="reservations-page__hint">{{ runtimeLocale.t('reservation.cancelHint') }}</text>
-              <u-button size="sm" variant="text" :label="openReservationId === reservation.id ? runtimeLocale.t('common.closeActions') : runtimeLocale.t('common.actions')" @click="toggleReservationActions(reservation.id)" />
+            <!-- <lang><zh-CN>受控操作栏只在用户明确露出后出现；改期只导航，取消只进入二次确认 modal。</zh-CN><en>The controlled action rail appears only after explicit user reveal; reschedule only navigates, while cancel only enters the second-confirmation modal.</en></lang> -->
+            <view v-if="reservation.status === 'confirmed' && openReservationId === reservation.id" class="reservation-card__action-rail">
+              <u-button :label="runtimeLocale.t('reservation.reschedule')" variant="secondary" block @click="openReschedule(reservation.id)" />
+              <u-button :label="runtimeLocale.t('common.cancel')" variant="secondary" block @click="requestCancellation(reservation.id)" />
             </view>
           </u-card>
-        </u-swipe-action>
-      </u-list>
-      <u-modal :visible="Boolean(pendingReservationId)" :title="runtimeLocale.t('reservation.cancelTitle')" :cancel-text="runtimeLocale.t('common.keep')" :confirm-text="runtimeLocale.t('reservation.cancelConfirm')" @cancel="closeCancelModal" @confirm="confirmCancellation"><text>{{ runtimeLocale.t('reservation.cancelNotice') }}</text></u-modal>
+        </u-list>
+        <u-modal :visible="Boolean(pendingReservationId)" :title="runtimeLocale.t('reservation.cancelTitle')" :cancel-text="runtimeLocale.t('common.keep')" :confirm-text="runtimeLocale.t('reservation.cancelConfirm')" @cancel="closeCancelModal" @confirm="confirmCancellation"><text>{{ runtimeLocale.t('reservation.cancelNotice') }}</text></u-modal>
       </view>
     </runtime-page-shell>
   </u-config-provider>
@@ -50,6 +63,8 @@
 import { computed, ref } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
+import SourceBadge from '../../components/SourceBadge.vue';
+import { getVenueImage } from '../../data/asset-map.mjs';
 import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
@@ -74,6 +89,7 @@ const visibleReservations = computed(() => demo.reservationCards.value
   .filter((reservation) => activeTab.value === 'active' ? reservation.status === 'confirmed' : reservation.status === 'cancelled')
   .map((reservation) => Object.freeze({
     ...reservation,
+    venueImage: getVenueImage(reservation.venueImageId),
     venueName: runtimeLocale.localize(reservation.venueName),
     resourceName: runtimeLocale.localize(reservation.resourceName)
   })));
@@ -83,9 +99,6 @@ const openReservationId = ref('');
 
 // <lang><zh-CN>待二次确认的单一预约 ID；它不包含整条记录或其他用户信息。</zh-CN><en>Single reservation ID awaiting second confirmation; it contains no whole record or other user information.</en></lang>
 const pendingReservationId = ref('');
-
-// <lang><zh-CN>取消操作是页面自有冻结 allowlist；swipe 组件不理解其业务结果。</zh-CN><en>The cancellation action is a page-owned frozen allowlist; the swipe component understands no business result.</en></lang>
-const cancelActions = computed(() => Object.freeze([Object.freeze({ value: 'cancel', label: runtimeLocale.t('common.cancel'), type: 'danger' })]));
 
 /**
  * <lang><zh-CN>投影有限预约状态的单语言标签。</zh-CN><en>Projects a single-language label for a finite reservation status.</en></lang>
@@ -97,23 +110,6 @@ const cancelActions = computed(() => Object.freeze([Object.freeze({ value: 'canc
 function reservationStatusLabel(status) {
   // <lang><zh-CN>只允许 confirmed/cancelled 两项映射，符合当前 local mock contract。</zh-CN><en>Map only confirmed/cancelled, consistent with the current local-mock contract.</en></lang>
   return status === 'confirmed' ? runtimeLocale.t('reservation.confirmed') : status === 'cancelled' ? runtimeLocale.t('reservation.cancelled') : runtimeLocale.t('common.notAvailable');
-}
-
-/**
- * <lang><zh-CN>为有限预约状态创建步骤显示模型。</zh-CN><en>Creates a steps presentation model for a finite reservation status.</en></lang>
- * @param {string} status <lang><zh-CN>预约记录的有限状态。</zh-CN><en>Finite status of a reservation record.</en></lang>
- * @returns {ReadonlyArray<object>} <lang><zh-CN>只读 steps 列表。</zh-CN><en>Readonly steps list.</en></lang>
- * @lang zh-CN steps 仅呈现当前 mock 状态，不声称服务端审批、通知或退款进度。
- * @lang en Steps present current mock state only and claim no server approval, notification, or refund progress.
- */
-function reservationSteps(status) {
-  // <lang><zh-CN>已取消记录追加第三步；已确认记录保持两步，防止凭空显示未发生的取消。</zh-CN><en>Cancelled records append a third step; confirmed records retain two, preventing display of a cancellation that never happened.</en></lang>
-  const steps = [
-    Object.freeze({ label: runtimeLocale.t('reservation.stepCreated') }),
-    Object.freeze({ label: runtimeLocale.t('reservation.stepConfirmed') })
-  ];
-  if (status === 'cancelled') steps.push(Object.freeze({ label: runtimeLocale.t('reservation.stepCancelled') }));
-  return Object.freeze(steps);
 }
 
 /**
@@ -129,11 +125,28 @@ function openReservationDetail(reservationId) {
 }
 
 /**
- * <lang><zh-CN>切换一条已确认预约的受限操作行。</zh-CN><en>Toggles the bounded action row for one confirmed reservation.</en></lang>
+ * <lang><zh-CN>从列表打开当前 confirmed 预约的受控改期页。</zh-CN><en>Opens the controlled reschedule page for a current confirmed booking from the list.</en></lang>
+ * @param {string} reservationId <lang><zh-CN>当前记录的稳定预约 ID。</zh-CN><en>Stable reservation ID of the current record.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 路由仍只携带稳定 ID；改期页必须从共享 readonly state 重新验证记录与时段。
+ * @lang en The route still carries only a stable ID; the reschedule page must revalidate record and slots from shared readonly state.
+ */
+function openReschedule(reservationId) {
+  // <lang><zh-CN>只有当前可见列表中仍为 confirmed 的记录才允许导航，避免 stale action 打开不可改期记录。</zh-CN><en>Allow navigation only for a record still confirmed in the visible list, preventing a stale action from opening an ineligible record.</en></lang>
+  const isConfirmed = visibleReservations.value.some((reservation) => reservation.id === reservationId && reservation.status === 'confirmed');
+  if (!isConfirmed) return;
+
+  // <lang><zh-CN>导航前收起局部操作栏；不创建 replacement 或改写旧记录。</zh-CN><en>Close the local action rail before navigation; create no replacement and mutate no old record.</en></lang>
+  openReservationId.value = '';
+  uni.navigateTo({ url: `/pages/reservation-reschedule/index?reservationId=${encodeURIComponent(reservationId)}` });
+}
+
+/**
+ * <lang><zh-CN>切换一条已确认预约的受限操作栏。</zh-CN><en>Toggles the bounded action rail for one confirmed reservation.</en></lang>
  * @param {string} reservationId <lang><zh-CN>当前记录的有限 ID。</zh-CN><en>Finite ID of the current record.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN 显式入口补足小程序环境的可发现性；它只露出声明操作，不直接执行取消。
- * @lang en This explicit entry improves Mini Program discoverability; it reveals only declared action and does not cancel directly.
+ * @lang zh-CN 显式入口补足小程序环境的可发现性；它只露出声明的改期与取消意图，不直接执行任一写入。
+ * @lang en This explicit entry improves Mini Program discoverability; it reveals only declared reschedule and cancellation intents and performs neither write directly.
  */
 function toggleReservationActions(reservationId) {
   // <lang><zh-CN>再次点按同一记录收起；切换其他记录时始终只有一行可见。</zh-CN><en>A second tap on the same record closes it; switching records always leaves only one row visible.</en></lang>
@@ -148,24 +161,19 @@ function toggleReservationActions(reservationId) {
  * @lang zh-CN 该函数只管理局部呈现状态，不执行取消或修改预约。
  * @lang en This function manages local presentation state only and performs no cancellation or reservation change.
  */
-function handleSwipeOpen(reservationId, isOpen) {
-  // <lang><zh-CN>只保留一个露出行，减少小屏幕上多个危险操作同时可见的歧义。</zh-CN><en>Retain only one revealed row, reducing ambiguity from multiple dangerous actions visible on small screens.</en></lang>
-  openReservationId.value = isOpen ? reservationId : '';
-}
-
 /**
  * <lang><zh-CN>把已露出的取消意图送入二次确认 modal。</zh-CN><en>Sends a revealed cancel intent into the second-confirmation modal.</en></lang>
  * @param {string} reservationId <lang><zh-CN>当前记录的有限 ID。</zh-CN><en>Finite ID of the current record.</en></lang>
- * @param {string} action <lang><zh-CN>swipe 组件报告的 allowlisted action 值。</zh-CN><en>Allowlisted action value reported by the swipe component.</en></lang>
  * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
- * @lang zh-CN 未识别 action 保持零状态改变，不能被当成取消或任意命令。
- * @lang en An unrecognized action retains zero state change and cannot become cancellation or arbitrary command.
+ * @lang zh-CN 只有当前可见且 confirmed 的预约可进入二次确认；该函数不执行取消。
+ * @lang en Only a currently visible confirmed booking can enter second confirmation; this function does not cancel it.
  */
-function handleSwipeAction(reservationId, action) {
-  // <lang><zh-CN>只允许字面 cancel 进入 modal，保持操作 allowlist 封闭。</zh-CN><en>Allow only literal cancel to enter modal, keeping the action allowlist closed.</en></lang>
-  if (action !== 'cancel') return;
+function requestCancellation(reservationId) {
+  // <lang><zh-CN>重新验证当前 readonly 投影，阻止 stale、cancelled 或任意 ID 打开危险确认。</zh-CN><en>Revalidate current readonly projection, blocking stale, cancelled, or arbitrary IDs from opening dangerous confirmation.</en></lang>
+  const isConfirmed = visibleReservations.value.some((reservation) => reservation.id === reservationId && reservation.status === 'confirmed');
+  if (!isConfirmed) return;
 
-  // <lang><zh-CN>收起 action row 后才显示 modal，清晰区分“露出操作”和“确认取消”两个步骤。</zh-CN><en>Close action row before showing modal, clearly separating “reveal action” and “confirm cancellation” steps.</en></lang>
+  // <lang><zh-CN>收起 action rail 后才显示 modal，清晰区分“露出操作”和“确认取消”两个步骤。</zh-CN><en>Close the action rail before showing the modal, clearly separating “reveal action” and “confirm cancellation” steps.</en></lang>
   openReservationId.value = '';
   pendingReservationId.value = reservationId;
 }
@@ -212,14 +220,23 @@ onShow(() => syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (m
 </script>
 
 <style scoped>
-/* <lang><zh-CN>预约页使用中性信息卡、明显状态步骤和受限操作，不将取消危险色覆盖正文内容。</zh-CN><en>Reservations uses neutral information cards, visible state steps, and constrained actions without overlaying body content in destructive color.</en></lang> */
-.reservations-page { padding: 20px 16px 28px; background: var(--u-sys-color-surface-subtle); }
-.reservations-page__heading { display: flex; gap: 6px; flex-direction: column; margin-bottom: 18px; }
-.reservations-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.reservations-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
-.reservations-page__description { color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.6; }
-.reservations-page__list { display: flex; gap: 12px; flex-direction: column; margin-top: 14px; }
-.reservations-page__record { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--u-sys-color-text); font-size: 15px; }
-.reservations-page__actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
-.reservations-page__hint { flex: 1; color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
+/* <lang><zh-CN>预约页按获批设计板使用居中来源标记、紧凑筛选和图像主导卡片；底部 padding 为常驻 tabBar 保留安全空间。</zh-CN><en>Reservations follows the approved board with a centered source badge, compact filter, and image-led cards; bottom padding reserves safe space for the persistent tab bar.</en></lang> */
+.reservations-page { min-height: 100%; padding: 18px 14px calc(var(--bp-shell-tabbar-height) + 26px); background: var(--u-sys-color-surface); }
+.reservations-page__source { display: flex; justify-content: center; margin: 0 0 18px; }
+.reservations-page__hint { display: block; padding: 14px 2px 8px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.45; text-align: center; }
+.reservations-page__list { display: flex; gap: 16px; flex-direction: column; margin-top: 4px; }
+.reservation-card__layout { display: grid; grid-template-columns: 126px minmax(0, 1fr); min-height: 170px; }
+.reservation-card__image { display: block; width: 126px; height: 170px; }
+.reservation-card__body { display: flex; min-width: 0; gap: 9px; flex-direction: column; padding: 15px 14px 12px; }
+.reservation-card__title { color: var(--u-sys-color-text); font-size: 17px; font-weight: 700; line-height: 1.35; }
+.reservation-card__fact { display: flex; align-items: center; gap: 7px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.35; }
+.reservation-card__status { display: flex; align-items: center; gap: 8px; color: var(--u-sys-color-action-primary); font-size: 13px; font-weight: 600; }
+.reservation-card__status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--u-sys-color-accent); }
+.reservation-card__links { display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: auto; }
+.reservation-card__action-rail { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px 14px; }
+/* <lang><zh-CN>小屏幕收窄图片列，仍保留信息列最小可读宽度。</zh-CN><en>Narrow the image column on smaller screens while retaining a minimum readable information column.</en></lang> */
+@media (max-width: 360px) {
+  .reservation-card__layout { grid-template-columns: 108px minmax(0, 1fr); }
+  .reservation-card__image { width: 108px; }
+}
 </style>
