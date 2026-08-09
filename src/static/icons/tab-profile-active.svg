@@ -1,7 +1,7 @@
-<!-- <lang><zh-CN>本仓原创的个人信息选中线性图标；钴蓝人像只表达当前 tab。</zh-CN><en>Repository-original selected Profile line icon; the cobalt person outline expresses only the current tab.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0047ab" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+<!-- <lang><zh-CN>本仓原创的个人信息选中实心图标；钴蓝人像剪影只表达当前 tab。</zh-CN><en>Repository-original selected Profile solid icon; the cobalt person silhouette expresses only the current tab.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
   <title>Selected Profile</title>
-  <desc>Cobalt person outline for the selected Profile tab.</desc>
-  <circle cx="12" cy="7.8" r="4" />
-  <path d="M3.6 20.4c.45-4.5 3.5-6.8 8.4-6.8s7.95 2.3 8.4 6.8" />
+  <desc>Solid cobalt person silhouette for the selected Profile tab.</desc>
+  <circle cx="12" cy="7.4" r="4.5" fill="#0047ab" />
+  <path fill="#0047ab" d="M2.8 21c.6-5.4 3.9-8 9.2-8s8.6 2.6 9.2 8H2.8Z" />
 </svg>

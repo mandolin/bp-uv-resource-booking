@@ -59,14 +59,19 @@
           </view>
         </view>
 
-        <!-- <lang><zh-CN>来源说明使用 HIA-uView UAlertTips 的标题与说明结构，始终公开本地示例边界。</zh-CN><en>The source explanation uses HIA-uView UAlertTips title-and-description structure and always discloses the local-demo boundary.</en></lang> -->
-        <u-alert-tips
-          class="home-page__data-notice"
-          show
-          type="primary"
-          :title="runtimeLocale.t('home.dataNoticeTitle')"
-          :description="runtimeLocale.t('home.dataNoticeDescription')"
-        />
+        <!-- <lang><zh-CN>页面自有 wrapper 在精选卡与提示之间建立可靠间距；UAlertTips 继续承担提示语义，而 slot 让页面在不穿透小程序组件隔离边界的情况下统一图标、字体和颜色。</zh-CN><en>A page-owned wrapper creates reliable spacing between the featured card and the notice; UAlertTips retains alert semantics while its slot lets the page align icon, typography, and color without piercing Mini Program component isolation.</en></lang> -->
+        <view class="home-page__data-notice">
+          <u-alert-tips show type="primary">
+            <view class="home-page__data-notice-content">
+              <!-- <lang><zh-CN>信息标记是不可交互的可见装饰；相邻标题继续提供完整文字语义。</zh-CN><en>The information mark is non-interactive visible decoration; the adjacent title continues to provide the complete textual meaning.</en></lang> -->
+              <text class="home-page__data-notice-icon" aria-hidden="true">i</text>
+              <view class="home-page__data-notice-copy">
+                <text class="home-page__data-notice-title">{{ runtimeLocale.t('home.dataNoticeTitle') }}</text>
+                <text class="home-page__data-notice-description">{{ runtimeLocale.t('home.dataNoticeDescription') }}</text>
+              </view>
+            </view>
+          </u-alert-tips>
+        </view>
       </view>
     </runtime-page-shell>
   </u-config-provider>
@@ -189,8 +194,14 @@ onPullDownRefresh(async () => {
 .home-page__state { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
 .home-page__featured { margin-top: 22px; }
 .home-page__featured-card { margin-top: 10px; }
-/* <lang><zh-CN>来源说明通过组件根的公开 class 呈现视觉板中的浅蓝信息表面；不穿透或改写 UAlertTips 的内部结构。</zh-CN><en>The source explanation uses the component root's public class to render the board's pale-blue information surface without piercing or rewriting UAlertTips internals.</en></lang> */
-.home-page__data-notice { margin-top: 18px; background: var(--u-comp-notice-info-surface); border-color: var(--u-comp-notice-info-border); border-radius: var(--bp-card-radius, 14px); color: var(--u-comp-notice-info-foreground); }
+/* <lang><zh-CN>native wrapper 独立提供 16px 卡片间距，避免 margin 落到小程序自定义组件宿主后失效。</zh-CN><en>The native wrapper independently supplies a 16px card gap, avoiding a margin that disappears when attached to a Mini Program custom-component host.</en></lang> */
+.home-page__data-notice { box-sizing: border-box; margin-top: 16px; width: 100%; }
+/* <lang><zh-CN>slot 内容显式采用思源黑体优先栈和设计板的信息色层级；页面只控制其自有节点，不改写 UAlertTips 内部选择器。</zh-CN><en>The slot content explicitly uses the Source Han Sans-first stack and the board's information-color hierarchy; the page controls only its own nodes and does not override UAlertTips internals.</en></lang> */
+.home-page__data-notice-content { box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; width: 100%; color: #27364a; font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; }
+.home-page__data-notice-icon { display: block; flex: 0 0 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: #0047ab; color: #ffffff; font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
+.home-page__data-notice-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; font-family: inherit; }
+.home-page__data-notice-title { display: block; color: #0047ab; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.home-page__data-notice-description { display: block; color: #27364a; font-family: inherit; font-size: 13px; font-weight: 400; line-height: 1.55; }
 /* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；只预留固定安全空间，不读取设备或窗口信息。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; reserve fixed safe space without reading device or window information.</en></lang> */
 /* #ifdef MP-WEIXIN */
 .home-page__brand-bar { padding: 0 116px 0 16px; background: #ffffff; }

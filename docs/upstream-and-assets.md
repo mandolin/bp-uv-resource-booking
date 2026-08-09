@@ -48,9 +48,9 @@ All four images are fictional venue images generated for this project on 2026-08
 
 ## 原创界面图标 / Original UI icons
 
-底部主导航为 Home、Discover、My bookings 和 Profile 四个语义各保留中性未选中态和钴蓝选中态：八张 SVG 是本项目直接绘制的可审计源稿，八张 81×81 透明 PNG 是从对应源稿等比栅格化的微信运行时派生物。微信即使启用 official custom tabBar，也会在组件运行前校验宿主 `tabBar` 图标格式，因此宿主声明和自定义组件共同使用 PNG，SVG 只作为原创源稿保留。两类资产均不来自图标库、字体、网络、上游仓或第三方品牌，也不表示定位、真实日程、库存、头像或身份数据；它们随本仓 MIT 许可证发布。
+底部主导航为 Home、Discover、My bookings 和 Profile 四个语义各保留中性线框未选中态和钴蓝实心选中态：八张 SVG 是本项目直接绘制的可审计源稿，八张 81×81 透明 PNG 是从对应源稿等比栅格化的微信运行时派生物。custom tabBar 以 27px 显示这些 PNG，使常见 3x 屏使用整数缩放比例；微信即使启用 official custom tabBar，也会在组件运行前校验宿主 `tabBar` 图标格式，因此宿主声明和自定义组件共同使用 PNG，SVG 只作为原创源稿保留。两类资产均不来自图标库、字体、网络、上游仓或第三方品牌，也不表示定位、真实日程、库存、头像或身份数据；它们随本仓 MIT 许可证发布。
 
-The bottom primary navigation retains a neutral unselected state and a cobalt selected state for each of Home, Discover, My bookings, and Profile: eight SVGs are auditable sources drawn directly for this project, while eight transparent 81×81 PNGs are proportional raster derivatives of their corresponding sources. Even with the official custom tabBar enabled, WeChat validates the host `tabBar` icon format before the component runs, so the host declaration and custom component share the PNGs while SVGs remain as original sources only. Neither asset set comes from an icon library, font, network source, upstream repository, or third-party brand, and they represent no location, live schedule, inventory, avatar, or identity data. They are distributed under this repository's MIT License.
+The bottom primary navigation retains a neutral outline unselected state and a solid cobalt selected state for each of Home, Discover, My bookings, and Profile: eight SVGs are auditable sources drawn directly for this project, while eight transparent 81×81 PNGs are proportional raster derivatives of their corresponding sources. The custom tab bar displays these PNGs at 27px so common 3x screens use an integer scale ratio. Even with the official custom tabBar enabled, WeChat validates the host `tabBar` icon format before the component runs, so the host declaration and custom component share the PNGs while SVGs remain as original sources only. Neither asset set comes from an icon library, font, network source, upstream repository, or third-party brand, and they represent no location, live schedule, inventory, avatar, or identity data. They are distributed under this repository's MIT License.
 
 首页双入口另使用两张本项目原创 SVG：浅色日历只装饰主按钮“选择日期”，钴蓝公共建筑只装饰次按钮“浏览场馆”。操作名称始终由相邻的运行时本地化文字承担；图标不表示真实日程、定位、场馆状态或库存。
 
@@ -58,7 +58,7 @@ Home's paired entries use two additional original project SVGs: a light calendar
 
 | 语义 / Meaning | SVG 源稿（未选中 / 选中） / SVG sources (unselected / selected) | PNG 运行时（未选中 / 选中） / PNG runtime (unselected / selected) | 边界 / Boundary |
 | --- | --- | --- | --- |
-| Home / 首页 | `tab-home.svg` / `tab-home-active.svg` | `tab-home.png` / `tab-home-active.png` | 房屋轮廓仅表示主页 / House outline identifies only the primary Home page |
+| Home / 首页 | `tab-home.svg` / `tab-home-active.svg` | `tab-home.png` / `tab-home-active.png` | 房屋线框/实心剪影仅表示主页 / House outline/solid silhouette identifies only the primary Home page |
 | Discover / 发现 | `tab-discover.svg` / `tab-discover-active.svg` | `tab-discover.png` / `tab-discover-active.png` | 指南针仅为导航隐喻，不声明定位能力 / Compass is only a navigation metaphor and claims no location capability |
 | My bookings / 我的预约 | `tab-reservations.svg` / `tab-reservations-active.svg` | `tab-reservations.png` / `tab-reservations-active.png` | 日历不包含真实日期或库存 / Calendar contains no live date or inventory |
 | Profile / 个人信息 | `tab-profile.svg` / `tab-profile-active.svg` | `tab-profile.png` / `tab-profile-active.png` | 人像轮廓不是真实头像或认证身份 / Person outline is no real avatar or authenticated identity |

@@ -1,7 +1,7 @@
-<!-- <lang><zh-CN>本仓原创的发现选中线性图标；钴蓝只表达当前 tab，不表示位置权限。</zh-CN><en>Repository-original selected Discover line icon; cobalt expresses only the current tab and no location permission.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0047ab" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+<!-- <lang><zh-CN>本仓原创的发现选中实心图标；钴蓝圆盘与留白指针只表达当前 tab，不表示位置权限。</zh-CN><en>Repository-original selected Discover solid icon; the cobalt disc and white needle express only the current tab and no location permission.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
   <title>Selected Discover</title>
-  <desc>Cobalt outline compass for the selected Discover tab.</desc>
-  <circle cx="12" cy="12" r="8.6" />
-  <path d="m14.9 8.6-1.7 4.6-4.1 2.2 1.7-4.6 4.1-2.2Z" />
+  <desc>Solid cobalt compass with a white needle for the selected Discover tab.</desc>
+  <circle cx="12" cy="12" r="9.2" fill="#0047ab" />
+  <path fill="#ffffff" d="m15.6 7.6-2.2 5.8-5 3 2.2-5.8 5-3Zm-2.8 4.3-.8-.8-.8 2.1.8.8.8-2.1Z" />
 </svg>

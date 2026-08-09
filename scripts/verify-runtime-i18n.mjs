@@ -194,12 +194,14 @@ async function verifyRuntimeI18n() {
     if (!sourceText.includes('syncPrimaryTabChrome')) throw new Error(`Missing persistent tab chrome synchronization in ${relativePath}.`);
   }
 
-  // <lang><zh-CN>微信 raw custom-tab-bar 必须保持静态 allowlist、双语选择、无业务输入和固定 switchTab；样式根必须常驻 fixed。</zh-CN><en>The raw WeChat custom tab bar must retain a static allowlist, bilingual selection, no business input, and fixed switchTab; its style root must remain fixed.</en></lang>
+  // <lang><zh-CN>微信 raw custom-tab-bar 必须保持静态 allowlist、双语选择、无业务输入和固定 switchTab；样式根必须常驻 fixed，并以无外边距白底、1px 上边框及四等分 tab 呈现。</zh-CN><en>The raw WeChat custom tab bar must retain a static allowlist, bilingual selection, no business input, and fixed switchTab; its fixed root must render as a marginless white surface with a 1px top border and four equal tabs.</en></lang>
   const customTabRuntime = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.js'), 'utf8');
   const customTabTemplate = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxml'), 'utf8');
   const customTabStyle = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxss'), 'utf8');
-  const hasStableTabTypography = customTabStyle.includes('align-items: stretch') && customTabStyle.includes('"Source Han Sans SC"');
-  if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography) {
+  const hasStableTabTypography = customTabStyle.includes('font-size: 13px') && customTabStyle.includes('"Source Han Sans SC"');
+  const hasFlushEqualSurface = customTabStyle.includes('padding: 5px 0 calc(5px + env(safe-area-inset-bottom))') && customTabStyle.includes('border-top: 1px solid #dfe5ec') && customTabStyle.includes('flex: 0 0 25%') && customTabStyle.includes('width: 27px');
+  const hasNativeTabSurface = customTabTemplate.includes('<view\n    wx:for="{{items}}"') && !customTabTemplate.includes('<button');
+  if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography || !hasFlushEqualSurface || !hasNativeTabSurface) {
     throw new Error('WeChat custom tabBar does not satisfy persistent bilingual chrome contract.');
   }
 

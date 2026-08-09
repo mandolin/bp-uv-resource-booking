@@ -3,19 +3,19 @@
 @lang en Persistent presentation surface for the official WeChat custom tab bar: renders only four first-party primary pages and the current runtime locale and reads no business data, identity, network, or arbitrary route.
 -->
 <view class="bp-custom-tabbar" role="tablist">
-  <!-- <lang><zh-CN>每项只携带冻结 value 对应的 dataset；点击 handler 再从本地 allowlist 解析固定 pagePath。</zh-CN><en>Each item carries only the dataset for a frozen value; the click handler resolves a fixed pagePath from the local allowlist.</en></lang> -->
-  <button
+  <!-- <lang><zh-CN>每项使用无原生 button 外观的语义 tab 容器，只携带冻结 value 对应的 dataset；点击 handler 再从本地 allowlist 解析固定 pagePath。</zh-CN><en>Each item uses a semantic tab container without native button chrome and carries only the dataset for a frozen value; the click handler resolves a fixed pagePath from the local allowlist.</en></lang> -->
+  <view
     wx:for="{{items}}"
     wx:key="value"
     class="bp-custom-tabbar__item {{item.value === selected ? 'bp-custom-tabbar__item--active' : ''}}"
-    type="default"
     role="tab"
     aria-selected="{{item.value === selected}}"
+    aria-label="{{locale === 'en' ? item.labelEn : item.labelZh}}"
     data-value="{{item.value}}"
     bindtap="handleSelect"
     hover-class="bp-custom-tabbar__item--pressed"
   >
-    <!-- <lang><zh-CN>图标仅补充视觉导航线索；完整的可读名称仍由同一 button 内的 locale label 提供。</zh-CN><en>The icon only supplements the visual navigation cue; the complete readable name still comes from the locale label in the same button.</en></lang> -->
+    <!-- <lang><zh-CN>图标仅补充视觉导航线索；完整的可读名称仍由同一 tab 项内的 locale label 提供。</zh-CN><en>The icon only supplements the visual navigation cue; the complete readable name still comes from the locale label in the same tab item.</en></lang> -->
     <image
       class="bp-custom-tabbar__icon"
       src="{{item.value === selected ? item.activeIcon : item.icon}}"
@@ -24,5 +24,5 @@
     />
     <!-- <lang><zh-CN>只在已支持的 en/zh-Hans 静态文案之间选择，不拼接双语或显示内部 key。</zh-CN><en>Select only between supported static en/zh-Hans copy and never concatenate languages or display an internal key.</en></lang> -->
     <text class="bp-custom-tabbar__label">{{locale === 'en' ? item.labelEn : item.labelZh}}</text>
-  </button>
+  </view>
 </view>

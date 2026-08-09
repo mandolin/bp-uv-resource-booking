@@ -1,8 +1,6 @@
-<!-- <lang><zh-CN>本仓原创的首页选中线性图标；只以 HIA 浅色主操作钴蓝表达当前页。</zh-CN><en>Repository-original selected Home line icon; uses only the HIA light primary-action cobalt to express the current page.</en></lang> -->
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0047ab" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+<!-- <lang><zh-CN>本仓原创的首页选中实心图标；钴蓝房屋剪影强化当前页，但不承载文字或业务状态。</zh-CN><en>Repository-original selected Home solid icon; the cobalt house silhouette reinforces the current page but carries no text or business state.</en></lang> -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
   <title>Selected Home</title>
-  <desc>Cobalt outline of a house for the selected Home tab.</desc>
-  <path d="M3.5 10.6 12 3.7l8.5 6.9" />
-  <path d="M5.4 9.4v10.2h13.2V9.4" />
-  <path d="M9.4 19.6v-5.7h5.2v5.7" />
+  <desc>Solid cobalt house for the selected Home tab.</desc>
+  <path fill="#0047ab" d="M2.8 10.7 12 3.3l9.2 7.4-1.4 1.7-1.3-1.1v8.9h-5v-5.7h-3v5.7h-5v-8.9l-1.3 1.1-1.4-1.7Z" />
 </svg>

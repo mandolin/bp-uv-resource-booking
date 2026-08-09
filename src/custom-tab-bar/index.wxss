@@ -4,7 +4,7 @@
  * @lang en Literal-style adapter for the persistent WeChat custom tab bar: visual values align with the current HIA-uView `u-tabbar` default-light contract, but it copies no component runtime and acquires no routing ownership.
  */
 
-/* <lang><zh-CN>平台 custom-tab-bar 根始终固定在安全区上方并占满底边，同时显式采用与页面相同的思源黑体优先栈；它在 tab 页面切换时不随页面 slot 卸载。</zh-CN><en>The platform custom-tab-bar root remains fixed above the safe area, spans the bottom edge, and explicitly adopts the same Source Han Sans-first stack as pages; it does not unmount with page slots during tab switches.</en></lang> */
+/* <lang><zh-CN>平台 custom-tab-bar 根始终固定并无外边距地占满底边；纯白表面与 1px 浅灰上边框直接衔接页面，同时显式采用与页面相同的思源黑体优先栈。</zh-CN><en>The platform custom-tab-bar root remains fixed and spans the bottom edge without an outer margin; its plain-white surface and 1px light-gray top border directly meet the page while explicitly adopting the same Source Han Sans-first stack.</en></lang> */
 .bp-custom-tabbar {
   position: fixed;
   z-index: 30;
@@ -13,55 +13,56 @@
   left: 0;
   display: flex;
   align-items: stretch;
+  width: 100%;
   box-sizing: border-box;
   min-height: calc(62px + env(safe-area-inset-bottom));
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  border-top: 1px solid #e8edf3;
+  margin: 0;
+  padding: 5px 0 calc(5px + env(safe-area-inset-bottom));
+  border-top: 1px solid #dfe5ec;
   background: #ffffff;
   font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
 }
 
-/* <lang><zh-CN>每项均分宽度并以 24px 线性图标、12px 文字和 50px 触控高度构成稳定纵向导航，不依赖固定字符宽度。</zh-CN><en>Each item receives equal width and forms stable vertical navigation from a 24px line icon, 12px text, and a 50px touch height without relying on fixed character widths.</en></lang> */
+/* <lang><zh-CN>每项严格占四分之一宽度，并以 27px 图标、13px 文字和 52px 触控高度构成稳定纵向导航；使用原生 view 可避免微信 button 的灰底、内边距与字号重置。</zh-CN><en>Each item occupies exactly one quarter of the width and forms stable vertical navigation from a 27px icon, 13px text, and a 52px touch height; a native view avoids WeChat button gray surfaces, padding, and font resets.</en></lang> */
 .bp-custom-tabbar__item {
-  flex: 1;
+  flex: 0 0 25%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 2px;
+  width: 25%;
   box-sizing: border-box;
   min-width: 0;
-  min-height: 50px;
+  min-height: 52px;
   margin: 0;
-  padding: 3px 2px;
+  padding: 2px 0 3px;
   border: 0;
   border-radius: 0;
-  background: transparent;
+  background: #ffffff;
   color: #27364a;
   font-family: inherit;
-  font-size: 12px;
-  line-height: 1;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
 }
-
-/* <lang><zh-CN>移除微信 button 的默认伪元素边框，避免与 HIA-uView 风格产生双边框。</zh-CN><en>Remove WeChat button's default pseudo-element border, avoiding a double border against the HIA-uView visual contract.</en></lang> */
-.bp-custom-tabbar__item::after { border: 0; }
 
 /* <lang><zh-CN>按压态只降低透明度作为短暂反馈，不生成与设计板不符的持续 pill 或色块。</zh-CN><en>The pressed state only lowers opacity for transient feedback and creates no persistent pill or surface block that conflicts with the design board.</en></lang> */
 .bp-custom-tabbar__item--pressed { opacity: 0.68; }
 
 /* <lang><zh-CN>选中态由钴蓝图标、文字与字重共同表达；背景保持白色，不使用 pill。</zh-CN><en>The selected state is expressed by the cobalt icon, label, and weight together; the background remains white and uses no pill.</en></lang> */
 .bp-custom-tabbar__item--active {
-  background: transparent;
+  background: #ffffff;
   color: #0047ab;
   font-weight: 600;
 }
 
-/* <lang><zh-CN>图标的 24px 几何框在四项之间保持一致；颜色由原创 SVG 源稿派生的本地透明 PNG 运行时资产确定。</zh-CN><en>The icon's 24px geometry remains consistent across all four items; the local transparent PNG runtime asset derived from the original SVG source determines its color.</en></lang> */
+/* <lang><zh-CN>四项统一使用 27px 几何框；81×81 PNG 在微信常用 3x 屏上正好按整数比例呈现，避免此前缩到 24px 造成的非整数重采样模糊。</zh-CN><en>All four items use a 27px geometry box; the 81×81 PNG maps at an exact integer ratio on common WeChat 3x screens, avoiding the non-integer resampling blur caused by the former 24px display size.</en></lang> */
 .bp-custom-tabbar__icon {
   display: block;
   flex: none;
-  width: 24px;
-  height: 24px;
+  width: 27px;
+  height: 27px;
 }
 
 /* <lang><zh-CN>单行标签在小屏空间不足时截断，不改变实际 locale 文案。</zh-CN><en>The single-line label truncates when small-screen space is insufficient without changing actual locale copy.</en></lang> */
@@ -70,8 +71,9 @@
   max-width: 100%;
   overflow: hidden;
   font-family: inherit;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 13px;
+  font-weight: inherit;
+  line-height: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

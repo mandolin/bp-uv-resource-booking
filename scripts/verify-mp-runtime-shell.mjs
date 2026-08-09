@@ -160,13 +160,15 @@ async function verifyGeneratedRuntimeShell() {
     throw new Error('Generated Discover list is missing native-wrapper card spacing.');
   }
 
-  // <lang><zh-CN>官方 custom-tab-bar 四件套必须被编译器原样复制，并保留 fixed 根、双语选择和固定 switchTab。</zh-CN><en>The official custom-tab-bar quartet must be copied verbatim by the compiler and retain a fixed root, bilingual selection, and fixed switchTab.</en></lang>
+  // <lang><zh-CN>官方 custom-tab-bar 四件套必须被编译器原样复制，并保留 fixed 根、双语选择、固定 switchTab、无外边距白底和四项等分几何。</zh-CN><en>The official custom-tab-bar quartet must be copied verbatim by the compiler and retain a fixed root, bilingual selection, fixed switchTab, a marginless white surface, and equal four-item geometry.</en></lang>
   const customTabConfiguration = await readOutputJson('custom-tab-bar/index.json');
   const customTabRuntime = await readFile(resolve(outputRoot, 'custom-tab-bar/index.js'), 'utf8');
   const customTabTemplate = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxml'), 'utf8');
   const customTabStyle = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxss'), 'utf8');
-  const hasStableTabTypography = customTabStyle.includes('align-items: stretch') && customTabStyle.includes('Source Han Sans SC');
-  if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography) {
+  const hasStableTabTypography = customTabStyle.includes('font-size: 13px') && customTabStyle.includes('Source Han Sans SC');
+  const hasFlushEqualSurface = customTabStyle.includes('padding: 5px 0 calc(5px + env(safe-area-inset-bottom))') && customTabStyle.includes('border-top: 1px solid #dfe5ec') && customTabStyle.includes('flex: 0 0 25%') && customTabStyle.includes('width: 27px');
+  const hasNativeTabSurface = customTabTemplate.includes('<view\n    wx:for="{{items}}"') && !customTabTemplate.includes('<button');
+  if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography || !hasFlushEqualSurface || !hasNativeTabSurface) {
     throw new Error('Generated official custom tabBar does not satisfy persistent bilingual chrome contract.');
   }
 

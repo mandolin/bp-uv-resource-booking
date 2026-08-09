@@ -33,7 +33,7 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `9959205f5cb411ce16227943759ffb74c7aaae16` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线、按钮前置装饰以及原生按钮/搜索 control 的宿主字体继承 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, button leading decorations, and host-font inheritance for native button/search controls |
+| `src/vendor/HIA-uView` | `796fe0d839537900aade45b4a7a856721dfe4e4a` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线、按钮前置装饰以及原生按钮、搜索与提示 control 的宿主字体继承 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, button leading decorations, and host-font inheritance for native button, search, and alert controls |
 | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Catalog/detail read and reservation write async-provider runtime / 目录/详情读取与预约写入 async-provider runtime |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
