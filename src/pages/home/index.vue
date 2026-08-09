@@ -53,7 +53,10 @@
         <view v-else class="home-page__featured">
           <!-- <lang><zh-CN>区块右侧提供明确“查看全部”入口；精选卡整体报告查看意图，没有第二个重复详情按钮。</zh-CN><en>The section exposes an explicit View all entry; the whole featured card reports view intent and contains no duplicate details button.</en></lang> -->
           <u-section :title="runtimeLocale.t('home.sectionFeatured')" :right-text="runtimeLocale.t('common.viewAll')" @right-click="browseResources" />
-          <resource-card :entry="featuredEntry" layout="featured" @view="openDetail" />
+          <!-- <lang><zh-CN>页面自有 view 承担卡片上间距，避免 scoped 样式跨越小程序自定义组件隔离边界。</zh-CN><en>A page-owned view carries the card's top spacing, avoiding scoped styling across the Mini Program custom-component isolation boundary.</en></lang> -->
+          <view class="home-page__featured-card">
+            <resource-card :entry="featuredEntry" layout="featured" @view="openDetail" />
+          </view>
         </view>
 
         <!-- <lang><zh-CN>来源说明使用 HIA-uView UAlertTips 的标题与说明结构，始终公开本地示例边界。</zh-CN><en>The source explanation uses HIA-uView UAlertTips title-and-description structure and always discloses the local-demo boundary.</en></lang> -->
@@ -170,28 +173,28 @@ onPullDownRefresh(async () => {
 
 <style scoped>
 /* <lang><zh-CN>首页采用设计板的紧凑纵向节奏，并为固定 custom tabBar 与安全区留出完整滚动空间。</zh-CN><en>Home adopts the board's compact vertical rhythm and reserves complete scroll space for the fixed custom tab bar and safe area.</en></lang> */
-.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline) calc(var(--bp-shell-tabbar-height) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); color: var(--u-sys-color-text); }
+.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline, 16px) calc(var(--bp-shell-tabbar-height, 64px) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); color: var(--u-sys-color-text); }
 /* <lang><zh-CN>品牌栏是首页唯一顶部标题层；其宽度与高度稳定，不生成第二个居中标题。</zh-CN><en>The brand bar is Home's sole top-title layer; its width and height remain stable and create no second centered heading.</en></lang> */
-.home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 var(--bp-page-inline); overflow: hidden; background: var(--u-sys-color-surface); }
-.home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "Songti SC", STSong, SimSun, serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
-/* <lang><zh-CN>欢迎语使用系统可用的中文展示字体 fallback；正文仍采用统一无衬线字体栈。</zh-CN><en>Welcome copy uses the system-available Chinese display-font fallback while body copy retains the shared sans-serif stack.</en></lang> */
+.home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 var(--bp-page-inline, 16px); overflow: hidden; background: var(--u-sys-color-surface); }
+.home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+/* <lang><zh-CN>欢迎语采用思源宋体优先的展示栈；正文、按钮和导航继续继承思源黑体优先栈。</zh-CN><en>Welcome copy uses a Source Han Serif-first display stack while body copy, buttons, and navigation continue to inherit the Source Han Sans-first stack.</en></lang> */
 .home-page__intro { display: flex; flex-direction: column; gap: 6px; }
-.home-page__title { display: block; max-width: 330px; font-family: var(--bp-font-display, "Songti SC", STSong, SimSun, serif); font-size: 26px; font-weight: 700; line-height: 1.38; letter-spacing: .01em; }
+.home-page__title { display: block; max-width: 330px; font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 26px; font-weight: 700; line-height: 1.38; letter-spacing: .01em; }
 .home-page__subtitle { display: block; color: var(--u-sys-color-text-secondary); font-size: 14px; line-height: 1.55; }
 /* <lang><zh-CN>页面拥有 216px hero 几何，UImage 仅通过 fluid 填满，图片不再依靠深层选择器或覆盖文案。</zh-CN><en>The page owns 216px hero geometry and UImage only fills it through fluid, with no deep selector or overlaid copy.</en></lang> */
-.home-page__hero { height: 216px; margin-top: 14px; overflow: hidden; border-radius: 16px; box-shadow: var(--bp-card-shadow); }
+.home-page__hero { height: 216px; margin-top: 14px; overflow: hidden; border-radius: 16px; box-shadow: var(--bp-card-shadow, 0 2px 8px rgb(0 27 46 / 12%)); }
 /* <lang><zh-CN>双入口等宽排列，主操作在左，图标与文字保持单行居中。</zh-CN><en>The two entries share equal width with the primary action on the left, keeping icon and copy centered on one line.</en></lang> */
 .home-page__shortcuts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
 .home-page__shortcut-icon { display: block; flex: 0 0 24px; height: 24px; width: 24px; }
 .home-page__state { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
 .home-page__featured { margin-top: 22px; }
-.home-page__featured > .resource-card { margin-top: 10px; }
+.home-page__featured-card { margin-top: 10px; }
 /* <lang><zh-CN>来源说明通过组件根的公开 class 呈现视觉板中的浅蓝信息表面；不穿透或改写 UAlertTips 的内部结构。</zh-CN><en>The source explanation uses the component root's public class to render the board's pale-blue information surface without piercing or rewriting UAlertTips internals.</en></lang> */
-.home-page__data-notice { margin-top: 18px; background: var(--u-comp-notice-info-surface); border-color: var(--u-comp-notice-info-border); border-radius: var(--bp-card-radius); color: var(--u-comp-notice-info-foreground); }
+.home-page__data-notice { margin-top: 18px; background: var(--u-comp-notice-info-surface); border-color: var(--u-comp-notice-info-border); border-radius: var(--bp-card-radius, 14px); color: var(--u-comp-notice-info-foreground); }
 /* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；只预留固定安全空间，不读取设备或窗口信息。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; reserve fixed safe space without reading device or window information.</en></lang> */
 /* #ifdef MP-WEIXIN */
-.home-page__brand-bar { padding-right: 116px; background: #ffffff; }
-.home-page { background: #f7f9fc; color: #001b2e; }
+.home-page__brand-bar { padding: 0 116px 0 16px; background: #ffffff; }
+.home-page { padding: 20px 16px calc(112px + env(safe-area-inset-bottom)); background: #f7f9fc; color: #001b2e; }
 .home-page__brand { color: #0047ab; }
 .home-page__subtitle { color: #27364a; }
 /* #endif */

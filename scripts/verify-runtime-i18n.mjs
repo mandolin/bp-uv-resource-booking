@@ -160,6 +160,26 @@ async function verifyRuntimeI18n() {
     throw new Error('Runtime page shell must render HIA-uView navbar without a page-local tabbar.');
   }
 
+  // <lang><zh-CN>字体入口必须同时声明思源黑体、思源宋体和思源等宽三类受控角色；generic fallback 不能取代显式家族选择。</zh-CN><en>The font entry must declare the three controlled Source Han Sans, Source Han Serif, and Source Han Mono roles; generic fallbacks cannot replace explicit family selection.</en></lang>
+  const globalStyleSource = await readFile(resolve(projectRoot, 'src/uni.scss'), 'utf8');
+  const expectedSourceHanFamilies = Object.freeze(['"Source Han Sans SC"', '"Source Han Serif SC"', '"Source Han Mono SC"']);
+  if (expectedSourceHanFamilies.some((familyName) => !globalStyleSource.includes(familyName))) {
+    throw new Error('Global typography must retain the three declared Source Han font roles.');
+  }
+
+  // <lang><zh-CN>首页必须同时保留通用变量 fallback 与微信字面 gutter；任一缺失都可能让一条无效 shorthand 再次抹掉整页边距。</zh-CN><en>Home must retain both generic variable fallbacks and the literal WeChat gutter; either omission could let one invalid shorthand erase the entire page inset again.</en></lang>
+  const homePageSource = await readFile(resolve(projectRoot, 'src/pages/home/index.vue'), 'utf8');
+  if (!homePageSource.includes('var(--bp-page-inline, 16px)') || !homePageSource.includes('padding: 20px 16px calc(112px + env(safe-area-inset-bottom))')) {
+    throw new Error('Home must retain its bounded cross-platform content gutter.');
+  }
+
+  // <lang><zh-CN>发现页的卡片间距必须由 UList slot 内的原生 view 拥有，不能再把页面 class 挂到隔离的自定义组件 host。</zh-CN><en>Discover card spacing must be owned by a native view inside the UList slot and cannot move its page class back onto the isolated custom-component host.</en></lang>
+  const discoverPageSource = await readFile(resolve(projectRoot, 'src/pages/discover/index.vue'), 'utf8');
+  const hasNativeDiscoverList = discoverPageSource.includes('<u-list v-else>') && discoverPageSource.includes('<view class="discover-page__list">') && discoverPageSource.includes('class="discover-page__list-item"');
+  if (!hasNativeDiscoverList || discoverPageSource.includes('<u-list v-else class="discover-page__list">') || !discoverPageSource.includes('gap: 14px')) {
+    throw new Error('Discover list spacing must remain on the native slot wrapper.');
+  }
+
   // <lang><zh-CN>按受控 pages 配置建立路径映射，使 tab 合约不依赖页面在数组中的偶然排列。</zh-CN><en>Build a path map from controlled pages configuration so the tab contract does not depend on incidental array ordering.</en></lang>
   const pageSourcesByRoute = new Map(pagesConfiguration.pages.map((page) => [page.path, `src/${page.path}.vue`]));
 
@@ -178,7 +198,8 @@ async function verifyRuntimeI18n() {
   const customTabRuntime = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.js'), 'utf8');
   const customTabTemplate = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxml'), 'utf8');
   const customTabStyle = await readFile(resolve(projectRoot, 'src/custom-tab-bar/index.wxss'), 'utf8');
-  if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
+  const hasStableTabTypography = customTabStyle.includes('align-items: stretch') && customTabStyle.includes('"Source Han Sans SC"');
+  if (!customTabRuntime.includes('wx.switchTab') || !customTabRuntime.includes("labelEn: 'My bookings'") || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography) {
     throw new Error('WeChat custom tabBar does not satisfy persistent bilingual chrome contract.');
   }
 

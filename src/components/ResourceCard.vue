@@ -90,9 +90,9 @@ function handleView() {
 </script>
 
 <style scoped>
-/* <lang><zh-CN>卡片根裁切公开 UImage，并保持设计板较柔和的应用级圆角；它不覆盖 UCard 内部选择器。</zh-CN><en>The card root clips the public UImage and retains the board's softer application-level radius without overriding UCard internals.</en></lang> */
-.resource-card { overflow: hidden; border-radius: var(--bp-card-radius); }
-.resource-card__control { display: flex; align-items: stretch; min-width: 0; cursor: pointer; }
+/* <lang><zh-CN>卡片根裁切公开 UImage、继承页面字体，并保持设计板较柔和的应用级圆角；它不覆盖 UCard 内部选择器。</zh-CN><en>The card root clips the public UImage, inherits the page font, and retains the board's softer application-level radius without overriding UCard internals.</en></lang> */
+.resource-card { overflow: hidden; border-radius: var(--bp-card-radius, 14px); font-family: inherit; }
+.resource-card__control { display: flex; align-items: stretch; min-width: 0; cursor: pointer; font-family: inherit; }
 /* <lang><zh-CN>首页精选图固定占卡宽约四成，避免 fixed UImage 尺寸挤入正文。</zh-CN><en>The Home-featured image occupies about two-fifths of the card width, preventing a fixed UImage size from intruding into copy.</en></lang> */
 .resource-card__image-shell { flex: 0 0 42%; height: 118px; overflow: hidden; }
 .resource-card__body { box-sizing: border-box; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; padding: 12px 12px 11px; }

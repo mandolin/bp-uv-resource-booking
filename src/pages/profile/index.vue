@@ -171,7 +171,7 @@ onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messag
 
 <style scoped>
 /* <lang><zh-CN>个人页采用审阅稿的身份摘要、预约统计与设置分组；底部 padding 为常驻 tabBar 留出安全空间。</zh-CN><en>Profile follows the reviewed identity summary, booking statistics, and grouped settings; bottom padding reserves safe space for the persistent tab bar.</en></lang> */
-.profile-page { display: flex; min-height: 100%; gap: 16px; flex-direction: column; padding: 24px 16px calc(var(--bp-shell-tabbar-height) + 28px); background: var(--u-sys-color-surface); }
+.profile-page { box-sizing: border-box; display: flex; min-height: 100%; gap: 16px; flex-direction: column; padding: 24px 16px calc(var(--bp-shell-tabbar-height, 64px) + 28px); background: var(--u-sys-color-surface); }
 .profile-page__identity { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: center; padding: 6px 22px 16px; }
 .profile-page__identity-copy { display: flex; min-width: 0; gap: 10px; flex-direction: column; }
 .profile-page__name { display: block; color: var(--u-sys-color-text); font-size: 24px; font-weight: 700; line-height: 1.3; }
@@ -184,4 +184,8 @@ onShow(() => syncPrimaryTabChrome('profile', runtimeLocale.locale.value, (messag
 .profile-page__source { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .profile-page__setting-value { color: var(--u-sys-color-text-secondary); font-size: 14px; }
 .profile-page__divider { height: 1px; margin: 14px 0; background: var(--u-sys-color-border); }
+/* <lang><zh-CN>微信端用字面底栏预留保护整条 padding，不依赖跨自定义组件边界的 app-level 变量。</zh-CN><en>WeChat protects the complete padding declaration with a literal tab-bar reservation instead of relying on an app-level variable across custom-component boundaries.</en></lang> */
+/* #ifdef MP-WEIXIN */
+.profile-page { padding: 24px 16px 92px; background: #ffffff; }
+/* #endif */
 </style>

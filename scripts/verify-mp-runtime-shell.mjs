@@ -141,12 +141,32 @@ async function verifyGeneratedRuntimeShell() {
   const explicitVisibleCount = shellRuntime.match(/visible:!0/gu)?.length ?? 0;
   if (explicitVisibleCount < 1) throw new Error('Generated RuntimePageShell does not explicitly show HIA-uView navbar.');
 
+  // <lang><zh-CN>页面壳生成样式必须保留思源黑体优先的继承根，使 HIA-uView 叶级 control 能取得与页面一致的宿主字体。</zh-CN><en>The generated page-shell style must retain the Source Han Sans-first inheritance root so HIA-uView leaf controls receive the same host font as pages.</en></lang>
+  const shellStyle = await readFile(resolve(outputRoot, 'components/RuntimePageShell.wxss'), 'utf8');
+  if (!shellStyle.includes('Source Han Sans SC')) {
+    throw new Error('Generated RuntimePageShell is missing Source Han Sans inheritance.');
+  }
+
+  // <lang><zh-CN>首页微信样式必须含确定的 16px gutter 与底栏预留；该字面 canary 捕获 app-level 变量让 shorthand 整体失效的回归。</zh-CN><en>The generated Home style must contain a deterministic 16px gutter and tab-bar reservation; this literal canary catches regressions where app-level variables invalidate the entire shorthand.</en></lang>
+  const homeStyle = await readFile(resolve(outputRoot, 'pages/home/index.wxss'), 'utf8');
+  if (!/\.home-page(?:\.[a-z0-9-]+)?\{[^}]*padding:20px 16px calc\(112px \+ env\(safe-area-inset-bottom\)\)/u.test(homeStyle)) {
+    throw new Error('Generated Home style is missing the bounded WeChat content gutter.');
+  }
+
+  // <lang><zh-CN>发现目录生成物必须把 spacing class 落在原生 view，并保留 14px 纵向间距，不能退回 u-list host。</zh-CN><en>The generated Discover catalog must place the spacing class on a native view and retain a 14px vertical gap rather than returning it to the u-list host.</en></lang>
+  const discoverTemplate = await readFile(resolve(outputRoot, 'pages/discover/index.wxml'), 'utf8');
+  const discoverStyle = await readFile(resolve(outputRoot, 'pages/discover/index.wxss'), 'utf8');
+  if (!/<view[^>]*class="discover-page__list(?:\s|")/u.test(discoverTemplate) || /<u-list[^>]*class="discover-page__list(?:\s|")/u.test(discoverTemplate) || !/\.discover-page__list(?:\.[a-z0-9-]+)?\{[^}]*gap:14px/u.test(discoverStyle)) {
+    throw new Error('Generated Discover list is missing native-wrapper card spacing.');
+  }
+
   // <lang><zh-CN>官方 custom-tab-bar 四件套必须被编译器原样复制，并保留 fixed 根、双语选择和固定 switchTab。</zh-CN><en>The official custom-tab-bar quartet must be copied verbatim by the compiler and retain a fixed root, bilingual selection, and fixed switchTab.</en></lang>
   const customTabConfiguration = await readOutputJson('custom-tab-bar/index.json');
   const customTabRuntime = await readFile(resolve(outputRoot, 'custom-tab-bar/index.js'), 'utf8');
   const customTabTemplate = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxml'), 'utf8');
   const customTabStyle = await readFile(resolve(outputRoot, 'custom-tab-bar/index.wxss'), 'utf8');
-  if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed')) {
+  const hasStableTabTypography = customTabStyle.includes('align-items: stretch') && customTabStyle.includes('Source Han Sans SC');
+  if (customTabConfiguration.component !== true || !customTabRuntime.includes('wx.switchTab') || !customTabTemplate.includes("locale === 'en'") || !customTabStyle.includes('position: fixed') || !hasStableTabTypography) {
     throw new Error('Generated official custom tabBar does not satisfy persistent bilingual chrome contract.');
   }
 

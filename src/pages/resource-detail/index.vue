@@ -244,7 +244,7 @@ onLoad(readRouteResource);
 .resource-detail-page__identity { display: flex; gap: 12px; flex-direction: column; }
 .resource-detail-page__heading-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .resource-detail-page__heading-copy { display: flex; flex: 1; gap: 7px; flex-direction: column; min-width: 0; }
-.resource-detail-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display); font-size: 25px; font-weight: 700; line-height: 1.25; }
+.resource-detail-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 25px; font-weight: 700; line-height: 1.25; }
 .resource-detail-page__summary { color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.55; }
 .resource-detail-page__metadata { display: flex; gap: 8px 16px; flex-wrap: wrap; }
 .resource-detail-page__meta-item { display: flex; align-items: center; gap: 5px; color: var(--u-sys-color-text-secondary); font-size: 13px; }

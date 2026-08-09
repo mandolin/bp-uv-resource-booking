@@ -4,7 +4,7 @@
 
 | 输入 / Input | 地址 / Location | 提交 / Commit | 许可证 / License | 使用方式 / Use |
 | --- | --- | --- | --- | --- |
-| HIA-uView | `src/vendor/HIA-uView` | `498d5020d542561ca897b0deb64f144d3b99566c` | MIT | 通过明确 `file:` package、静态 Easycom、完整样式入口、默认主题、locale provider bridge、package-owned types、小程序条件编译回退、`UImage.fluid`、`UTag.appearance=outline`、无宿主描边的 `USection` 操作、正确对齐的纵向 `USteps` 连接线和必须配合可见文字的 `UButton.leading` 装饰消费 UI；不深导入 UI runtime 私有状态 / Consumes UI through the explicit `file:` package, static Easycom, complete style entry, default theme, locale provider bridge, package-owned types, Mini Program conditional fallbacks, `UImage.fluid`, `UTag.appearance=outline`, host-chrome-free `USection` actions, correctly aligned vertical `USteps` connectors, and `UButton.leading` decoration that must accompany visible text; it does not deep-import UI runtime private state |
+| HIA-uView | `src/vendor/HIA-uView` | `9959205f5cb411ce16227943759ffb74c7aaae16` | MIT | 通过明确 `file:` package、静态 Easycom、完整样式入口、默认主题、locale provider bridge、package-owned types、小程序条件编译回退、`UImage.fluid`、`UTag.appearance=outline`、无宿主描边的 `USection` 操作、正确对齐的纵向 `USteps` 连接线、必须配合可见文字的 `UButton.leading` 装饰及原生按钮/搜索 control 的宿主字体继承消费 UI；不深导入 UI runtime 私有状态 / Consumes UI through the explicit `file:` package, static Easycom, complete style entry, default theme, locale provider bridge, package-owned types, Mini Program conditional fallbacks, `UImage.fluid`, `UTag.appearance=outline`, host-chrome-free `USection` actions, correctly aligned vertical `USteps` connectors, `UButton.leading` decoration that must accompany visible text, and host-font inheritance for native button/search controls; it does not deep-import UI runtime private state |
 | HIA-uView-Biz | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | MIT | 通过明确 Vite alias 使用 async-provider runtime / async-provider runtime through an explicit Vite alias |
 
 两个 submodule 均保留为 Git link。升级只能经单独审阅：更新 Git link、记录新 commit、重跑本仓测试与 H5/mp-weixin 构建，再审阅许可证/NOTICE 变化。
@@ -18,6 +18,20 @@ The current HIA-uView pin includes the repair that writes component rules to app
 HIA-uView 的更早上游参考项目（uView、uView2.0、uView-Pro、uview-plus）由 HIA-uView 自身的审计与 NOTICE 治理负责。本 BP 不直接复制这些项目的源码。
 
 Earlier HIA-uView upstream references (uView, uView2.0, uView-Pro, and uview-plus) are governed by HIA-uView’s own audit and NOTICE process. This BP does not directly copy their source code.
+
+## 字体选择与交付边界 / Typeface selection and delivery boundary
+
+| 角色 / Role | 首选 / Preferred | 审阅基线 / Reviewed baseline | 许可证 / License | fallback 与发布范围 / Fallback and publication scope |
+| --- | --- | --- | --- | --- |
+| 正文、导航与 control / Body, navigation, and controls | Source Han Sans SC / 思源黑体 | Adobe Source Han Sans 2.005R | SIL Open Font License 1.1 | `Noto Sans SC` / `Noto Sans CJK SC` → generic `sans-serif` |
+| 品牌与少量展示标题 / Brand and limited display headings | Source Han Serif SC / 思源宋体 | Adobe Source Han Serif 2.003R | SIL Open Font License 1.1 | `Noto Serif SC` / `Noto Serif CJK SC` → generic `serif` |
+| 代码与技术文本 / Code and technical text | Source Han Mono SC / 思源等宽 | Adobe Source Han Mono 1.002 | SIL Open Font License 1.1 | `Noto Sans Mono CJK SC` / `Sarasa Mono SC` → generic `monospace` |
+
+上述版本是采用字体家族时的官方审阅基线，不是本仓锁定或再分发的二进制输入。当前仓库不包含字体文件、不发起远端字体请求，也不将字体加入小程序包；实际命中的版本取决于开发或运行宿主已安装的字体。这样避免完整 Pan-CJK 字体给示例主包造成不可接受的体积负担，但不同宿主仍可能使用同源 Noto 或 generic fallback，因而不能把当前截图解释为跨设备逐字形一致。若未来要交付确定字体文件，必须单独确定 webfont/subset 机制、保留名称、OFL 文本、包体与小程序加载证据后再纳入资产清单。
+
+The versions above are official review baselines for adopting the families, not binary inputs pinned or redistributed by this repository. The repository currently contains no font file, starts no remote font request, and adds no font to the Mini Program package; the exact version used depends on fonts installed by the development or runtime host. This avoids imposing the size of complete Pan-CJK fonts on the demo main package, while different hosts may still use sibling Noto or generic fallbacks, so current screenshots are not cross-device glyph-level evidence. Any future deterministic font-file delivery requires a separate decision on webfont/subsetting, reserved names, OFL text, package size, and Mini Program loading evidence before entering the asset inventory.
+
+官方来源 / Official sources: [Source Han Sans](https://github.com/adobe-fonts/source-han-sans), [Source Han Serif](https://github.com/adobe-fonts/source-han-serif), [Source Han Mono](https://github.com/adobe-fonts/source-han-mono).
 
 ## 原创图片资产 / Original image assets
 

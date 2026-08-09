@@ -210,7 +210,7 @@ onLoad(readRouteReservation);
 
 <style scoped>
 /* <lang><zh-CN>详情页以大图、紧凑摘要、状态追溯和固定双操作层级还原审阅稿；不模拟订单号、用户信息或支付收据。</zh-CN><en>Detail follows the reviewed board with a large image, compact summary, status trace, and fixed dual-action hierarchy without simulating order numbers, user information, or payment receipts.</en></lang> */
-.reservation-detail-page { min-height: 100%; padding: 12px 14px 24px; background: var(--u-sys-color-surface); }
+.reservation-detail-page { box-sizing: border-box; min-height: 100%; padding: 12px 16px 24px; background: var(--u-sys-color-surface); }
 .reservation-detail-page__content { display: flex; gap: 14px; flex-direction: column; }
 .reservation-detail-page__image-frame { width: 100%; height: 190px; }
 .reservation-detail-page__image { display: block; width: 100%; height: 100%; }

@@ -6,10 +6,14 @@
 @import '@hia-uview/ui/style.css';
 @import './vendor/HIA-uView/HIA-uView-UI/src/theme/hia-light.css';
 
-/* <lang><zh-CN>BP 容器 token 不重定义品牌或状态色，保持可迁移页面对 HIA-uView 主题的继承。</zh-CN><en>BP container tokens do not redefine brand or state colors, preserving page portability through inheritance from the HIA-uView theme.</en></lang> */
-:root {
-  --bp-font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
-  --bp-font-display: "Songti SC", STSong, SimSun, "Times New Roman", serif;
+/* <lang><zh-CN>BP 容器 token 同时投影到 H5 根与小程序 page；它不重定义品牌或状态色，并保持可迁移页面对 HIA-uView 主题的继承。</zh-CN><en>BP container tokens project to both the H5 root and Mini Program page; they redefine no brand or state color and preserve page portability through inheritance from the HIA-uView theme.</en></lang> */
+:root,
+page {
+  --bp-font-sans: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+  --bp-font-serif: "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif;
+  --bp-font-mono: "Source Han Mono SC", "Noto Sans Mono CJK SC", "Sarasa Mono SC", monospace;
+  --bp-font-body: var(--bp-font-sans);
+  --bp-font-display: var(--bp-font-serif);
   --bp-page-inline: 16px;
   --bp-page-block: 16px;
   --bp-card-radius: 14px;
@@ -19,10 +23,15 @@
   --bp-shell-tabbar-z: 30;
 }
 
-/* <lang><zh-CN>页面、原生表单 control 与按钮显式共享系统无衬线字体栈，避免宿主默认字体造成中英文页面字形和行高漂移；不下载或捆绑字体。</zh-CN><en>Pages, native form controls, and buttons explicitly share a system sans-serif stack, preventing host defaults from drifting glyphs and line height between Chinese and English; no font is downloaded or bundled.</en></lang> */
+/* <lang><zh-CN>页面、原生表单 control 与按钮显式共享思源黑体优先栈；同源 Noto CJK 名称作为可用性 fallback，避免宿主默认字体造成中英文页面字形和行高漂移。</zh-CN><en>Pages, native form controls, and buttons explicitly share a Source Han Sans-first stack; sibling Noto CJK names provide availability fallbacks and prevent host defaults from drifting glyphs and line height between Chinese and English.</en></lang> */
 page,
 button,
 input,
 textarea {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+}
+
+/* <lang><zh-CN>代码或技术文本可显式使用此有限 utility；普通编号与业务数据不因外观需要被误标为代码。</zh-CN><en>Code or technical text may explicitly use this bounded utility; ordinary identifiers and business data are not mislabeled as code for appearance alone.</en></lang> */
+.bp-code-text {
+  font-family: "Source Han Mono SC", "Noto Sans Mono CJK SC", "Sarasa Mono SC", monospace;
 }

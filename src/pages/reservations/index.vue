@@ -221,7 +221,7 @@ onShow(() => syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (m
 
 <style scoped>
 /* <lang><zh-CN>预约页按获批设计板使用居中来源标记、紧凑筛选和图像主导卡片；底部 padding 为常驻 tabBar 保留安全空间。</zh-CN><en>Reservations follows the approved board with a centered source badge, compact filter, and image-led cards; bottom padding reserves safe space for the persistent tab bar.</en></lang> */
-.reservations-page { min-height: 100%; padding: 18px 14px calc(var(--bp-shell-tabbar-height) + 26px); background: var(--u-sys-color-surface); }
+.reservations-page { box-sizing: border-box; min-height: 100%; padding: 18px 16px calc(var(--bp-shell-tabbar-height, 64px) + 26px); background: var(--u-sys-color-surface); }
 .reservations-page__source { display: flex; justify-content: center; margin: 0 0 18px; }
 .reservations-page__hint { display: block; padding: 14px 2px 8px; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.45; text-align: center; }
 .reservations-page__list { display: flex; gap: 16px; flex-direction: column; margin-top: 4px; }
@@ -239,4 +239,8 @@ onShow(() => syncPrimaryTabChrome('reservations', runtimeLocale.locale.value, (m
   .reservation-card__layout { grid-template-columns: 108px minmax(0, 1fr); }
   .reservation-card__image { width: 108px; }
 }
+/* <lang><zh-CN>微信端使用与其他主页面相同的 16px 字面 gutter，并为常驻底栏保留确定空间。</zh-CN><en>WeChat uses the same literal 16px gutter as the other primary pages and reserves deterministic space for the persistent tab bar.</en></lang> */
+/* #ifdef MP-WEIXIN */
+.reservations-page { padding: 18px 16px 90px; background: #ffffff; }
+/* #endif */
 </style>

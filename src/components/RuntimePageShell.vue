@@ -69,10 +69,10 @@ function handleBack() {
 </script>
 
 <style scoped>
-/* <lang><zh-CN>根壳填满视口并继承 HIA-uView 浅色表面；所有层级值由 BP 自有布局 token 提供。</zh-CN><en>The root shell fills the viewport and inherits the HIA-uView light surface; all layering values come from BP-owned layout tokens.</en></lang> */
-.runtime-page-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--u-sys-color-surface-subtle); }
+/* <lang><zh-CN>根壳填满视口、建立思源黑体优先的正文继承根并继承 HIA-uView 浅色表面；所有层级值由 BP 自有布局 token 提供。</zh-CN><en>The root shell fills the viewport, establishes a Source Han Sans-first body inheritance root, and inherits the HIA-uView light surface; all layering values come from BP-owned layout tokens.</en></lang> */
+.runtime-page-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--u-sys-color-surface-subtle); font-family: var(--bp-font-body, "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif); }
 /* <lang><zh-CN>header 在页面滚动时保持可见，并以主题表面遮住其下内容。</zh-CN><en>The header remains visible during page scrolling and uses the themed surface to cover content beneath it.</en></lang> */
-.runtime-page-shell__header { position: sticky; z-index: var(--bp-shell-header-z); top: 0; background: var(--u-sys-color-surface); }
+.runtime-page-shell__header { position: sticky; z-index: var(--bp-shell-header-z, 20); top: 0; background: var(--u-sys-color-surface); }
 /* <lang><zh-CN>UniApp 的状态栏变量在 H5 为零、在支持宿主为实际高度；不读取设备标识或同步系统 API。</zh-CN><en>UniApp's status-bar variable is zero on H5 and the actual height on supporting hosts; no device identifier or synchronous system API is read.</en></lang> */
 .runtime-page-shell__status-bar { height: var(--status-bar-height); min-height: var(--status-bar-height); background: var(--u-sys-color-surface); }
 /* <lang><zh-CN>返回 control 清除宿主 button 外观并保留 40px 触控面；内部双边框形成与视觉板一致的轻量 chevron，不依赖字符字形或外部图标。</zh-CN><en>The back control removes host button chrome while retaining a 40px touch target; two inner borders form the board-aligned lightweight chevron without relying on a text glyph or external icon.</en></lang> */

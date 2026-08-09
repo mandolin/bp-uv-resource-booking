@@ -15,6 +15,9 @@
 - 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 呈现；“个人信息”可选择跟随系统、简体中文或 English。标题继续使用 HIA-uView `u-navbar`，微信主导航通过 official custom tabBar 与 `switchTab` 保持跨页面常驻，并以受控 adapter 对齐 HIA-uView `u-tabbar` 的浅色视觉契约。
 - Page body copy, titles, and all four tabs render from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. Titles continue to use HIA-uView `u-navbar`; WeChat primary navigation remains persistent across pages through the official custom tab bar and `switchTab`, with a controlled adapter aligned to HIA-uView `u-tabbar`'s light visual contract.
 
+- 字体角色统一为思源黑体承载正文与控件、思源宋体承载少量展示标题、思源等宽仅供代码或技术文本；当前不捆绑字体文件，宿主缺少 Adobe 名称时使用同源 Noto CJK 名称，再降级到 generic family。
+- Typography uses Source Han Sans for body and controls, Source Han Serif for limited display headings, and Source Han Mono only for code or technical text. No font file is currently bundled; when Adobe family names are unavailable, the host uses sibling Noto CJK names before generic-family fallback.
+
 - 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。已确认预约可从详情进入受控改期：先验证并创建新预约，成功后才保留旧记录为“已取消”；它不能换资源，也不接入真实库存、支付或后端。
 - Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion. A confirmed booking can enter controlled reschedule from details: it validates and creates a replacement first, then retains the old record as cancelled only after success; it cannot change resource and connects to no live inventory, payment, or backend.
 
@@ -30,7 +33,7 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `498d5020d542561ca897b0deb64f144d3b99566c` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线与按钮前置装饰 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, and button leading decorations |
+| `src/vendor/HIA-uView` | `9959205f5cb411ce16227943759ffb74c7aaae16` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线、按钮前置装饰以及原生按钮/搜索 control 的宿主字体继承 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, button leading decorations, and host-font inheritance for native button/search controls |
 | `src/vendor/HIA-uView-Biz` | `8ba7fa56c1bcfe29655c37a2ea387237289a570c` | Catalog/detail read and reservation write async-provider runtime / 目录/详情读取与预约写入 async-provider runtime |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。

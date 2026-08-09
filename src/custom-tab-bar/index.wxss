@@ -4,7 +4,7 @@
  * @lang en Literal-style adapter for the persistent WeChat custom tab bar: visual values align with the current HIA-uView `u-tabbar` default-light contract, but it copies no component runtime and acquires no routing ownership.
  */
 
-/* <lang><zh-CN>平台 custom-tab-bar 根始终固定在安全区上方并占满底边；它在 tab 页面切换时不随页面 slot 卸载。</zh-CN><en>The platform custom-tab-bar root remains fixed above the safe area and spans the bottom edge; it does not unmount with page slots during tab switches.</en></lang> */
+/* <lang><zh-CN>平台 custom-tab-bar 根始终固定在安全区上方并占满底边，同时显式采用与页面相同的思源黑体优先栈；它在 tab 页面切换时不随页面 slot 卸载。</zh-CN><en>The platform custom-tab-bar root remains fixed above the safe area, spans the bottom edge, and explicitly adopts the same Source Han Sans-first stack as pages; it does not unmount with page slots during tab switches.</en></lang> */
 .bp-custom-tabbar {
   position: fixed;
   z-index: 30;
@@ -12,12 +12,13 @@
   bottom: 0;
   left: 0;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   box-sizing: border-box;
   min-height: calc(62px + env(safe-area-inset-bottom));
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
   border-top: 1px solid #e8edf3;
   background: #ffffff;
+  font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
 }
 
 /* <lang><zh-CN>每项均分宽度并以 24px 线性图标、12px 文字和 50px 触控高度构成稳定纵向导航，不依赖固定字符宽度。</zh-CN><en>Each item receives equal width and forms stable vertical navigation from a 24px line icon, 12px text, and a 50px touch height without relying on fixed character widths.</en></lang> */
@@ -39,7 +40,7 @@
   color: #27364a;
   font-family: inherit;
   font-size: 12px;
-  line-height: normal;
+  line-height: 1;
 }
 
 /* <lang><zh-CN>移除微信 button 的默认伪元素边框，避免与 HIA-uView 风格产生双边框。</zh-CN><en>Remove WeChat button's default pseudo-element border, avoiding a double border against the HIA-uView visual contract.</en></lang> */
@@ -68,6 +69,7 @@
   display: block;
   max-width: 100%;
   overflow: hidden;
+  font-family: inherit;
   font-size: 12px;
   line-height: 16px;
   text-overflow: ellipsis;

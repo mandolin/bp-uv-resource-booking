@@ -40,14 +40,19 @@
         :action-text="runtimeLocale.t('common.clearSearch')"
         @action="handleClear"
       />
-      <u-list v-else class="discover-page__list">
-        <!-- <lang><zh-CN>卡片只得到已映射 entry，并仅将查看意图返回给页面。</zh-CN><en>Cards receive only mapped entries and return only a view intent to the page.</en></lang> -->
-        <resource-card v-for="entry in demo.catalogEntries.value" :key="entry.id" :entry="entry" layout="catalog" @view="openDetail" />
-        <view class="discover-page__footer">
-          <!-- <lang><zh-CN>追加失败仍保留已有列表和页次；notice 明确说明当前可见结果未被清空，重试只重新请求下一页。</zh-CN><en>An append failure retains existing list and page facts; notice explicitly says visible results remain and retry requests only the next page.</en></lang> -->
-          <u-notice v-if="appendFailureMessage" visible tone="warning" :message="appendFailureMessage" />
-          <text>{{ pageFacts }}</text>
-          <u-loadmore :status="footerStatus" :more-text="runtimeLocale.t('load.more')" :loading-text="runtimeLocale.t('load.loading')" :nomore-text="runtimeLocale.t('load.nomore')" :error-text="runtimeLocale.t('load.error')" @loadmore="handleLoadMore" />
+      <u-list v-else>
+        <!-- <lang><zh-CN>原生 view 在 UList slot 内拥有卡片间距；这避免页面 scoped 样式落在隔离的自定义组件 host 上而失效。</zh-CN><en>A native view owns card spacing inside the UList slot, preventing page-scoped styling from landing on an isolated custom-component host and becoming ineffective.</en></lang> -->
+        <view class="discover-page__list">
+          <!-- <lang><zh-CN>每张卡片由页面 view 建立独立列表项边界，并只将查看意图返回给页面。</zh-CN><en>Each card receives a distinct list-item boundary from a page-owned view and returns only a view intent to the page.</en></lang> -->
+          <view v-for="entry in demo.catalogEntries.value" :key="entry.id" class="discover-page__list-item">
+            <resource-card :entry="entry" layout="catalog" @view="openDetail" />
+          </view>
+          <view class="discover-page__footer">
+            <!-- <lang><zh-CN>追加失败仍保留已有列表和页次；notice 明确说明当前可见结果未被清空，重试只重新请求下一页。</zh-CN><en>An append failure retains existing list and page facts; notice explicitly says visible results remain and retry requests only the next page.</en></lang> -->
+            <u-notice v-if="appendFailureMessage" visible tone="warning" :message="appendFailureMessage" />
+            <text>{{ pageFacts }}</text>
+            <u-loadmore :status="footerStatus" :more-text="runtimeLocale.t('load.more')" :loading-text="runtimeLocale.t('load.loading')" :nomore-text="runtimeLocale.t('load.nomore')" :error-text="runtimeLocale.t('load.error')" @loadmore="handleLoadMore" />
+          </view>
         </view>
       </u-list>
       </view>
@@ -354,10 +359,15 @@ onReachBottom(handleLoadMore);
 
 <style scoped>
 /* <lang><zh-CN>发现页从 navbar 后直接进入搜索、筛选与封面目录，并为固定 tabBar 预留完整底部空间。</zh-CN><en>Discover moves directly from the navbar into search, filters, and the cover catalog while reserving full bottom space for the fixed tab bar.</en></lang> */
-.discover-page { min-height: 100%; padding: 16px 16px calc(var(--bp-shell-tabbar-height) + 42px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); }
+.discover-page { box-sizing: border-box; min-height: 100%; padding: 16px 16px calc(var(--bp-shell-tabbar-height, 64px) + 42px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); }
 .discover-page__filters { display: flex; gap: 8px; flex-direction: column; margin-top: 14px; }
 .discover-page__filter-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .discover-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
 .discover-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 16px; }
+.discover-page__list-item { min-width: 0; }
 .discover-page__footer { display: flex; gap: 8px; flex-direction: column; align-items: center; padding: 8px 0 20px; color: var(--u-sys-color-text-secondary); font-size: 12px; }
+/* <lang><zh-CN>微信端采用字面内容 gutter 和底栏预留，避免 app-level CSS 变量在自定义组件隔离下令整条 padding 声明失效。</zh-CN><en>WeChat uses a literal content gutter and tab-bar reservation so app-level CSS variables cannot invalidate the entire padding declaration under custom-component isolation.</en></lang> */
+/* #ifdef MP-WEIXIN */
+.discover-page { padding: 16px 16px calc(106px + env(safe-area-inset-bottom)); background: #f7f9fc; }
+/* #endif */
 </style>
