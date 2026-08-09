@@ -11,8 +11,9 @@
       <!-- <lang><zh-CN>根节点按 detail 的有限 phase 选择静态 loading、可恢复 failure 或已加载详情。</zh-CN><en>The root selects static loading, recoverable failure, or loaded detail from the detail's finite phase.</en></lang> -->
       <u-loading-page v-if="demo.detailPhase.value === 'loading'" :message="runtimeLocale.t('detail.loading')" />
       <view v-else-if="demo.detailPhase.value === 'failure'" class="resource-detail-page__state">
-        <u-notice visible tone="error" :message="runtimeLocale.localize(demo.detailFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
-        <u-button :label="runtimeLocale.t('common.goDiscover')" block @click="backToDiscover" />
+        <source-badge :source="demo.catalogSource.value" />
+        <u-empty :title="runtimeLocale.t('detail.failureTitle')" :description="runtimeLocale.localize(demo.detailFailure.value?.message) || runtimeLocale.t('common.notAvailable')" :action-text="runtimeLocale.t('common.retry')" @action="retryDetail" />
+        <u-button :label="runtimeLocale.t('common.goDiscover')" variant="secondary" block @click="backToDiscover" />
       </view>
       <view v-else-if="demo.detailPhase.value === 'ready' && detail.kind === 'detail'" class="resource-detail-page__content">
         <u-image class="resource-detail-page__image" :src="venueImage || ''" :alt="venueName" size="large" shape="rounded" />
@@ -65,6 +66,9 @@ const detail = computed(() => demo.selectedDetail.value ?? {});
 const selectedDate = ref('');
 const selectedTime = ref('');
 
+// <lang><zh-CN>路由资源 ID 只保存为受控重试输入；详情展示仍只信任 state/provider 的 terminal outcome。</zh-CN><en>The route resource ID is retained only as controlled retry input; detail presentation still trusts only the state/provider terminal outcome.</en></lang>
+const routeResourceId = ref('');
+
 // <lang><zh-CN>详情页保留最近一次草稿校验失败，以便用户在原地调整选择而不是误以为已经预约。</zh-CN><en>The detail page retains the most recent draft-validation failure so a user can adjust selection in place rather than believe a booking already exists.</en></lang>
 const selectionFailure = ref(null);
 
@@ -111,7 +115,19 @@ const venueImage = computed(() => detail.value.venue ? getVenueImage(detail.valu
  */
 async function readRouteResource(query) {
   // <lang><zh-CN>只传递有限 resourceId 字段，不接受 endpoint、source、token 或动态配置。</zh-CN><en>Pass only the finite resourceId field and accept no endpoint, source, token, or dynamic configuration.</en></lang>
-  await demo.loadResourceDetail(query?.resourceId);
+  routeResourceId.value = typeof query?.resourceId === 'string' ? query.resourceId : '';
+  await demo.loadResourceDetail(routeResourceId.value);
+}
+
+/**
+ * <lang><zh-CN>重试当前路由声明的资源详情读取。</zh-CN><en>Retries resource-detail read declared by the current route.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>本次受限读取稳定后 resolve。</zh-CN><en>Resolves after this bounded read stabilizes.</en></lang>
+ * @lang zh-CN 重试只复用原始有限资源 ID，不切换 source、不保留失效 detail，也不把错误误作成功。
+ * @lang en Retry reuses only original finite resource ID, switches no source, retains no stale detail, and never treats error as success.
+ */
+async function retryDetail() {
+  // <lang><zh-CN>state 仍负责取消、晚到结果与失败映射；页面不直接调用 provider。</zh-CN><en>State still owns cancellation, late results, and failure mapping; page calls no provider directly.</en></lang>
+  await demo.loadResourceDetail(routeResourceId.value);
 }
 
 /**

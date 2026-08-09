@@ -36,10 +36,7 @@
 
       <!-- <lang><zh-CN>加载、错误、空目录与可追加列表互斥，避免状态被纯 CSS 或隐藏分支掩盖。</zh-CN><en>Loading, error, empty catalog, and appendable list are mutually exclusive, preventing state from being hidden by CSS or a concealed branch.</en></lang> -->
       <u-loading-page v-if="demo.catalogPhase.value === 'loading'" :message="runtimeLocale.t('discover.loading')" />
-      <view v-else-if="demo.catalogPhase.value === 'failure'" class="discover-page__state">
-        <u-notice visible tone="error" :message="runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
-        <u-button :label="runtimeLocale.t('common.reload')" block @click="handleSearch" />
-      </view>
+      <u-empty v-else-if="demo.catalogPhase.value === 'failure'" :title="runtimeLocale.t('discover.failureTitle')" :description="runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable')" :action-text="runtimeLocale.t('common.reload')" @action="handleSearch" />
       <u-empty
         v-else-if="demo.catalogPhase.value === 'ready' && demo.catalogEntries.value.length === 0"
         :title="runtimeLocale.t('discover.emptyTitle')"
@@ -51,6 +48,8 @@
         <!-- <lang><zh-CN>卡片只得到已映射 entry，并仅将查看意图返回给页面。</zh-CN><en>Cards receive only mapped entries and return only a view intent to the page.</en></lang> -->
         <resource-card v-for="entry in demo.catalogEntries.value" :key="entry.id" :entry="entry" @view="openDetail" />
         <view class="discover-page__footer">
+          <!-- <lang><zh-CN>追加失败仍保留已有列表和页次；notice 明确说明当前可见结果未被清空，重试只重新请求下一页。</zh-CN><en>An append failure retains existing list and page facts; notice explicitly says visible results remain and retry requests only the next page.</en></lang> -->
+          <u-notice v-if="appendFailureMessage" visible tone="warning" :message="appendFailureMessage" />
           <text>{{ pageFacts }}</text>
           <u-loadmore :status="footerStatus" :more-text="runtimeLocale.t('load.more')" :loading-text="runtimeLocale.t('load.loading')" :nomore-text="runtimeLocale.t('load.nomore')" :error-text="runtimeLocale.t('load.error')" @loadmore="handleLoadMore" />
         </view>
@@ -195,6 +194,11 @@ const pageFacts = computed(() => runtimeLocale.t('common.pageFacts', {
   total: demo.catalogPaging.value.total,
   page: demo.catalogPaging.value.page
 }));
+
+// <lang><zh-CN>只有已有结果上的追加失败才显示这条恢复提示；首屏失败使用完整 `u-empty`，避免两个错误层级同时出现。</zh-CN><en>Show this recovery hint only for an append failure with existing results; an initial failure uses complete `u-empty`, avoiding two error hierarchies at once.</en></lang>
+const appendFailureMessage = computed(() => demo.catalogFailure.value && demo.catalogEntries.value.length > 0
+  ? `${runtimeLocale.localize(demo.catalogFailure.value.message) || runtimeLocale.t('common.notAvailable')} ${runtimeLocale.t('discover.appendFailure')}`
+  : '');
 
 /**
  * <lang><zh-CN>确保首次进入发现页时有一个 catalog 首页。</zh-CN><en>Ensures a catalog first page exists when Discover is first entered.</en></lang>

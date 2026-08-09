@@ -9,7 +9,25 @@
     <runtime-page-shell :title="runtimeLocale.t('title.confirm')" back>
       <view class="booking-confirm-page">
       <!-- <lang><zh-CN>页面只在已有 detail 和同资源已验证草稿时开放确认；无任一条件时明确恢复，阻止隐藏状态或 URL 直接创建预约。</zh-CN><en>The page opens confirmation only with existing detail and same-resource validated draft; without either, explicit recovery prevents hidden state or URL from creating a booking directly.</en></lang> -->
-      <view v-if="hasBookingDraft" class="booking-confirm-page__content">
+      <!-- <lang><zh-CN>确认成功后切换到独立结果投影，防止仍显示可再次提交的确认按钮。</zh-CN><en>After confirmation succeeds, switch to a separate result projection so a button allowing another submission is not still shown.</en></lang> -->
+      <view v-if="confirmedReservation" class="booking-confirm-page__content">
+        <source-badge :source="detail.source" />
+        <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('reservation.eyebrow') }}</text>
+        <text class="booking-confirm-page__title">{{ runtimeLocale.t('booking.confirmedTitle') }}</text>
+        <u-tag :text="runtimeLocale.t('reservation.confirmed')" tone="primary" />
+        <u-card :title="runtimeLocale.t('booking.selectionTitle')">
+          <u-cell :label="runtimeLocale.t('booking.venueLabel')" :value="confirmedReservation.venueName" />
+          <u-cell :label="runtimeLocale.t('booking.resourceLabel')" :value="confirmedReservation.resourceName" />
+          <u-cell :label="runtimeLocale.t('booking.dateLabel')" :value="runtimeLocale.formatDate(confirmedReservation.date)" />
+          <u-cell :label="runtimeLocale.t('booking.timeLabel')" :value="confirmedReservation.time" />
+        </u-card>
+        <u-notice visible tone="success" :message="runtimeLocale.t('booking.confirmedDescription')" />
+        <view class="booking-confirm-page__actions">
+          <u-button :label="runtimeLocale.t('booking.viewReservation')" block @click="openConfirmedReservationDetail" />
+          <u-button :label="runtimeLocale.t('booking.returnHome')" variant="secondary" block @click="returnHome" />
+        </view>
+      </view>
+      <view v-else-if="hasBookingDraft" class="booking-confirm-page__content">
         <source-badge :source="detail.source" />
         <text class="booking-confirm-page__eyebrow">{{ runtimeLocale.t('booking.eyebrow') }}</text>
         <text class="booking-confirm-page__title">{{ resourceName }}</text>
@@ -25,6 +43,7 @@
         <u-notice visible tone="info" :message="runtimeLocale.t('booking.localNotice')" />
         <!-- <lang><zh-CN>此按钮只调用已锁定 Biz write adapter 的 state action；页面不直接改写预约、调用 domain 或模拟后端。</zh-CN><en>This button calls only the state action backed by locked Biz write adapter; page directly mutates no reservation, calls no domain, and simulates no backend.</en></lang> -->
         <u-button :label="runtimeLocale.t('booking.confirmLocal')" block :loading="demo.bookingPhase.value === 'submitting'" @click="confirmBooking" />
+        <u-button v-if="resultTone === 'error'" :label="runtimeLocale.t('booking.reviewAvailability')" variant="secondary" block @click="reviewAvailability" />
       </view>
       <u-empty v-else :title="runtimeLocale.t('booking.emptyTitle')" :description="runtimeLocale.t('booking.emptyDescription')" :action-text="runtimeLocale.t('common.goDiscover')" @action="backToDiscover" />
       </view>
@@ -72,6 +91,25 @@ const resultMessage = ref('');
 // <lang><zh-CN>结果视觉 tone 只在受限 success/error 两项中选择。</zh-CN><en>Result visual tone selects only between bounded success/error values.</en></lang>
 const resultTone = ref('info');
 
+// <lang><zh-CN>成功页只按本次 create outcome 的稳定 ID 查找 adopted snapshot，不显示旧成功、任意 query 或内部 command。</zh-CN><en>The success page finds adopted snapshot only by stable ID from this create outcome and displays no stale success, arbitrary query, or internal command.</en></lang>
+const confirmedReservationId = ref('');
+
+// <lang><zh-CN>结果页将当前 readonly reservation card 投影为单语言显示对象；snapshot 缺失时回到常规确认恢复态。</zh-CN><en>The result page projects the current readonly reservation card into a single-language display object; on absent snapshot it returns to ordinary confirmation recovery.</en></lang>
+const confirmedReservation = computed(() => {
+  // <lang><zh-CN>只在共享卡片集合中精确查找本次成功 ID，避免从 write outcome 直接泄漏原始记录。</zh-CN><en>Look up this success ID exactly only in shared card collection, avoiding direct exposure of raw record from write outcome.</en></lang>
+  const reservation = demo.reservationCards.value.find((candidate) => candidate.id === confirmedReservationId.value);
+
+  // <lang><zh-CN>缺失记录不产生半完成的成功页。</zh-CN><en>An absent record produces no half-complete success page.</en></lang>
+  if (!reservation) return null;
+
+  // <lang><zh-CN>只投影页面需要的字段对象，模板不选择固定语言键。</zh-CN><en>Project only fields the page needs, and do not let template select a fixed language key.</en></lang>
+  return Object.freeze({
+    ...reservation,
+    venueName: runtimeLocale.localize(reservation.venueName),
+    resourceName: runtimeLocale.localize(reservation.resourceName)
+  });
+});
+
 /**
  * <lang><zh-CN>执行本地 mock 预约确认。</zh-CN><en>Executes local mock booking confirmation.</en></lang>
  * @returns {Promise<void>} <lang><zh-CN>Biz write terminal outcome 已投影到当前页面后 resolve。</zh-CN><en>Resolves after Biz write terminal outcome is projected onto current page.</en></lang>
@@ -90,11 +128,52 @@ async function confirmBooking() {
   }
 
   // <lang><zh-CN>成功不跳转或隐藏结果，让用户可清楚确认 local mock 的性质。</zh-CN><en>Success neither navigates nor hides result, letting users clearly confirm the local-mock nature.</en></lang>
+  confirmedReservationId.value = outcome.reservation.id;
   resultTone.value = 'success';
   resultMessage.value = runtimeLocale.t('booking.created', {
     date: runtimeLocale.formatDate(outcome.reservation.date),
     time: outcome.reservation.time
   });
+}
+
+/**
+ * <lang><zh-CN>打开刚确认的本地示例预约详情。</zh-CN><en>Opens details of the just-confirmed local demo booking.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 路由只携带当前成功结果的有限 ID；详情页仍通过 shared readonly state 重新查找记录。
+ * @lang en Route carries only finite ID of current success result; detail still relooks up record through shared readonly state.
+ */
+function openConfirmedReservationDetail() {
+  // <lang><zh-CN>没有安全结果视图时保持零导航副作用。</zh-CN><en>When no safe result view exists, retain zero navigation side effect.</en></lang>
+  if (!confirmedReservation.value) return;
+
+  // <lang><zh-CN>只打开应用已声明的本地预约详情页面。</zh-CN><en>Open only the application-declared local reservation-detail page.</en></lang>
+  uni.redirectTo({ url: `/pages/reservation-detail/index?reservationId=${encodeURIComponent(confirmedReservation.value.id)}` });
+}
+
+/**
+ * <lang><zh-CN>回到当前确认草稿所属资源的可用时段。</zh-CN><en>Returns to available slots of resource belonging to current confirmation draft.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 此恢复只在失败结果下提供；它不伪称失败已提交，也不清空当前草稿。
+ * @lang en This recovery is offered only after a failure; it does not pretend failure submitted or clear current draft.
+ */
+function reviewAvailability() {
+  // <lang><zh-CN>只使用 provider-read detail 的有限 resource ID，不从错误或路由解析目标。</zh-CN><en>Use only finite resource ID from provider-read detail and parse no destination from error or route.</en></lang>
+  const resourceId = detail.value.kind === 'detail' ? detail.value.resource.id : '';
+  if (!resourceId) return;
+
+  // <lang><zh-CN>替换为本地详情页，以明确重新选择而不是重放失败 write。</zh-CN><en>Replace with local detail page to explicitly reselect rather than replay failed write.</en></lang>
+  uni.redirectTo({ url: `/pages/resource-detail/index?resourceId=${encodeURIComponent(resourceId)}` });
+}
+
+/**
+ * <lang><zh-CN>从确认结果返回首页主页面。</zh-CN><en>Returns from confirmation result to Home primary page.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 首页导航不重置已经确认的本地记录，不触发新的目录读取或业务写入。
+ * @lang en Home navigation resets no confirmed local record and starts neither a new catalog read nor business write.
+ */
+function returnHome() {
+  // <lang><zh-CN>只进入应用壳固定允许的首页主页面。</zh-CN><en>Enter only Home primary page fixed by application shell.</en></lang>
+  openPrimaryPage('home');
 }
 
 /**
@@ -116,4 +195,5 @@ function backToDiscover() {
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
 .booking-confirm-page__title { color: var(--u-sys-color-text); font-size: 27px; font-weight: 700; }
 .booking-confirm-page__venue { color: var(--u-sys-color-text-secondary); font-size: 14px; }
+.booking-confirm-page__actions { display: flex; gap: 10px; flex-direction: column; }
 </style>

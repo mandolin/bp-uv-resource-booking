@@ -30,6 +30,16 @@ The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; 
 
 Catalog filtering accepts only venue IDs, resource-type IDs, and available dates declared by current local JSON; they are computed together with keyword matching before paging. Pages pass no arbitrary field, expression, URL parameter, or live schedule, and an empty filter means only “unrestricted.”
 
+## 可恢复结果 / Recoverable outcomes
+
+目录的首屏读取失败显示完整的重试状态；追加失败保留已经显示的结果、分页事实和“重试下一页”入口。资源详情失败只重试同一个受限资源 ID，不切换 source 或把失败解释为已降级成功。
+
+An initial catalog-read failure displays a complete retry state; an append failure retains already displayed results, pagination facts, and a “retry next page” entry. A resource-detail failure retries only the same bounded resource ID, switches no source, and never interprets failure as a successful degradation.
+
+确认创建成功后，页面呈现独立的本地示例结果，并只允许进入该预约详情或返回首页；创建失败保留原草稿并提供“重新查看时段”。写入 authority 始终是 `local`，失败不会自动换成另一 source 或假装预约已经提交。
+
+After a confirmed creation, the page presents a separate local-demo result and permits only entry to that booking’s details or return to Home; a creation failure retains the original draft and offers “review available times.” Write authority is always `local`: a failure neither automatically switches to another source nor pretends that a booking was submitted.
+
 ## 预约边界 / Booking boundary
 
 确认预约、取消与改期都经 `local-reservation-write-provider` 的 Biz async-provider write lifecycle 到达进程内 mock transaction，刷新即回到 `venues.json` 中的初始预约。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；改期采用“取消旧预约 + 创建新预约”，若新时段冲突则旧预约保持确认状态。没有远端撤销、退款、库存释放、支付或会员规则。

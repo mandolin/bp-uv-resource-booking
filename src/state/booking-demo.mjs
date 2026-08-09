@@ -58,8 +58,8 @@ let activeDetailHandle = null;
 
 /**
  * <lang><zh-CN>当前预约 write 的可取消 handle。</zh-CN><en>Cancellable handle of the current reservation write.</en></lang>
- * @lang zh-CN 单一 handle 防止同一 runtime 内并发 create/cancel/reschedule 绕过 provider 的有界 receipt 语义；页面当前不提供取消按钮。
- * @lang en A single handle prevents concurrent create/cancel/reschedule in one runtime from bypassing provider's bounded receipt semantics; pages currently provide no cancel button.
+ * @lang zh-CN 单一 handle 防止同一 runtime 内并发 create/cancel/reschedule 绕过 provider 的有界 receipt 语义；页面可在显式确认后发起取消或改期。
+ * @lang en A single handle prevents concurrent create/cancel/reschedule in one runtime from bypassing provider's bounded receipt semantics; pages can start cancellation or reschedule after explicit confirmation.
  */
 let activeReservationWriteHandle = null;
 
@@ -593,8 +593,8 @@ export async function cancelLocalReservation(reservationId) {
  * @param {string} date <lang><zh-CN>新的有限 ISO 日期。</zh-CN><en>New finite ISO date.</en></lang>
  * @param {string} time <lang><zh-CN>新的已声明时段。</zh-CN><en>New declared slot.</en></lang>
  * @returns {Promise<object>} <lang><zh-CN>rescheduled 或 bounded failure outcome。</zh-CN><en>Rescheduled or bounded failure outcome.</en></lang>
- * @lang zh-CN 当前页面尚未开放改期入口；此 action 为后续受审阅 UI 提供同一 Biz write seam，不能被页面 CSS 或直接 mutation 替代。
- * @lang en Current pages do not yet open a reschedule entry; this action provides the same Biz write seam for later reviewed UI and cannot be replaced by page CSS or direct mutation.
+ * @lang zh-CN 预约详情页已在显式入口后调用此 action；它仍不能被页面 CSS 或直接 mutation 替代。
+ * @lang en Reservation Detail now calls this action after an explicit entry; it still cannot be replaced by page CSS or direct mutation.
  */
 export async function rescheduleLocalReservation(reservationId, date, time) {
   // <lang><zh-CN>构造唯一有限 reschedule command，资源从旧记录由 adapter 决定而非页面输入。</zh-CN><en>Construct the sole finite reschedule command; adapter determines resource from old record rather than page input.</en></lang>
