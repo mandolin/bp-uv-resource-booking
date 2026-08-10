@@ -30,6 +30,82 @@ export function resolveRuntimeUniApi() {
 }
 
 /**
+ * <lang><zh-CN>读取当前编译目标的系统信息，优先保留显式兼容对象并为 H5 保留 direct UniApp API。</zh-CN><en>Reads system information from the current compilation target, preserving an explicit compatibility object first and a direct UniApp API for H5.</en></lang>
+ * @returns {unknown} <lang><zh-CN>平台系统信息；后续 facade 只读取 language。</zh-CN><en>Platform system information; the later facade reads only language.</en></lang>
+ * @lang zh-CN H5 的 `globalThis.uni` 可能是空占位对象；直接调用使 UniApp 编译器收录真实 API。
+ * @lang en H5's `globalThis.uni` may be an empty placeholder; the direct call makes the UniApp compiler include the real API.
+ */
+function getRuntimeSystemInfo() {
+  // <lang><zh-CN>测试或兼容宿主显式提供真实方法时保持其优先级。</zh-CN><en>Retain priority for a real method explicitly supplied by a test or compatible host.</en></lang>
+  const compatibilityApi = resolveRuntimeUniApi();
+  if (typeof compatibilityApi?.getSystemInfoSync === 'function') return compatibilityApi.getSystemInfoSync();
+
+  // <lang><zh-CN>此直接属性调用是 UniApp 编译注入边界。</zh-CN><en>This direct property call is the UniApp compilation-injection boundary.</en></lang>
+  return uni.getSystemInfoSync();
+}
+
+/**
+ * <lang><zh-CN>从当前编译目标读取一个由 locale facade 固定的 storage key。</zh-CN><en>Reads one storage key fixed by the locale facade from the current compilation target.</en></lang>
+ * @param {string} key <lang><zh-CN>唯一 locale preference key。</zh-CN><en>The sole locale-preference key.</en></lang>
+ * @returns {unknown} <lang><zh-CN>平台原始 stored value。</zh-CN><en>Raw stored value from the platform.</en></lang>
+ * @lang zh-CN wrapper 不枚举 storage，也不接受页面输入；异常仍由上层 facade 捕获。
+ * @lang en The wrapper enumerates no storage and accepts no page input; the upper facade still catches exceptions.
+ */
+function getRuntimeStorageValue(key) {
+  // <lang><zh-CN>有真实兼容方法时复用它，空 global placeholder 则不能遮蔽 direct API。</zh-CN><en>Reuse a real compatibility method when present; an empty global placeholder cannot shadow the direct API.</en></lang>
+  const compatibilityApi = resolveRuntimeUniApi();
+  if (typeof compatibilityApi?.getStorageSync === 'function') return compatibilityApi.getStorageSync(key);
+
+  // <lang><zh-CN>direct API 只接收上层固定 key。</zh-CN><en>The direct API receives only the upper layer's fixed key.</en></lang>
+  return uni.getStorageSync(key);
+}
+
+/**
+ * <lang><zh-CN>向当前编译目标写入一个已验证 locale preference。</zh-CN><en>Writes one validated locale preference to the current compilation target.</en></lang>
+ * @param {string} key <lang><zh-CN>唯一 locale preference key。</zh-CN><en>The sole locale-preference key.</en></lang>
+ * @param {'zh-Hans'|'en'} value <lang><zh-CN>已由 facade allowlist 验证的 canonical locale。</zh-CN><en>Canonical locale already validated by the facade allowlist.</en></lang>
+ * @returns {unknown} <lang><zh-CN>平台同步写入结果。</zh-CN><en>Synchronous platform-write result.</en></lang>
+ * @lang zh-CN wrapper 不建立备用 key、账号同步或网络路径；异常由 facade 转为可发现失败。
+ * @lang en The wrapper creates no fallback key, account sync, or network path; the facade converts exceptions into a discoverable failure.
+ */
+function setRuntimeStorageValue(key, value) {
+  // <lang><zh-CN>显式兼容方法优先，保证 Node 测试和旧宿主仍可注入窄替身。</zh-CN><en>An explicit compatibility method takes priority so Node tests and legacy hosts may still inject a narrow double.</en></lang>
+  const compatibilityApi = resolveRuntimeUniApi();
+  if (typeof compatibilityApi?.setStorageSync === 'function') return compatibilityApi.setStorageSync(key, value);
+
+  // <lang><zh-CN>direct API 只写固定 key 与 canonical locale。</zh-CN><en>The direct API writes only the fixed key and canonical locale.</en></lang>
+  return uni.setStorageSync(key, value);
+}
+
+/**
+ * <lang><zh-CN>从当前编译目标删除唯一 locale preference key。</zh-CN><en>Removes the sole locale-preference key from the current compilation target.</en></lang>
+ * @param {string} key <lang><zh-CN>唯一 locale preference key。</zh-CN><en>The sole locale-preference key.</en></lang>
+ * @returns {unknown} <lang><zh-CN>平台同步删除结果。</zh-CN><en>Synchronous platform-removal result.</en></lang>
+ * @lang zh-CN 不清空 storage，不写空值，也不触及其他偏好；异常由 facade 捕获。
+ * @lang en Clears no storage, writes no empty value, and touches no other preference; the facade catches exceptions.
+ */
+function removeRuntimeStorageValue(key) {
+  // <lang><zh-CN>真实兼容方法优先，空对象继续进入 direct 编译 API。</zh-CN><en>A real compatibility method takes priority, while an empty object continues to the direct compiled API.</en></lang>
+  const compatibilityApi = resolveRuntimeUniApi();
+  if (typeof compatibilityApi?.removeStorageSync === 'function') return compatibilityApi.removeStorageSync(key);
+
+  // <lang><zh-CN>direct API 只删除上层固定 key。</zh-CN><en>The direct API removes only the upper layer's fixed key.</en></lang>
+  return uni.removeStorageSync(key);
+}
+
+/**
+ * <lang><zh-CN>生产 runtime locale 使用的冻结窄 UniApp adapter。</zh-CN><en>Frozen narrow UniApp adapter used by the production runtime locale.</en></lang>
+ * @lang zh-CN 四项操作保留 direct 编译调用，但 facade 仍独占字段读取、key、locale allowlist 与异常策略。
+ * @lang en All four operations retain direct compiled calls, while the facade still solely owns field reads, the key, the locale allowlist, and exception policy.
+ */
+const RUNTIME_LOCALE_UNI_API = Object.freeze({
+  getSystemInfoSync: getRuntimeSystemInfo,
+  getStorageSync: getRuntimeStorageValue,
+  setStorageSync: setRuntimeStorageValue,
+  removeStorageSync: removeRuntimeStorageValue
+});
+
+/**
  * <lang><zh-CN>将候选值严格收敛到 BP 已支持的 locale，未知值返回 `null` 而不猜测语言。</zh-CN><en>Strictly narrows a candidate to a BP-supported locale; an unknown value returns `null` without guessing a language.</en></lang>
  * @param {unknown} locale <lang><zh-CN>待验证的候选 locale。</zh-CN><en>Candidate locale to validate.</en></lang>
  * @returns {'zh-Hans'|'en'|null} <lang><zh-CN>受支持 locale 或 `null`。</zh-CN><en>A supported locale or `null`.</en></lang>
@@ -132,7 +208,7 @@ export function formatDemoDate(isoDate, locale) {
  * @lang zh-CN facade 不公开原始平台对象，且绝不因可选 API 缺失而抛出到页面。
  * @lang en The facade exposes no raw platform object and never throws to pages when an optional API is absent.
  */
-export function createUniLocalePlatform(uniApi = resolveRuntimeUniApi()) {
+export function createUniLocalePlatform(uniApi = RUNTIME_LOCALE_UNI_API) {
   /**
    * <lang><zh-CN>受限读取系统 language 字段。</zh-CN><en>Constrained read of the system `language` field.</en></lang>
    * @returns {unknown} <lang><zh-CN>原始语言值；不可用或失败时为 `undefined`。</zh-CN><en>Raw language value; `undefined` when unavailable or failed.</en></lang>

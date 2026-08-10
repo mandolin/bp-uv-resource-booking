@@ -197,3 +197,40 @@ test('primary tab chrome synchronizes WeChat custom state before native host lab
     { index: 3, text: 'Profile' }
   ]);
 });
+
+test('H5 compatibility wx global never suppresses localized native tab labels', () => {
+  // <lang><zh-CN>保存可能存在的 Node 全局，测试结束后逐项恢复，避免影响同进程其他平台测试。</zh-CN><en>Retain any existing Node globals and restore each after the test, preventing impact on other platform tests in the same process.</en></lang>
+  const previousWx = globalThis.wx;
+  const previousDocument = globalThis.document;
+  const nativeCalls = [];
+
+  // <lang><zh-CN>翻译替身只返回四个受审 label，不读取 runtime store 或任意输入。</zh-CN><en>The translation double returns only four reviewed labels and reads neither the runtime store nor arbitrary input.</en></lang>
+  const translate = (messageKey) => ({
+    'nav.home': 'Home',
+    'nav.discover': 'Discover',
+    'nav.reservations': 'My bookings',
+    'nav.profile': 'Profile'
+  })[messageKey];
+
+  try {
+    // <lang><zh-CN>复现 UniApp H5：浏览器 document 存在，同时兼容层暴露空 wx；它仍必须进入 injected native tab adapter。</zh-CN><en>Reproduce UniApp H5: browser document exists while the compatibility layer exposes an empty wx; it must still enter the injected native-tab adapter.</en></lang>
+    globalThis.wx = {};
+    globalThis.document = {};
+    assert.equal(syncPrimaryTabChrome('profile', 'en', translate, {
+      pages: [],
+      uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
+    }), true);
+    assert.deepEqual(nativeCalls, [
+      { index: 0, text: 'Home' },
+      { index: 1, text: 'Discover' },
+      { index: 2, text: 'My bookings' },
+      { index: 3, text: 'Profile' }
+    ]);
+  } finally {
+    // <lang><zh-CN>不存在的原始全局用删除恢复，已有值则精确写回原引用。</zh-CN><en>Restore an originally absent global by deletion and an existing value by writing back its exact reference.</en></lang>
+    if (previousWx === undefined) delete globalThis.wx;
+    else globalThis.wx = previousWx;
+    if (previousDocument === undefined) delete globalThis.document;
+    else globalThis.document = previousDocument;
+  }
+});

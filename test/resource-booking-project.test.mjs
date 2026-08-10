@@ -305,8 +305,49 @@ async function testWriteLifecycleAndIdempotency() {
   assert.equal(createObservation.retries, 0);
 }
 
-// <lang><zh-CN>四项 test 独立创建 project transaction，避免测试间共享 mutation。</zh-CN><en>All four tests create isolated project transactions, preventing mutation shared across tests.</en></lang>
+/**
+ * <lang><zh-CN>验证 confirmed 时段冲突可由真实项目入口稳定触发，并可通过改选时段恢复。</zh-CN><en>Verifies that a confirmed-slot conflict is deterministically reachable through the real project entry and recoverable by choosing another slot.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>冲突与恢复断言完成信号。</zh-CN><en>Completion signal for conflict and recovery assertions.</en></lang>
+ * @lang zh-CN 测试复用仓内初始预约，不伪造 provider outage，也不读取 adapter snapshot。
+ * @lang en The test reuses the checked-in initial reservation, fabricates no provider outage, and reads no adapter snapshot.
+ */
+async function testConfirmedSlotConflictAndRecovery() {
+  // <lang><zh-CN>独立 project 从 reservation-demo-001 的 confirmed 14:00 时段开始。</zh-CN><en>An isolated project starts with reservation-demo-001 occupying the confirmed 14:00 slot.</en></lang>
+  const project = createResourceBookingProject();
+
+  // <lang><zh-CN>相同资源、日期与时段必须返回有界业务 conflict，并保留 local source fact。</zh-CN><en>The same resource, date, and slot must return a bounded business conflict while retaining the local source fact.</en></lang>
+  const conflict = await project.createReservation({
+    commandId: 'booking-command-301',
+    resourceId: 'riverside-court-a',
+    date: '2026-08-08',
+    time: '14:00'
+  }).promise;
+  assert.equal(conflict.kind, 'failure');
+  assert.equal(conflict.code, 'conflict');
+  assert.equal(JSON.stringify(conflict).includes('14:00'), false);
+  assertLocalSource(conflict);
+
+  // <lang><zh-CN>冲突后列表仍只有初始记录，证明失败没有占号或改写 snapshot。</zh-CN><en>After the conflict the list still contains only the initial record, proving that failure reserved no ordinal and changed no snapshot.</en></lang>
+  const afterConflict = await project.listReservations().promise;
+  assert.equal(afterConflict.reservations.length, 1);
+  assert.equal(afterConflict.reservations[0].id, 'reservation-demo-001');
+
+  // <lang><zh-CN>改选同一详情中空闲的 16:00 时段后，应创建确定的 reservation-demo-002。</zh-CN><en>Choosing the free 16:00 slot from the same detail must then create deterministic reservation-demo-002.</en></lang>
+  const recovered = await project.createReservation({
+    commandId: 'booking-command-302',
+    resourceId: 'riverside-court-a',
+    date: '2026-08-08',
+    time: '16:00'
+  }).promise;
+  assert.equal(recovered.kind, 'confirmed');
+  assert.equal(recovered.reservation.id, 'reservation-demo-002');
+  assert.equal(recovered.reservations.length, 2);
+  assertLocalSource(recovered);
+}
+
+// <lang><zh-CN>五项 test 独立创建 project transaction，避免测试间共享 mutation。</zh-CN><en>All five tests create isolated project transactions, preventing mutation shared across tests.</en></lang>
 test('resource-booking project exposes a complete ready solution closure', testProjectReadinessAndClosure);
 test('resource-booking project executes all six operations through one local adapter', testSixOperationsAndSharedState);
 test('resource-booking project rejects unknown and kind-mismatched operations before adapter execution', testGateRejectsWithoutAdapterExecution);
 test('resource-booking project preserves single-attempt idempotent write lifecycle', testWriteLifecycleAndIdempotency);
+test('resource-booking project rejects an occupied slot and recovers with a free slot', testConfirmedSlotConflictAndRecovery);

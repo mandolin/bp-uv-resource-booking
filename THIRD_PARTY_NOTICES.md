@@ -1,0 +1,111 @@
+# 第三方声明 / Third-party notices
+
+本文件记录 <code>bp-uv-resource-booking</code> 当前直接采用、编译进应用输出或仅用于构建/CI 的主要输入。精确传递依赖解析以 <code>pnpm-lock.yaml</code> 为准；各上游仓和 package 中的 LICENSE/NOTICE 仍是许可证文本与归属的权威来源。本清单不复制本机路径、registry 响应或安装日志。
+
+This file records the principal inputs directly consumed by <code>bp-uv-resource-booking</code>, compiled into application output, or used only for builds/CI. The exact transitive resolution is in <code>pnpm-lock.yaml</code>; LICENSE/NOTICE files in each upstream repository and package remain authoritative for license text and attribution. This ledger copies no machine path, registry response, or installation log.
+
+## 项目自有材料 / Project-owned material
+
+| 材料 / Material | 版本或提交 / Version or commit | 许可证 / License | 边界 / Boundary |
+| --- | --- | --- | --- |
+| [bp-uv-resource-booking](https://github.com/mandolin/bp-uv-resource-booking) | <code>0.1.0</code> | [MIT](LICENSE) | 本仓源码、mock JSON、双语文案、原创界面图标以及已记录的虚构场馆图片。图片和图标不是第三方素材；具体来源见 <code>docs/upstream-and-assets.md</code>。 / Repository source, mock JSON, bilingual copy, original UI icons, and recorded fictional venue images. The images and icons are not third-party assets; see <code>docs/upstream-and-assets.md</code> for provenance. |
+
+思源黑体、思源宋体和思源等宽目前只是 CSS 首选 family 名称。仓库与构建产物均不捆绑或远端加载字体二进制，因此当前分发中没有 Source Han/Noto 字体文件；实际显示可能降级到宿主已安装的 Noto CJK 或 generic family。
+
+Source Han Sans, Source Han Serif, and Source Han Mono are currently CSS preferred-family names only. Neither the repository nor its build artifacts bundle or remotely load font binaries, so no Source Han/Noto font file is distributed at present; rendering may fall back to host-installed Noto CJK or generic families.
+
+## Pages 成品许可证载荷 / Pages artifact license payload
+
+H5 prepare 只从下表固定 source 读取文本，将 CRLF/CR 统一为 LF，并写到固定 destination。除本文件因自引用不能内嵌自身固定 digest 外，每项 source 都按 canonical LF bytes 的固定 SHA-256 核验；本文件则要求非空，并在写后比较 source 与 destination digest。destination 必须是固定成品根内 link count 为 1 的普通文件。
+
+The H5 prepare step reads text only from the fixed sources below, normalizes CRLF/CR to LF, and writes fixed destinations. Every source is checked against a fixed SHA-256 of its canonical LF bytes, except this file, which cannot embed its own fixed digest without self-reference; this file must be non-empty and its source and destination digests are compared after writing. A destination must be a regular file with a link count of one inside the fixed artifact root.
+
+| 成品路径 / Artifact path | 固定 source / Fixed source | Canonical SHA-256 | 作用 / Purpose |
+| --- | --- | --- | --- |
+| <code>LICENSE</code> | <code>LICENSE</code> | <code>DE0E1030000523AC27D7B3BC6A8DDE4EE67F58867AD5EDE64A65A76BF2D8848E</code> | BP MIT 全文。 / Full BP MIT text. |
+| <code>THIRD_PARTY_NOTICES.md</code> | <code>THIRD_PARTY_NOTICES.md</code> | 写入时 source/destination digest 相等 / source/destination digest equality at write time | 本清单的成品副本。 / Artifact copy of this ledger. |
+| <code>LICENSES/HIA-uView-MIT.txt</code> | <code>src/vendor/HIA-uView/LICENSE</code> | <code>DE0E1030000523AC27D7B3BC6A8DDE4EE67F58867AD5EDE64A65A76BF2D8848E</code> | 固定 HIA-uView pin 的 MIT 全文。 / Full MIT text from the pinned HIA-uView input. |
+| <code>LICENSES/HIA-uView-Biz-MIT.txt</code> | <code>src/vendor/HIA-uView-Biz/LICENSE</code> | <code>DE0E1030000523AC27D7B3BC6A8DDE4EE67F58867AD5EDE64A65A76BF2D8848E</code> | 固定 HIA-uView-Biz pin 的 MIT 全文。 / Full MIT text from the pinned HIA-uView-Biz input. |
+| <code>LICENSES/HIA-uView-THIRD_PARTY_NOTICES.md</code> | <code>src/vendor/HIA-uView/THIRD_PARTY_NOTICES.md</code> | <code>C9FEB554809894CC7F69B90CD14C0B9120BFCCE9CEA95B70C570A16323349F23</code> | HIA-uView 当前 pin 的逐文件衍生与排除边界。 / Per-file derivation and exclusion boundary at the current HIA-uView pin. |
+| <code>LICENSES/uView-Pro-MIT.txt</code> | <code>LICENSES/uView-Pro-MIT.txt</code> | <code>906B494A3FA3B4E270BB08FC69625176E552EB0ACC922C253C4D5FBFA5544627</code> | uView-Pro 上游 MIT 全文及其版权声明。 / Full upstream uView-Pro MIT text and copyright notice. |
+| <code>LICENSES/DCloud-Apache-2.0.txt</code> | <code>node_modules/@dcloudio/uni-app/LICENSE</code> | <code>58D1E17FFE5109A7AE296CAAFCADFDBE6A7D176F0BC4AB01E12A689B0499D8BD</code> | 锁定 DCloud runtime/build packages 的 Apache-2.0 全文。 / Full Apache-2.0 text for the pinned DCloud runtime/build packages. |
+| <code>LICENSES/Vue-MIT.txt</code> | <code>node_modules/vue/LICENSE</code> | <code>1BB85CC9B13B81EF41C81C51866172FC345E0503C86726A6755B796590B70175</code> | Vue runtime MIT 全文及版权声明。 / Full Vue runtime MIT text and copyright notice. |
+| <code>LICENSES/Vue-Router-MIT.txt</code> | <code>LICENSES/Vue-Router-MIT.txt</code> | <code>91A2845C4DB44E7497B514B98634A674C737986AD0DB81599307CF733BF850B2</code> | Vue Router runtime MIT 全文及其独立版权声明。 / Full Vue Router runtime MIT text and its separate copyright notice. |
+
+仓内 <code>LICENSES/uView-Pro-MIT.txt</code> 是 immutable upstream commit <code>3bc1948d8f7c5d2bcb1ba3434cede1e709391a62</code> 的 <code>LICENSE</code> 精确 canonical 副本；上游 Git blob 为 <code>837f9643580783834339d1b40e58772413895e39</code>，canonical bytes 为 1068。构建不联网获取或合成许可证。
+
+The repository copy at <code>LICENSES/uView-Pro-MIT.txt</code> is the exact canonical <code>LICENSE</code> from immutable upstream commit <code>3bc1948d8f7c5d2bcb1ba3434cede1e709391a62</code>. Its upstream Git blob is <code>837f9643580783834339d1b40e58772413895e39</code>, and it contains 1068 canonical bytes. The build neither fetches nor synthesizes a license over the network.
+
+仓内 <code>LICENSES/Vue-Router-MIT.txt</code> 是 <code>vue-router@4.4.4</code>、immutable commit <code>be681484d1761713491b14e393227241d15dadc4</code> 的 <code>LICENSE</code> 精确 canonical 副本；上游 Git blob 为 <code>0c77562bea0465ab994162cc740914ed609d700b</code>，canonical bytes 为 1100。它独立保留 Copyright (c) 2019-present Eduardo San Martin Morote，不能由 Vue core 的版权声明替代。
+
+The repository copy at <code>LICENSES/Vue-Router-MIT.txt</code> is the exact canonical <code>LICENSE</code> from <code>vue-router@4.4.4</code>, immutable commit <code>be681484d1761713491b14e393227241d15dadc4</code>. Its upstream Git blob is <code>0c77562bea0465ab994162cc740914ed609d700b</code>, and it contains 1100 canonical bytes. It independently preserves Copyright (c) 2019-present Eduardo San Martin Morote and cannot be replaced by the Vue core copyright notice.
+
+## 应用与 Pages 成品 runtime 输入 / Application and Pages artifact runtime inputs
+
+下列输入的代码会直接参与 H5 或微信小程序应用输出。浏览器或小程序不会在运行时从 npm registry 或 submodule 仓库下载这些 package。
+
+Code from the following inputs participates directly in H5 or WeChat Mini Program output. The browser or Mini Program does not download these packages from an npm registry or submodule repository at runtime.
+
+| 输入 / Input | 精确版本或提交 / Exact version or commit | 许可证 / License | 用途与分发边界 / Purpose and distribution boundary | 稳定上游 / Stable upstream |
+| --- | --- | --- | --- | --- |
+| <code>@hia-uview/ui</code> | package <code>0.0.0</code>; Git commit <code>796fe0d839537900aade45b4a7a856721dfe4e4a</code> | MIT | 通过固定公开 Git link、仓内 <code>file:</code> dependency、样式入口和 Easycom 进入 UI 输出；是 private pre-release source package，不是 registry 下载。 / Enters UI output through a pinned public Git link, in-repository <code>file:</code> dependency, style entry, and Easycom; it is a private pre-release source package, not a registry download. | [Pinned HIA-uView tree](https://github.com/mandolin/HIA-uView/tree/796fe0d839537900aade45b4a7a856721dfe4e4a) |
+| <code>@hia-uview/biz-project-runtime</code>、<code>@hia-uview/biz-async-provider-runtime</code>、<code>@hia-uview/biz-provider-port-runtime</code>、<code>@hia-uview/biz-solution-profile-runtime</code> | each package <code>0.0.0</code>; Git commit <code>838e0344adb4177327ced50792c2e5b5744b86f7</code> | MIT | BP 只直接消费 project-facing package；其余三项是同一 pin 的传递 composition/lifecycle 输入。它们不提供后端、HTTP 或遥测。 / BP directly consumes only the project-facing package; the other three are transitive composition/lifecycle inputs from the same pin. They provide no backend, HTTP, or telemetry. | [Pinned HIA-uView-Biz tree](https://github.com/mandolin/HIA-uView-Biz/tree/838e0344adb4177327ced50792c2e5b5744b86f7) |
+| <code>@dcloudio/uni-app</code>、<code>@dcloudio/uni-h5</code> | <code>3.0.0-5010520260709002</code>; package <code>gitHead 33e807d66e1fe47e2ee08ad9c59247e37b8884da</code> | Apache-2.0 | UniApp 应用/runtime surface 与 H5 平台 runtime；选定代码编译进 H5 成品。锁定的 uni-h5 bundle 保留 dormant ad-manager endpoint <code>https://hac1.dcloud.net.cn/ah5v2</code> 与 <code>https://has1.dcloud.net.cn/ahl</code>；BP 不调用广告组件/API，门禁只接受锁定结构，默认流程仍须以 Network smoke 证明零跨域。该能力与版本漂移是已披露阶段风险，不能把成品描述为没有远端能力。 / UniApp application/runtime surface and H5 platform runtime; selected code is compiled into the H5 artifact. The pinned uni-h5 bundle retains dormant ad-manager endpoints at <code>https://hac1.dcloud.net.cn/ah5v2</code> and <code>https://has1.dcloud.net.cn/ahl</code>. The BP invokes no advertising component/API, gates admit only the pinned structure, and the default flow still requires a Network smoke proving zero cross-origin requests. This capability and version drift are disclosed interim risks, so the artifact must not be described as lacking remote capability. | [Pinned dcloudio/uni-app tree](https://github.com/dcloudio/uni-app/tree/33e807d66e1fe47e2ee08ad9c59247e37b8884da) |
+| <code>@dcloudio/uni-components</code> | <code>3.0.0-5010520260709002</code>; package <code>gitHead 33e807d66e1fe47e2ee08ad9c59247e37b8884da</code> | Apache-2.0 | 平台 component 的 build/runtime bridge；package 本身不由成品动态加载，但选定平台实现可进入生成输出。 / Build/runtime bridge for platform components; the artifact does not dynamically load the package, but selected platform implementation can enter generated output. | [Pinned package source](https://github.com/dcloudio/uni-app/tree/33e807d66e1fe47e2ee08ad9c59247e37b8884da/packages/uni-components) |
+| <code>vue</code>、<code>@vue/reactivity</code>、<code>@vue/runtime-core</code>、<code>@vue/runtime-dom</code>、<code>@vue/shared</code> | <code>3.4.21</code> | MIT | Vue 3 响应式、组件和 DOM runtime，作为明确依赖编译进 H5/平台输出。 / Vue 3 reactivity, component, and DOM runtime compiled into H5/platform output as explicit dependencies. | [vuejs/core v3.4.21](https://github.com/vuejs/core/tree/v3.4.21) |
+| <code>vue-router</code> | <code>4.4.4</code>; Git commit <code>be681484d1761713491b14e393227241d15dadc4</code> | MIT | 由 UniApp H5 runtime 锁定解析的 hash router；Pages 使用项目子路径与 URL fragment。其独立 MIT 全文进入成品 <code>LICENSES/Vue-Router-MIT.txt</code>。 / Lockfile-resolved hash router used by the UniApp H5 runtime; Pages uses the project subpath and URL fragment. Its separate full MIT text is included at <code>LICENSES/Vue-Router-MIT.txt</code>. | [Pinned vuejs/router tree](https://github.com/vuejs/router/tree/be681484d1761713491b14e393227241d15dadc4) |
+
+## HIA-uView 的实际衍生 NOTICE 边界 / Actual HIA-uView derivation NOTICE boundary
+
+BP 不直接从 uView 系列仓库复制源码。当前 HIA-uView pin 的权威 [THIRD_PARTY_NOTICES](https://github.com/mandolin/HIA-uView/blob/796fe0d839537900aade45b4a7a856721dfe4e4a/THIRD_PARTY_NOTICES.md) 记录：已实际采用的第三方 UI 源码边界限于审阅 <code>anyup/uView-Pro</code>、npm <code>uview-pro@0.6.13</code>、不可变提交 <code>3bc1948d8f7c5d2bcb1ba3434cede1e709391a62</code> 后独立重写且实质衍生的组件，来源仓采用 MIT 许可证。其准确 MIT 全文与版权声明在 source 和 Pages output 中都以 <code>LICENSES/uView-Pro-MIT.txt</code> 独立保留。
+
+The BP copies no source directly from a uView-family repository. The authoritative [THIRD_PARTY_NOTICES](https://github.com/mandolin/HIA-uView/blob/796fe0d839537900aade45b4a7a856721dfe4e4a/THIRD_PARTY_NOTICES.md) at the current HIA-uView pin records the actual third-party UI boundary: independently rewritten, materially derived components after reviewing <code>anyup/uView-Pro</code>, npm <code>uview-pro@0.6.13</code>, immutable commit <code>3bc1948d8f7c5d2bcb1ba3434cede1e709391a62</code>, under that repository's MIT License. Its exact MIT text and copyright notice are preserved independently at <code>LICENSES/uView-Pro-MIT.txt</code> in both source and Pages output.
+
+HIA-uView 的清单还明确排除上游 <code>$u</code> runtime、props/types、图片、字体、图标、品牌、网络、router、平台系统访问和生成物。精确源路径到 HIA target 的逐文件表必须继续留在 HIA-uView 的 NOTICE 中；BP 只能引用，不能压缩、删除或把整个 uView 系列误写成已复制输入。
+
+The HIA-uView ledger also explicitly excludes the upstream <code>$u</code> runtime, props/types, images, fonts, icons, branding, networking, router, platform-system access, and generated output. The exact per-file source-to-HIA-target table must remain in HIA-uView's NOTICE; this BP may reference it but must not collapse, delete, or misrepresent the whole uView family as copied input.
+
+稳定来源 / Stable source: [审阅提交的 anyup/uView-Pro / anyup/uView-Pro at the reviewed commit](https://github.com/anyup/uView-Pro/tree/3bc1948d8f7c5d2bcb1ba3434cede1e709391a62).
+
+## 仅构建期输入 / Build-only inputs
+
+这些 package 在受信任源码的安装、检查或编译阶段使用；它们不是 Pages 的远端服务，也不能作为 BP 提供同名运行时能力的证据。
+
+These packages are used while installing, checking, or compiling trusted source. They are neither remote Pages services nor evidence that the BP provides a same-named runtime capability.
+
+| 输入 / Input | 精确版本 / Exact version | 许可证 / License | 构建边界 / Build boundary | 稳定上游 / Stable upstream |
+| --- | --- | --- | --- | --- |
+| <code>@dcloudio/uni-mp-weixin</code> | <code>3.0.0-5010520260709002</code>; package <code>gitHead 33e807d66e1fe47e2ee08ad9c59247e37b8884da</code> | Apache-2.0 | 微信小程序 compiler target；不发布到 H5 runtime。 / WeChat Mini Program compiler target; not published as H5 runtime. | [Pinned package source](https://github.com/dcloudio/uni-app/tree/33e807d66e1fe47e2ee08ad9c59247e37b8884da/packages/uni-mp-weixin) |
+| <code>@dcloudio/vite-plugin-uni</code> | <code>3.0.0-5010520260709002</code>; package <code>gitHead 33e807d66e1fe47e2ee08ad9c59247e37b8884da</code> | Apache-2.0 | 官方 UniApp Vite transform；只执行静态 build。 / Official UniApp Vite transform used only for static builds. | [Pinned package source](https://github.com/dcloudio/uni-app/tree/33e807d66e1fe47e2ee08ad9c59247e37b8884da/packages/vite-plugin-uni) |
+| <code>@dcloudio/uni-stat</code>（传递 / transitive） | <code>3.0.0-5010520260709002</code>; package <code>gitHead 33e807d66e1fe47e2ee08ad9c59247e37b8884da</code> | Apache-2.0 | 编译链仍解析该 package，但根 manifest 显式设置 <code>uniStatistics.enable=false</code>；H5 与 mp-weixin 产物门禁拒绝统计端点和初始化标记，因此不得把它写成已发布遥测 runtime。 / The compiler graph still resolves this package, but the root manifest explicitly sets <code>uniStatistics.enable=false</code>; H5 and mp-weixin artifact gates reject statistics endpoints and initialization markers, so it must not be described as a published telemetry runtime. | [Pinned package source](https://github.com/dcloudio/uni-app/tree/33e807d66e1fe47e2ee08ad9c59247e37b8884da/packages/uni-stat) |
+| <code>vite</code> | <code>5.2.8</code> | MIT | H5/UniApp 静态打包；不运行公开 dev/preview server。 / H5/UniApp static bundling; no public dev/preview server is run. | [vitejs/vite v5.2.8](https://github.com/vitejs/vite/tree/v5.2.8) |
+| <code>sass</code> | <code>1.77.8</code> | MIT | 只编译仓内 <code>uni.scss</code>；不提供运行时样式服务。 / Compiles only the in-repository <code>uni.scss</code>; provides no runtime style service. | [sass/dart-sass 1.77.8](https://github.com/sass/dart-sass/tree/1.77.8) |
+
+开发者工具链由 <code>.mise.toml</code> 固定为 Node <code>24.12.0</code> 与 pnpm <code>10.27.0</code>。它们执行构建，但不作为 JavaScript package 编译进应用 artifact。
+
+The developer toolchain is pinned by <code>.mise.toml</code> to Node <code>24.12.0</code> and pnpm <code>10.27.0</code>. They execute the build but are not JavaScript packages compiled into the application artifact.
+
+## 仅 CI/Pages 输入 / CI- and Pages-only inputs
+
+GitHub Actions workflow 以不可变 commit 引用以下公开官方 Action。它们只在 GitHub-hosted runner 中读取受信任源码、配置 Pages metadata、上传经验证的静态 artifact 并部署；不是应用 runtime dependency，也不需要应用 secret。
+
+The GitHub Actions workflow references the following public official Actions by immutable commit. They run only on a GitHub-hosted runner to read trusted source, configure Pages metadata, upload the validated static artifact, and deploy it. They are not application runtime dependencies and require no application secret.
+
+| Action | 固定提交 / Pinned commit | 许可证 / License | CI 用途 / CI purpose | 稳定上游 / Stable upstream |
+| --- | --- | --- | --- | --- |
+| <code>actions/checkout</code> v6 | <code>d23441a48e516b6c34aea4fa41551a30e30af803</code> | MIT | 检出父仓与两个公开 submodule；构建后不保留凭据。 / Checks out the parent repository and both public submodules; credentials do not persist after checkout. | [Pinned commit](https://github.com/actions/checkout/commit/d23441a48e516b6c34aea4fa41551a30e30af803) |
+| <code>actions/setup-node</code> v6 | <code>249970729cb0ef3589644e2896645e5dc5ba9c38</code> | MIT | 提供固定 Node build runtime，不启用 package cache。 / Provides the fixed Node build runtime without a package cache. | [Pinned commit](https://github.com/actions/setup-node/commit/249970729cb0ef3589644e2896645e5dc5ba9c38) |
+| <code>actions/configure-pages</code> v5 | <code>983d7736d9b0ae728b81ab479565c72886d7745b</code> | MIT | 配置 GitHub Pages build metadata。 / Configures GitHub Pages build metadata. | [Pinned commit](https://github.com/actions/configure-pages/commit/983d7736d9b0ae728b81ab479565c72886d7745b) |
+| <code>actions/upload-pages-artifact</code> v4 | <code>7b1f4a764d45c48632c6b24a0339c27f5614fb0b</code> | MIT | 只上传经门禁验证的 <code>dist/build/h5</code>。 / Uploads only the gate-validated <code>dist/build/h5</code>. | [Pinned commit](https://github.com/actions/upload-pages-artifact/commit/7b1f4a764d45c48632c6b24a0339c27f5614fb0b) |
+| <code>actions/deploy-pages</code> v4 | <code>d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e</code> | MIT | 从 <code>github-pages</code> environment 部署已上传 artifact。 / Deploys the uploaded artifact from the <code>github-pages</code> environment. | [Pinned commit](https://github.com/actions/deploy-pages/commit/d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e) |
+
+## 保留与升级规则 / Preservation and upgrade rules
+
+- 分发源码或包含上述代码的应用输出时，保留本仓 [MIT License](LICENSE)、本文件以及对应 upstream LICENSE/NOTICE。Apache-2.0 输入以其 package/上游 [Apache License 2.0](https://github.com/dcloudio/uni-app/blob/33e807d66e1fe47e2ee08ad9c59247e37b8884da/LICENSE) 为准。
+- When distributing source or application output containing the code above, retain this repository's [MIT License](LICENSE), this file, and the corresponding upstream LICENSE/NOTICE. Apache-2.0 inputs are governed by their package/upstream [Apache License 2.0](https://github.com/dcloudio/uni-app/blob/33e807d66e1fe47e2ee08ad9c59247e37b8884da/LICENSE).
+
+- 升级 HIA-uView、HIA-uView-Biz、DCloud、Vue、Vite、Sass 或 Action 前，必须重新核对精确版本/commit、许可证、NOTICE、分发范围、构建产物和本清单；不能只修改版本字符串。
+- Before upgrading HIA-uView, HIA-uView-Biz, DCloud, Vue, Vite, Sass, or an Action, recheck the exact version/commit, license, NOTICE, distribution boundary, build artifacts, and this ledger; changing only a version string is insufficient.
+
+- 依赖安全公告与采用许可是不同判断。已知公告、受信任静态构建、<code>--ignore-scripts</code> 和显式关闭遥测的当前边界见 [开发交接、部署与回退](docs/handoff-and-deployment.md)；它们不是 runtime 零风险或漏洞已修复的声明。
+- Dependency advisories and adoption licensing are separate judgments. See [Development handoff, deployment, and rollback](docs/handoff-and-deployment.md) for the current boundaries around known advisories, trusted static builds, <code>--ignore-scripts</code>, and explicit telemetry opt-out; those boundaries are not claims of zero runtime risk or fixed vulnerabilities.

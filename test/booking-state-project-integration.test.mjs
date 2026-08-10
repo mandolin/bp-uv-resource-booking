@@ -29,6 +29,28 @@ test('booking state obtains catalog, reservation cards, and all writes through p
   assert.equal(demo.selectedDetail.value.kind, 'detail');
   assert.equal(demo.detailSource.value.authority, 'local');
 
+  // <lang><zh-CN>从有效详情切到未知 ID 时，state 必须在 terminal 前立即撤下旧详情，不能让新路由继续显示前一资源。</zh-CN><en>When moving from a valid detail to an unknown ID, state must withdraw the old detail before the terminal and must not let the new route keep showing the prior resource.</en></lang>
+  const missingDetailRead = demo.loadResourceDetail('unknown');
+  assert.equal(demo.detailPhase.value, 'loading');
+  assert.equal(demo.selectedDetail.value, null);
+  await missingDetailRead;
+  assert.equal(demo.detailPhase.value, 'failure');
+  assert.equal(demo.selectedDetail.value, null);
+  assert.equal(demo.detailFailure.value.kind, 'failure');
+  assert.equal(demo.detailFailure.value.code, 'not-found');
+  assert.equal(demo.detailFailure.value.message.en.includes('unknown'), false);
+
+  // <lang><zh-CN>对同一未知路由显式重试仍保持 bounded failure 与空详情，不得恢复缓存成功结果。</zh-CN><en>An explicit retry of the same unknown route must retain a bounded failure and empty detail rather than restoring a cached success.</en></lang>
+  await demo.loadResourceDetail('unknown');
+  assert.equal(demo.detailPhase.value, 'failure');
+  assert.equal(demo.selectedDetail.value, null);
+  assert.equal(demo.detailFailure.value.code, 'not-found');
+
+  // <lang><zh-CN>返回一个 canonical 资源后可重新进入 ready，证明失败没有污染后续发现页恢复路径。</zh-CN><en>Returning to a canonical resource can re-enter ready, proving the failure does not contaminate the later Discover recovery path.</en></lang>
+  await demo.loadResourceDetail(resourceId);
+  assert.equal(demo.detailPhase.value, 'ready');
+  assert.equal(demo.selectedDetail.value.resource.id, resourceId);
+
   // <lang><zh-CN>预约列表由 reservation.list 初始化；state 不从 JSON seed 构造卡片。</zh-CN><en>Initialize reservations through reservation.list; state constructs no cards from a JSON seed.</en></lang>
   await demo.refreshReservations();
   assert.equal(demo.reservationPhase.value, 'ready');

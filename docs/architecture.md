@@ -51,15 +51,29 @@ After a confirmed creation, the page presents a separate local-demo result and p
 
 ## 预约边界 / Booking boundary
 
-确认预约、取消与改期都经 project facade 的固定 write operation 到达共享 local adapter 的进程内 mock transaction，刷新即回到 `venues.json` 中的初始预约。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；改期采用“取消旧预约 + 创建新预约”，若新时段冲突则旧预约保持确认状态。没有远端撤销、退款、库存释放、支付或会员规则。
+确认预约、取消与改期都经 project facade 的固定 write operation 到达共享 local adapter 的进程内 mock transaction，刷新即回到 `venues.json` 中的初始预约。同一资源、日期与时段最多保留一项 `confirmed` 记录；创建或改期命中已确认时段时返回有界冲突且不改变 snapshot，`cancelled` 历史不占用示例时段。取消采用“露出取消操作 → 二次确认 → 标记为已取消”的受控语义；改期采用“取消旧预约 + 创建新预约”，若新时段冲突则旧预约保持确认状态。没有远端撤销、退款、库存释放、支付或会员规则。
 
-Booking creation, cancellation, and reschedule all reach an in-process mock transaction in the shared local adapter through fixed project-facade write operations; a refresh returns to initial reservations in `venues.json`. Cancellation uses controlled “reveal Cancel → confirm again → mark cancelled” semantics. Reschedule uses “cancel old reservation + create new reservation”; if a new slot conflicts, the old reservation stays confirmed. There is no remote revocation, refund, inventory release, payment, or membership rule.
+Booking creation, cancellation, and reschedule all reach an in-process mock transaction in the shared local adapter through fixed project-facade write operations; a refresh returns to initial reservations in `venues.json`. At most one `confirmed` record may occupy the same resource, date, and slot. A create or reschedule attempt against an occupied confirmed slot returns a bounded conflict without changing the snapshot, while `cancelled` history occupies no demo slot. Cancellation uses controlled “reveal Cancel → confirm again → mark cancelled” semantics. Reschedule uses “cancel old reservation + create new reservation”; if a new slot conflicts, the old reservation stays confirmed. There is no remote revocation, refund, inventory release, payment, or membership rule.
 
 ## 主题装载边界 / Theme-loading boundary
 
 `src/App.vue` 作为唯一全局样式发射点显式导入 `src/uni.scss`。该文件再显式导入已锁定的 HIA-uView 样式与浅色 token；页面与组件只消费 token，不复制主题值。此入口必须随 H5 与 mp-weixin 构建一同验证，避免组件 CSS 已存在而主题 token 未装载的视觉退化。
 
 `src/App.vue` explicitly imports `src/uni.scss` as the sole global-style emission point. That file explicitly imports the locked HIA-uView styles and light tokens; pages and components consume tokens without copying theme values. This entry must be verified with both H5 and mp-weixin builds, preventing visual degradation where component CSS exists but theme tokens are not loaded.
+
+## 隐私与遥测边界 / Privacy and telemetry boundary
+
+根 `src/manifest.json` 显式设置 `uniStatistics.enable=false`；H5、`web` 或 `mp-weixin` 平台块若以后声明 `uniStatistics`，也必须明确保持 `enable=false`，不能覆盖根设置。常规 `check` 锁定源码配置，两个 build 命令还会分别扫描最终 H5 与微信小程序文本产物，并在发现已知 DCloud 统计采集端点、接收器、配置、持久队列或初始化 banner 时失败。门禁不执行产物，也不把“lockfile 仍解析到编译链传递依赖”等同于“统计 runtime 已发布”。
+
+The root `src/manifest.json` explicitly sets `uniStatistics.enable=false`. If an H5, `web`, or `mp-weixin` platform block later declares `uniStatistics`, it must also keep `enable=false` explicitly and cannot override the root. The normal `check` locks the source configuration, while both build commands separately scan final H5 and WeChat Mini Program text artifacts and fail on known DCloud statistics collector endpoints, receivers, configuration, persistent queues, or initialization banners. The gate does not execute artifacts and does not equate “the lockfile still resolves a compiler-chain transitive dependency” with “a statistics runtime is shipped.”
+
+本 BP 不发送应用分析、用户行为或预约数据。目录、详情和预约操作只使用仓内 JSON 与进程内状态；预约草稿与记录不持久化。唯一设备 storage 例外是用户在“个人信息”明确选择 runtime locale 时使用的固定 key；该值只表达 `zh-Hans`、`en` 或跟随系统偏好，不含账号、身份、预约、场馆、搜索或设备画像。
+
+This BP sends no application analytics, user behavior, or booking data. Catalog, detail, and booking operations use only checked-in JSON plus in-process state, and booking drafts and records are not persisted. The sole device-storage exception is the fixed key used when a user explicitly chooses a runtime locale in Profile; its value expresses only `zh-Hans`, `en`, or follow-system preference and contains no account, identity, booking, venue, search, or device-profile data.
+
+锁定的 `@dcloudio/uni-h5` 通用 bundle 仍包含广告组件 manager 的休眠实现，以及 `https://hac1.dcloud.net.cn/ah5v2` 与 `https://has1.dcloud.net.cn/ahl` 两个固定端点字面值。它们只有在广告组件路径调用 manager 时才会请求配置或上报；本 BP 不声明广告组件、`adpid`、广告配置或广告 API。源码门禁拒绝这些采用入口，H5 成品门禁只允许锁定版本中的精确休眠结构并拒绝漂移、复制或其他广告端点，浏览器验收还必须证明默认页面流没有跨域请求。该边界不把“当前未触发”写成“框架没有远端能力”。
+
+The pinned generic `@dcloudio/uni-h5` bundle still contains the dormant implementation of its ad-component manager and the two fixed endpoint literals `https://hac1.dcloud.net.cn/ah5v2` and `https://has1.dcloud.net.cn/ahl`. They request configuration or report data only when an ad-component path calls the manager. This BP declares no ad component, `adpid`, ad configuration, or ad API. The source gate rejects those adoption entries; the H5 artifact gate allows only the exact dormant shape in the pinned version and rejects drift, duplication, or another ad endpoint; browser acceptance must additionally prove that the default page flow makes no cross-origin request. This boundary does not turn “not currently triggered” into “the framework has no remote capability.”
 
 ## 未来 source selector / Future source selector
 

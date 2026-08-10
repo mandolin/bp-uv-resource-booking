@@ -4,6 +4,9 @@
   "description": "A local-first HIA-uView resource and service booking boilerplate.",
   "versionName": "0.1.0",
   "versionCode": "100",
+  "uniStatistics": {
+    "enable": false
+  },
   "mp-weixin": {
     "appid": ""
   },

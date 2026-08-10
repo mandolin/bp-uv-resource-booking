@@ -368,7 +368,8 @@ export async function loadResourceDetail(resourceId) {
   // <lang><zh-CN>请求取消旧详情，避免返回较慢的旧资源覆盖新导航。</zh-CN><en>Request cancellation of old detail, avoiding a slower old resource overwriting new navigation.</en></lang>
   activeDetailHandle?.cancel();
 
-  // <lang><zh-CN>新详情读取使旧资源的预约草稿失效，避免确认页跨资源复用日期或时段。</zh-CN><en>A new detail read invalidates an old resource’s booking draft, preventing confirmation from reusing date or slot across resources.</en></lang>
+  // <lang><zh-CN>新详情读取立即清除旧 detail 与预约草稿，避免 loading/failure 期间继续暴露前一路由的资源、日期或时段。</zh-CN><en>A new detail read immediately clears the old detail and booking draft, preventing the loading/failure phases from exposing the prior route's resource, date, or slot.</en></lang>
+  selectedDetail.value = null;
   bookingDraft.value = null;
 
   // <lang><zh-CN>清空前一详情 failure 并进入独立 loading phase。</zh-CN><en>Clear prior detail failure and enter independent loading phase.</en></lang>

@@ -1,0 +1,81 @@
+name: Deploy Resource Booking Demo
+
+# <lang><zh-CN>主分支发布、人工复跑和 PR 构建共用同一受控入口；PR 永不进入 deploy job。</zh-CN><en>Main-branch publication, manual reruns, and pull-request builds share one controlled entry; pull requests never enter the deploy job.</en></lang>
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+# <lang><zh-CN>工作流默认只读仓库；Pages 写权限只在 deploy job 内按需授予。</zh-CN><en>The workflow reads the repository by default; Pages write access is granted only to the deploy job that needs it.</en></lang>
+permissions:
+  contents: read
+
+# <lang><zh-CN>同一 Pages environment 串行部署，保留正在执行的已审提交。</zh-CN><en>Serialize deployments to the same Pages environment and retain an in-progress reviewed commit.</en></lang>
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # <lang><zh-CN>两个 HIA source input 都是公开 Git link；递归检出且不把凭据留给后续步骤。</zh-CN><en>Both HIA source inputs are public Git links; check them out recursively and retain no credential for later steps.</en></lang>
+      - name: Checkout controlled sources
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+          submodules: recursive
+
+      # <lang><zh-CN>CI 使用官方 Node action 与仓内同版本 runtime；本地开发继续由 mise 固定同一版本。</zh-CN><en>CI uses the official Node action and the same repository-pinned runtime; local development remains pinned by mise.</en></lang>
+      - name: Setup locked Node runtime
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24.12.0
+          package-manager-cache: false
+
+      # <lang><zh-CN>Corepack 只激活仓内固定 pnpm 版本，不安装项目脚本或发现父 workspace。</zh-CN><en>Corepack activates only the repository-pinned pnpm version and installs no project script or parent workspace.</en></lang>
+      - name: Activate locked pnpm runtime
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.27.0 --activate
+          test "$(pnpm --version)" = "10.27.0"
+
+      # <lang><zh-CN>先建立 Pages metadata，随后只从冻结 lockfile materialize 依赖。</zh-CN><en>Establish Pages metadata first, then materialize dependencies only from the frozen lockfile.</en></lang>
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      # <lang><zh-CN>测试、H5 构建和成品隐私门禁必须全部通过，才允许上传单一静态目录。</zh-CN><en>Tests, the H5 build, and the artifact privacy gate must all pass before the sole static directory may be uploaded.</en></lang>
+      - name: Validate and build the static demo
+        run: |
+          pnpm test
+          pnpm run build:h5
+          node scripts/verify-h5-pages-artifact.mjs
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4
+        with:
+          path: dist/build/h5
+
+  deploy:
+    # <lang><zh-CN>只有 main 的 push 或从 main 发起的人工复跑可部署；PR 与其他 ref 只构建。</zh-CN><en>Only a main push or a manual rerun from main may deploy; pull requests and other refs only build.</en></lang>
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    permissions:
+      contents: read
+      id-token: write
+      pages: write
+    runs-on: ubuntu-latest
+    steps:
+      # <lang><zh-CN>部署只消费 build job 生成的 Pages artifact，不再次检出、构建或运行任意项目代码。</zh-CN><en>Deployment consumes only the Pages artifact produced by the build job and does not re-check out, rebuild, or run arbitrary project code.</en></lang>
+      - name: Deploy GitHub Pages artifact
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

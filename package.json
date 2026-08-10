@@ -5,11 +5,13 @@
   "description": "Local-first UniApp resource and service booking boilerplate based on HIA-uView.",
   "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@10.27.0",
   "scripts": {
-    "check": "node scripts/verify-input-pins.mjs && node scripts/check-rop.mjs && node scripts/verify-runtime-i18n.mjs",
+    "check": "node scripts/verify-input-pins.mjs && node scripts/verify-telemetry-boundary.mjs source && node scripts/check-rop.mjs && node scripts/verify-runtime-i18n.mjs",
     "test": "pnpm run check && node --test test/*.test.mjs",
-    "build:h5": "uni build -p h5",
-    "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs"
+    "verify:h5-pages": "node scripts/verify-h5-pages-artifact.mjs",
+    "build:h5": "uni build -p h5 && node scripts/verify-telemetry-boundary.mjs h5 && node scripts/prepare-h5-pages-artifact.mjs && pnpm run verify:h5-pages",
+    "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin"
   },
   "dependencies": {
     "@hia-uview/biz-project-runtime": "file:src/vendor/HIA-uView-Biz/packages/project-runtime",

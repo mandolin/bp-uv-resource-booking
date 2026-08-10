@@ -283,6 +283,25 @@ function executeCreate(command, reservationSnapshot) {
     return { outcome, nextSnapshot: reservationSnapshot };
   }
 
+  // <lang><zh-CN>同一资源、日期与时段只能保留一项 confirmed 预约；cancelled 历史不占用示例时段。</zh-CN><en>Only one confirmed reservation may occupy the same resource, date, and slot; cancelled history does not occupy a demo slot.</en></lang>
+  const hasConfirmedSlotConflict = reservationSnapshot.some(
+    (reservation) => reservation.status === 'confirmed'
+      && reservation.resourceId === command.resourceId
+      && reservation.date === command.date
+      && reservation.time === command.time
+  );
+  if (hasConfirmedSlotConflict) {
+    // <lang><zh-CN>返回固定双语 conflict，不回显 resource、日期、时段或现有预约记录。</zh-CN><en>Return a fixed bilingual conflict without echoing the resource, date, slot, or existing reservation record.</en></lang>
+    return {
+      outcome: createBookingFailure(
+        'conflict',
+        '该示例时段已被预约，请重新选择时段。',
+        'This demo slot is already booked; choose another slot.'
+      ),
+      nextSnapshot: reservationSnapshot
+    };
+  }
+
   // <lang><zh-CN>append 使用新数组；导入 dataset 与旧 snapshot 均不原地修改。</zh-CN><en>Append with a new array; neither imported dataset nor old snapshot is mutated in place.</en></lang>
   const nextSnapshot = [...reservationSnapshot, copyJson(outcome.reservation)];
   return {

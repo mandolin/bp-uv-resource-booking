@@ -9,7 +9,8 @@
     <runtime-page-shell :title="runtimeLocale.t('title.discover')">
       <view class="discover-page">
       <!-- <lang><zh-CN>发现页只保留 navbar 的单一标题层；搜索紧随其后，不重复营销标题或 eyebrow。</zh-CN><en>Discover retains only the navbar's single title layer; search follows immediately with no duplicate marketing heading or eyebrow.</en></lang> -->
-      <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @search="handleSearch" @clear="handleClear" />
+      <!-- <lang><zh-CN>原生键盘确认与可选搜索动作汇聚到同一显式提交；handler 只读取受控 keyword，不把原始事件当作查询。</zh-CN><en>Native keyboard confirmation and the optional search action converge on the same explicit submission; the handler reads only the controlled keyword and never treats the raw event as a query.</en></lang> -->
+      <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @confirm="handleSearch" @search="handleSearch" @clear="handleClear" />
       <!-- <lang><zh-CN>三项紧凑触发器复用 HIA-uView button 与 action-sheet：按钮只打开有限本地选项，选择面板提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>Three compact triggers reuse HIA-uView buttons and action sheet: a button only opens finite local options, while selection replaces page one and appended pages never mix a draft.</en></lang> -->
       <view class="discover-page__filters">
         <view class="discover-page__filter-actions">
@@ -226,8 +227,8 @@ function readFilterDraft() {
 /**
  * <lang><zh-CN>提交发现页的本地搜索。</zh-CN><en>Submits Discover's local search.</en></lang>
  * @returns {Promise<void>} <lang><zh-CN>page=1 替换完成后 resolve。</zh-CN><en>Resolves after page-one replacement completes.</en></lang>
- * @lang zh-CN 关键字只传给 local JSON contains 查询，不成为 URL、表达式或偏好。
- * @lang en The keyword goes only to local-JSON contains matching and never becomes a URL, expression, or preference.
+ * @lang zh-CN 原生 confirm 与可选 search intent 共用本函数；传入事件被有意忽略，关键字只从受控草稿进入 local JSON contains 查询，不成为 URL、表达式或偏好。
+ * @lang en Native confirm and the optional search intent share this function; any passed event is intentionally ignored, and the keyword enters local-JSON contains matching only from the controlled draft, never becoming a URL, expression, or preference.
  */
 async function handleSearch() {
   // <lang><zh-CN>以页面草稿执行明确首页刷新。</zh-CN><en>Run an explicit first-page refresh with the page draft.</en></lang>

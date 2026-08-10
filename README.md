@@ -6,8 +6,14 @@
 
 ## 当前边界 / Current boundary
 
-- 核心数据来自仓内版本化 JSON；目录、详情、预约列表、创建、取消和改期六项业务操作全部经版本化 project/solution profile、capability gate 与 HIA-uView-Biz project facade 到达唯一 local adapter。默认流程不读取网络、不写入 storage，也不依赖账号、定位、地图或支付。
-- The core data comes from versioned in-repository JSON. Catalog, detail, reservation-list, create, cancel, and reschedule operations all reach the sole local adapter through versioned project/solution profiles, the capability gate, and the HIA-uView-Biz project facade. The default flow reads no network, writes no storage, and depends on no account, location, map, or payment.
+- 核心数据来自仓内版本化 JSON；目录、详情、预约列表、创建、取消和改期六项业务操作全部经版本化 project/solution profile、capability gate 与 HIA-uView-Biz project facade 到达唯一 local adapter。默认业务流不读取网络，预约与草稿只留在内存，也不依赖账号、定位、地图或支付；只有用户明确选择的 runtime locale 会尝试写入一个固定设备 storage key，写入失败仍保留内存选择。
+- The core data comes from versioned in-repository JSON. Catalog, detail, reservation-list, create, cancel, and reschedule operations all reach the sole local adapter through versioned project/solution profiles, the capability gate, and the HIA-uView-Biz project facade. The default business flow reads no network, keeps bookings and drafts only in memory, and depends on no account, location, map, or payment. Only an explicitly selected runtime locale attempts to write one fixed device-storage key, and an in-memory choice survives a storage failure.
+
+- 根 `manifest.json` 显式设置 `uniStatistics.enable=false`，不启用 DCloud Uni Statistics。H5 与 mp-weixin 构建命令都会在编译后扫描最终文本产物，拒绝已知统计采集端点、接收器、队列、配置或初始化标记；锁文件仍可能包含编译链的传递依赖，这不代表它进入运行时产物。
+- The root `manifest.json` explicitly sets `uniStatistics.enable=false`, so DCloud Uni Statistics is not enabled. Both H5 and mp-weixin build commands scan final text artifacts after compilation and reject known statistics collector endpoints, receivers, queues, configuration, or initialization markers. The lockfile may still contain a transitive compiler-chain dependency; that does not mean it enters runtime artifacts.
+
+- 锁定的 Uni H5 通用 bundle 仍带有未调用的广告组件管理能力及两个 DCloud 广告端点字面值。本 BP 不声明广告组件、`adpid` 或广告 API 调用；源码与成品门禁只允许已审的休眠框架结构，并要求浏览器验收证明默认运行没有跨域请求。这是明确接受并披露的框架 surface，不是已启用广告能力，也不是“成品不含远端能力”的声明。
+- The pinned generic Uni H5 bundle still carries an uncalled ad-component manager and two DCloud ad-endpoint literals. This BP declares no ad component, `adpid`, or ad-API call. Source and artifact gates permit only the reviewed dormant framework shape, while browser acceptance must prove that default execution makes no cross-origin request. This is an explicitly accepted and disclosed framework surface—not enabled advertising and not a claim that the artifact contains no remote-capable code.
 
 - 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
 - There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
@@ -52,7 +58,7 @@ This project prefers mise rather than a system-default Node or a temporarily dow
 
 ```powershell
 mise install
-mise exec -- pnpm install
+mise exec -- pnpm install --frozen-lockfile --ignore-scripts
 mise exec -- pnpm test
 mise exec -- pnpm run build:h5
 mise exec -- pnpm run build:mp-weixin
@@ -62,9 +68,13 @@ mise exec -- pnpm run build:mp-weixin
 
 The WeChat Mini Program build output is `dist/build/mp-weixin/`. Import that directory with WeChat DevTools for development-tool testing. This project configures no remote API, so it does not handle domain allowlists for downstream business projects.
 
-H5 构建产物的静态 base 固定为 `/bp-uv-resource-booking/`，与未来 GitHub Pages 仓路径一致。H5 runtime `@dcloudio/uni-h5` 与 `sass` 均为锁定的明确输入；前者用于 H5 平台运行时，后者只在编译 `uni.scss` 时使用。
+H5 构建产物的静态 base 固定为 `/bp-uv-resource-booking/`，与 GitHub Pages 仓路径一致。构建命令会在固定输出中补入许可证与第三方声明，并在成功返回前执行 Pages 成品门禁。H5 runtime `@dcloudio/uni-h5` 与 `sass` 均为锁定的明确输入；前者用于 H5 平台运行时，后者只在编译 `uni.scss` 时使用。
 
-The H5 build artifact has the static base `/bp-uv-resource-booking/`, matching the future GitHub Pages repository path. Both the H5 runtime `@dcloudio/uni-h5` and `sass` are pinned explicit inputs; the former serves the H5 platform runtime and the latter is used only to compile `uni.scss`.
+The H5 build artifact has the static base `/bp-uv-resource-booking/`, matching the GitHub Pages repository path. The build command adds license and third-party notices to the fixed output and runs the Pages artifact gate before returning successfully. Both the H5 runtime `@dcloudio/uni-h5` and `sass` are pinned explicit inputs; the former serves the H5 platform runtime and the latter is used only to compile `uni.scss`.
+
+默认公开地址是 [https://mandolin.github.io/bp-uv-resource-booking/](https://mandolin.github.io/bp-uv-resource-booking/)。首次部署前，仓库管理员必须把 Pages source 设为 GitHub Actions；工作流本身不持有 PAT，也不会尝试自行改变仓库设置。完整的克隆、构建、人工验收、发布、pin 升级与回退步骤见 [交接与部署指南](docs/handoff-and-deployment.md)，分发输入与许可证边界见 [第三方声明](THIRD_PARTY_NOTICES.md)。
+
+The default public URL is [https://mandolin.github.io/bp-uv-resource-booking/](https://mandolin.github.io/bp-uv-resource-booking/). Before the first deployment, a repository administrator must set the Pages source to GitHub Actions; the workflow holds no PAT and does not try to change repository settings itself. See the [handoff and deployment guide](docs/handoff-and-deployment.md) for cloning, builds, manual acceptance, publication, pin upgrades, and rollback, and the [third-party notices](THIRD_PARTY_NOTICES.md) for distributed inputs and license boundaries.
 
 ## 数据源演进 / Data-source evolution
 

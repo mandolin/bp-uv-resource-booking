@@ -35,3 +35,11 @@ textarea {
 .bp-code-text {
   font-family: "Source Han Mono SC", "Noto Sans Mono CJK SC", "Sarasa Mono SC", monospace;
 }
+
+/* #ifdef H5 */
+/* <lang><zh-CN>关闭 Uni H5 基础样式注入的远端阴影图片预载动画，确保 Pages 运行只请求同源静态资产；该规则不改变页面可见内容。</zh-CN><en>Disable the remote shadow-image preload animation injected by Uni H5 base styles so the Pages runtime requests only same-origin static assets; this rule changes no visible page content.</en></lang> */
+body::after {
+  animation: none !important;
+  background-image: none !important;
+}
+/* #endif */
