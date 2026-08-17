@@ -65,11 +65,11 @@ test('Home main state keeps the approved presentation, navigation, and accessibi
   assert.match(sources.home, /\.home-page__title--zh-hans\s*\{\s*max-width:\s*280px;/u);
   assert.match(sources.home, /\.home-page\s*\{[^}]*background:\s*var\(--u-sys-color-surface\);/u);
 
-  // <lang><zh-CN>首页最终验收几何锁定 8px 精选区外距、24px 底栏额外预留与 124px 精选图；目录卡的 172px 覆盖仍保持独立。</zh-CN><en>Final Home acceptance geometry locks an 8px featured-section margin, 24px extra tab-bar reservation, and a 124px featured image while the catalog card's 172px override remains independent.</en></lang>
+  // <lang><zh-CN>首页最终验收几何锁定 8px 精选区外距、24px 底栏额外预留与 128px 精选图；目录卡的 172px 覆盖仍保持独立。</zh-CN><en>Final Home acceptance geometry locks an 8px featured-section margin, 24px extra tab-bar reservation, and a 128px featured image while the catalog card's 172px override remains independent.</en></lang>
   assert.match(sources.home, /\.home-page__featured\s*\{\s*margin-top:\s*8px;/u);
   assert.match(sources.home, /calc\(var\(--bp-shell-tabbar-height,\s*64px\)\s*\+\s*24px\s*\+\s*env\(safe-area-inset-bottom\)\)/u);
   assert.match(sources.home, /padding:\s*20px 16px calc\(88px \+ env\(safe-area-inset-bottom\)\)/u);
-  assert.match(sources.resourceCard, /\.resource-card__image-shell\s*\{[^}]*height:\s*124px;/u);
+  assert.match(sources.resourceCard, /\.resource-card__image-shell\s*\{[^}]*height:\s*128px;/u);
   assert.match(sources.resourceCard, /\.resource-card--catalog \.resource-card__image-shell\s*\{[^}]*height:\s*172px;/u);
 
   // <lang><zh-CN>自定义首页 header 必须在首帧使用现代微信窗口/胶囊 API，并让品牌栏填满壳拥有的实测高度；严禁重新引入废弃系统信息 API。</zh-CN><en>The custom Home header must use modern WeChat window/capsule APIs on the first render and let the brand bar fill the shell-owned measured height; deprecated system-information APIs must never return.</en></lang>
