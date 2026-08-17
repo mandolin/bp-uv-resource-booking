@@ -26,6 +26,13 @@ const CATALOG_PAGE_SIZE = 2;
 const DEFAULT_CATALOG_FILTERS = Object.freeze({ venueId: '', resourceTypeId: '', date: '' });
 
 /**
+ * <lang><zh-CN>没有可呈现目录 snapshot 时使用的固定分页事实。</zh-CN><en>Fixed pagination facts used when no displayable catalog snapshot exists.</en></lang>
+ * @lang zh-CN scope 切换或无卡片重试会复制这份值，确保 loading 不继续声称旧页次、总数或下一页。
+ * @lang en A scope change or cardless retry copies this value so loading cannot keep claiming a stale page, total, or next page.
+ */
+const EMPTY_CATALOG_PAGING = Object.freeze({ page: 0, pageSize: CATALOG_PAGE_SIZE, total: 0, hasNext: false });
+
+/**
  * <lang><zh-CN>尚未产生 operation terminal 前使用的空 source fact。</zh-CN><en>Empty source fact used before an operation terminal exists.</en></lang>
  * @lang zh-CN null 只表示“尚无调用事实”；SourceBadge 会使用保守 local-safe 文案，真正调用完成后由 facade terminal 替换。
  * @lang en Null means only “no invocation fact yet”; SourceBadge uses conservative local-safe copy until a real facade terminal replaces it.
@@ -107,7 +114,7 @@ const catalogFilters = ref({ ...DEFAULT_CATALOG_FILTERS });
  * @lang zh-CN 页脚显示 loaded/page/total/hasNext 时仅消费这份安全结果，不猜测总数。
  * @lang en Footer consumes only these safe result facts for loaded/page/total/hasNext and guesses no total.
  */
-const catalogPaging = ref({ page: 0, pageSize: CATALOG_PAGE_SIZE, total: 0, hasNext: false });
+const catalogPaging = ref({ ...EMPTY_CATALOG_PAGING });
 
 /**
  * <lang><zh-CN>可展示的当前 source metadata。</zh-CN><en>Current source metadata safe for display.</en></lang>
@@ -250,6 +257,51 @@ function normalizeCatalogFilters(filters) {
 }
 
 /**
+ * <lang><zh-CN>把候选关键字规范为 catalog scope 使用的稳定文本。</zh-CN><en>Normalizes a candidate keyword into stable text used by catalog scope.</en></lang>
+ * @param {unknown} keyword <lang><zh-CN>页面传入的候选关键字。</zh-CN><en>Candidate keyword supplied by a page.</en></lang>
+ * @returns {string} <lang><zh-CN>trim 后的有限文本或空字符串。</zh-CN><en>Trimmed finite text or an empty string.</en></lang>
+ * @lang zh-CN 该规范化与 local domain 的空白语义一致；它不执行大小写折叠、表达式解析或隐式序列化。
+ * @lang en This normalization matches the local domain's whitespace semantics; it performs no case folding, expression parsing, or implicit serialization.
+ */
+function normalizeCatalogKeyword(keyword) {
+  // <lang><zh-CN>只接受字符串并删除边界空白，其他类型不能成为查询 scope。</zh-CN><en>Accept only a string and remove boundary whitespace; other types cannot become a query scope.</en></lang>
+  return typeof keyword === 'string' ? keyword.trim() : '';
+}
+
+/**
+ * <lang><zh-CN>判断候选关键字与筛选是否仍属于当前已提交 catalog scope。</zh-CN><en>Determines whether candidate keyword and filters remain in the committed catalog scope.</en></lang>
+ * @param {string} keyword <lang><zh-CN>已规范化候选关键字。</zh-CN><en>Normalized candidate keyword.</en></lang>
+ * @param {{venueId:string,resourceTypeId:string,date:string}} filters <lang><zh-CN>已规范化候选筛选。</zh-CN><en>Normalized candidate filters.</en></lang>
+ * @returns {boolean} <lang><zh-CN>四项查询输入均与当前提交值相同时为 true。</zh-CN><en>True when all four query inputs equal their current committed values.</en></lang>
+ * @lang zh-CN scope 比较只读取有限 plain values；它不依赖页面实例、请求 handle、结果数量或 source authority。
+ * @lang en Scope comparison reads only finite plain values and depends on no page instance, request handle, result count, or source authority.
+ */
+function matchesCurrentCatalogScope(keyword, filters) {
+  // <lang><zh-CN>严格比较规范化字段，避免 Discover 的旧筛选 snapshot 被首页空 scope 复用。</zh-CN><en>Strictly compare normalized fields so Home cannot reuse a Discover snapshot from an old filtered scope.</en></lang>
+  return catalogKeyword.value === keyword
+    && catalogFilters.value.venueId === filters.venueId
+    && catalogFilters.value.resourceTypeId === filters.resourceTypeId
+    && catalogFilters.value.date === filters.date;
+}
+
+/**
+ * <lang><zh-CN>撤下不属于下一次读取 scope 的目录 snapshot。</zh-CN><en>Withdraws the catalog snapshot that does not belong to the next read scope.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值。</zh-CN><en>No return value.</en></lang>
+ * @lang zh-CN 只清除 entries、分页与 source；全局有限筛选选项仍来自最近成功 facade terminal，可继续支撑 Discover selector。
+ * @lang en Only entries, pagination, and source are cleared; global finite filter options still come from the latest successful facade terminal and may continue supporting Discover selectors.
+ */
+function clearCatalogSnapshot() {
+  // <lang><zh-CN>先撤下旧卡片，防止新 scope 的 loading 或 failure 显示前一 scope 数据。</zh-CN><en>Withdraw stale cards first so loading or failure for a new scope cannot display data from the prior scope.</en></lang>
+  catalogEntries.value = [];
+
+  // <lang><zh-CN>将分页恢复为“尚无 terminal”，不把旧 total/hasNext 投影给新 scope。</zh-CN><en>Restore pagination to “no terminal yet” and project no stale total/hasNext into the new scope.</en></lang>
+  catalogPaging.value = { ...EMPTY_CATALOG_PAGING };
+
+  // <lang><zh-CN>source 同步恢复为空事实，等待新 facade terminal 提供实际 authority。</zh-CN><en>Restore source to the empty fact as well, awaiting actual authority from the new facade terminal.</en></lang>
+  catalogSource.value = { ...EMPTY_SOURCE_FACT };
+}
+
+/**
  * <lang><zh-CN>加载或刷新目录页。</zh-CN><en>Loads or refreshes a catalog page.</en></lang>
  * @param {object} options <lang><zh-CN>请求模式、关键字和固定筛选。</zh-CN><en>Request mode, keyword, and fixed filters.</en></lang>
  * @param {boolean} options.append <lang><zh-CN>是否追加下一页。</zh-CN><en>Whether to append the next page.</en></lang>
@@ -268,17 +320,29 @@ async function loadCatalog({ append, keyword, filters }) {
     return;
   }
 
+  // <lang><zh-CN>刷新时规范化新关键字，追加时只使用已提交值，避免 page 间混入未提交草稿。</zh-CN><en>Normalize a new keyword on refresh and use only the committed value on append, preventing an unsubmitted draft from mixing across pages.</en></lang>
+  const requestedKeyword = append ? catalogKeyword.value : normalizeCatalogKeyword(keyword);
+
   // <lang><zh-CN>刷新时规范化新筛选，追加时只使用已提交值，避免 page 间混入未提交草稿。</zh-CN><en>Normalize new filters on refresh and use only committed values on append, preventing an unsubmitted draft from mixing across pages.</en></lang>
   const requestedFilters = append ? catalogFilters.value : normalizeCatalogFilters(filters);
+
+  // <lang><zh-CN>在写入新 scope 前比较四项提交值；append 按定义始终沿用当前 scope。</zh-CN><en>Compare all four committed values before writing a new scope; append always retains current scope by definition.</en></lang>
+  const scopeMatches = append || matchesCurrentCatalogScope(requestedKeyword, requestedFilters);
+
+  // <lang><zh-CN>只有 same-scope 且确有卡片时，刷新 loading/failure 才能保留旧 snapshot；空结果或新 scope 都不得保留旧分页/source。</zh-CN><en>Only a same-scope refresh with actual cards may retain the old snapshot during loading/failure; an empty result or new scope retains no stale pagination/source.</en></lang>
+  const retainsVisibleSnapshot = append || (scopeMatches && catalogEntries.value.length > 0);
 
   // <lang><zh-CN>取消先前尚未结束的读取请求；新 request 的结果由当前 call 自己拥有。</zh-CN><en>Request cancellation of prior unfinished read; result of new request is owned by current call itself.</en></lang>
   activeCatalogHandle?.cancel();
 
   // <lang><zh-CN>新搜索/刷新会立即更新 keyword 与筛选；append 保留上次已确认的完整查询。</zh-CN><en>New search/refresh updates keyword and filters; append retains the last confirmed complete query.</en></lang>
   if (!append) {
-    catalogKeyword.value = keyword;
+    catalogKeyword.value = requestedKeyword;
     catalogFilters.value = { ...requestedFilters };
   }
+
+  // <lang><zh-CN>新 scope、初始读取或无卡片重试先撤下 snapshot；same-scope 卡片刷新则保持已呈现内容，等待 terminal 决定替换或非阻塞失败。</zh-CN><en>A new scope, initial read, or cardless retry first withdraws its snapshot; a same-scope card refresh keeps displayed content until the terminal replaces it or reports a non-blocking failure.</en></lang>
+  if (!retainsVisibleSnapshot) clearCatalogSnapshot();
 
   // <lang><zh-CN>首次/刷新使用 loading，追加使用 appending，使列表在后者失败时保持可读。</zh-CN><en>Initial/refresh uses loading while append uses appending, keeping list readable when the latter fails.</en></lang>
   catalogPhase.value = append ? 'appending' : 'loading';
@@ -290,7 +354,7 @@ async function loadCatalog({ append, keyword, filters }) {
   const requestHandle = resourceBookingProject.queryResourceCatalog({
     page: requestedPage,
     pageSize: CATALOG_PAGE_SIZE,
-    keyword: catalogKeyword.value,
+    keyword: requestedKeyword,
     venueId: requestedFilters.venueId,
     resourceTypeId: requestedFilters.resourceTypeId,
     date: requestedFilters.date
@@ -315,7 +379,7 @@ async function loadCatalog({ append, keyword, filters }) {
     // <lang><zh-CN>失败仍保留 runtime 给出的 actual source，避免 badge 借用旧成功或硬编码 local。</zh-CN><en>Failure still retains the actual source supplied by the runtime, preventing the badge from borrowing stale success or hard-coded local.</en></lang>
     if (outcome.source) catalogSource.value = { ...outcome.source };
     catalogFailure.value = outcome;
-    catalogPhase.value = append ? 'ready' : 'failure';
+    catalogPhase.value = retainsVisibleSnapshot ? 'ready' : 'failure';
     return;
   }
 

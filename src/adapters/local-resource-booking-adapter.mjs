@@ -23,12 +23,47 @@ import {
   RESOURCE_BOOKING_OPERATION_IDS
 } from '../project/resource-booking-contracts.mjs';
 
+// <lang><zh-CN>首页恢复态夹具只提供有限 case 与内部 timing；adapter 不接收页面状态、callback、dataset 或任意 provider。</zh-CN><en>The Home recovery-state fixture supplies only a finite case and internal timing; the adapter accepts no page state, callback, dataset, or arbitrary provider.</en></lang>
+import { createHomeCatalogReviewFixture } from '../review/home-catalog-review.mjs';
+
 /**
  * <lang><zh-CN>单个 adapter 实例最多保留的幂等 write receipt 数量。</zh-CN><en>Maximum number of idempotent write receipts retained by one adapter instance.</en></lang>
  * @lang zh-CN 达到上限时拒绝新的 command，不驱逐可重放 receipt，也不产生新的 mutation。
  * @lang en At capacity a new command is rejected; replayable receipts are not evicted and no new mutation occurs.
  */
 const MAX_COMMAND_RECEIPTS = 32;
+
+/**
+ * <lang><zh-CN>empty 审阅 case 使用的只读空目录 dataset。</zh-CN><en>Read-only empty catalog dataset used by the empty review case.</en></lang>
+ * @lang zh-CN 该值只替代 queryCatalog 的目录输入；详情、预约列表与 mutation 继续使用完整 localDataset 和同一 authority。
+ * @lang en This value replaces only the catalog input for queryCatalog; details, reservation lists, and mutations continue using the complete localDataset and the same authority.
+ */
+const EMPTY_CATALOG_REVIEW_DATASET = Object.freeze({
+  datasetVersion: localDataset.datasetVersion,
+  venues: Object.freeze([]),
+  mockReservations: Object.freeze([])
+});
+
+/**
+ * <lang><zh-CN>保持一个 loading 审阅目录调用为 pending，不 resolve 或 reject。</zh-CN><en>Keeps a loading-review catalog invocation pending without resolving or rejecting.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值，也不触发 Promise terminal。</zh-CN><en>No return value and no Promise terminal is triggered.</en></lang>
+ * @lang zh-CN executor 不保存 runtime callback；显式 cancel 仍由 Biz facade lifecycle 终结公开 handle。
+ * @lang en The executor stores no runtime callback; explicit cancellation is still terminalized by the Biz facade lifecycle on the public handle.
+ */
+function keepHomeCatalogReviewPending() {
+  // <lang><zh-CN>有意保持空执行体：受控 review build 需要稳定的局部 loading，而不是生产延时。</zh-CN><en>The body is intentionally empty: a controlled review build needs stable local loading rather than a production delay.</en></lang>
+}
+
+/**
+ * <lang><zh-CN>创建一个由 Biz runtime 负责取消语义的 pending source Promise。</zh-CN><en>Creates a pending source Promise whose cancellation semantics are owned by the Biz runtime.</en></lang>
+ * @returns {Promise<never>} <lang><zh-CN>除非外层 handle 被取消，否则不产生 source terminal 的 Promise。</zh-CN><en>Promise that produces no source terminal unless the outer handle is cancelled.</en></lang>
+ * @lang zh-CN Promise 不启动 timer、I/O、listener 或轮询；review timing 由组合根的内部 scheduler 配对。
+ * @lang en The Promise starts no timer, I/O, listener, or polling; review timing is paired by the composition root's internal scheduler.
+ */
+function createPendingHomeCatalogReviewOutcome() {
+  // <lang><zh-CN>executor 永不调用 resolve/reject，确保截图期间状态不会因主机速度漂移。</zh-CN><en>The executor never calls resolve or reject, ensuring the state cannot drift with host speed during screenshots.</en></lang>
+  return new Promise(keepHomeCatalogReviewPending);
+}
 
 /**
  * <lang><zh-CN>复制本模块已知为 JSON plain data 的值。</zh-CN><en>Copies a value known by this module to be JSON plain data.</en></lang>
@@ -417,12 +452,16 @@ function executeReschedule(command, reservationSnapshot) {
 
 /**
  * <lang><zh-CN>创建一个拥有独立共享 snapshot/receipt 的 local project adapter。</zh-CN><en>Creates a local project adapter owning an isolated shared snapshot and receipt set.</en></lang>
+ * @param {unknown} [options={}] <lang><zh-CN>空 record 或只含 allowlisted `fixtureCase` 的审阅选项。</zh-CN><en>Empty record or review options containing only an allowlisted `fixtureCase`.</en></lang>
  * @returns {{adapter: object, getExecutionSnapshot: Function}} <lang><zh-CN>opaque adapter token 与仅计数 execution fact getter。</zh-CN><en>Opaque adapter token and a count-only execution-fact getter.</en></lang>
  * @throws {Error} <lang><zh-CN>checked-in operation definition 与 project-runtime contract 失配时抛出固定错误。</zh-CN><en>Throws a fixed error when checked-in operation definitions mismatch the project-runtime contract.</en></lang>
- * @lang zh-CN adapter token 不公开 handler/invoke；getter 只返回 operation ID 与次数，不返回 request、command、value 或 snapshot。
- * @lang en The adapter token exposes no handler or invoke; the getter returns only operation IDs and counts, not requests, commands, values, or snapshots.
+ * @lang zh-CN adapter token 不公开 handler/invoke；fixture 只改变 catalog source terminal，getter 只返回 operation ID 与次数。
+ * @lang en The adapter token exposes no handler or invoke; the fixture changes only the catalog source terminal and the getter returns only operation IDs and counts.
  */
-export function createLocalResourceBookingAdapter() {
+export function createLocalResourceBookingAdapter(options = {}) {
+  // <lang><zh-CN>复用审阅模块的 exact-field 与 allowlist 验证；adapter 不解释构建 mode 或任意配置。</zh-CN><en>Reuse the review module's exact-field and allowlist validation; the adapter interprets neither build modes nor arbitrary configuration.</en></lang>
+  const reviewFixture = createHomeCatalogReviewFixture(options);
+
   // <lang><zh-CN>每个 project factory 从 checked-in mockReservations 建立独立 transaction snapshot。</zh-CN><en>Every project factory creates an isolated transaction snapshot from checked-in mockReservations.</en></lang>
   let reservationSnapshot = copyJson(localDataset.mockReservations);
 
@@ -512,12 +551,29 @@ export function createLocalResourceBookingAdapter() {
           return { kind: 'failure', code: 'unknown', retryable: false };
         }
 
+        // <lang><zh-CN>loading case 在同一 local handler 内返回 pending Promise；页面仍只观察 Biz facade 的 handle。</zh-CN><en>The loading case returns a pending Promise inside the same local handler; the page still observes only the Biz facade handle.</en></lang>
+        if (reviewFixture.fixtureCase === 'loading') {
+          return createPendingHomeCatalogReviewOutcome();
+        }
+
+        // <lang><zh-CN>failure case 返回可重试 source failure，由 facade 转换为含 actual local source 的项目 failure。</zh-CN><en>The failure case returns a retryable source failure that the facade maps to a project failure carrying the actual local source.</en></lang>
+        if (reviewFixture.fixtureCase === 'failure') {
+          return { kind: 'failure', code: 'unavailable', retryable: true };
+        }
+
+        // <lang><zh-CN>empty 只把当前目录 domain 输入替换为空集合；ready 委托完整 checked-in dataset。</zh-CN><en>Empty replaces only the current catalog-domain input with an empty collection; ready delegates to the complete checked-in dataset.</en></lang>
+        const catalogDataset = reviewFixture.fixtureCase === 'empty'
+          ? EMPTY_CATALOG_REVIEW_DATASET
+          : localDataset;
+
         // <lang><zh-CN>纯 domain 返回 page 或业务 failure，均作为 canonical value 由 facade 隔离。</zh-CN><en>The pure domain returns a page or business failure, each isolated by the facade as a canonical value.</en></lang>
-        const catalogPage = createLocalCatalogPage(localDataset, request);
+        const catalogPage = createLocalCatalogPage(catalogDataset, request);
+
+        // <lang><zh-CN>只有 canonical page 才附加 adapter-owned filter choices；bounded domain failure 保持原 shape。</zh-CN><en>Attach adapter-owned filter choices only to a canonical page; a bounded domain failure retains its original shape.</en></lang>
         const catalogValue = catalogPage.kind === 'page'
           ? {
             ...catalogPage,
-            filterOptions: copyJson(createLocalCatalogFilterOptions(localDataset))
+            filterOptions: copyJson(createLocalCatalogFilterOptions(catalogDataset))
           }
           : catalogPage;
 

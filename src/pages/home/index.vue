@@ -38,24 +38,44 @@
           </u-button>
         </view>
 
-        <!-- <lang><zh-CN>加载、失败、空结果和精选项显式互斥；首页只呈现一个精选入口，不复用发现页的完整分页目录。</zh-CN><en>Loading, failure, empty, and featured states are explicitly exclusive; Home presents one featured entry rather than reusing Discover's complete paged catalog.</en></lang> -->
-        <u-loading-page v-if="demo.catalogPhase.value === 'loading'" :message="runtimeLocale.t('home.loading')" />
-        <view v-else-if="demo.catalogPhase.value === 'failure'" class="home-page__state">
-          <u-notice visible tone="error" :message="runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable')" />
-          <u-button :label="runtimeLocale.t('common.reload')" block @click="handleRetry" />
-        </view>
-        <u-empty
-          v-else-if="!featuredEntry"
-          :title="runtimeLocale.t('home.emptyTitle')"
-          :description="runtimeLocale.t('home.emptyDescription')"
-          :action-text="runtimeLocale.t('common.goDiscover')"
-          @action="browseResources"
-        />
-        <view v-else class="home-page__featured">
-          <!-- <lang><zh-CN>区块右侧提供明确“查看全部”入口；精选卡整体报告查看意图，没有第二个重复详情按钮。</zh-CN><en>The section exposes an explicit View all entry; the whole featured card reports view intent and contains no duplicate details button.</en></lang> -->
+        <!-- <lang><zh-CN>精选区标题在主态、加载、首次失败与成功空结果中保持稳定，使恢复状态不会改变首页的信息架构或“查看全部”入口。</zh-CN><en>The featured-section heading remains stable across ready, loading, initial failure, and successful empty results so recovery states do not change Home's information architecture or View all entry.</en></lang> -->
+        <view class="home-page__featured">
+          <!-- <lang><zh-CN>区块右侧提供明确“查看全部”入口；入口只负责导航，不把当前首页结果是否为空解释成发现页事实。</zh-CN><en>The section exposes an explicit View all entry; the entry only navigates and does not interpret whether the current Home result is empty as a Discover-page fact.</en></lang> -->
           <u-section :title="runtimeLocale.t('home.sectionFeatured')" :right-text="runtimeLocale.t('common.viewAll')" @right-click="browseResources" />
-          <!-- <lang><zh-CN>页面自有 view 承担卡片上间距，避免 scoped 样式跨越小程序自定义组件隔离边界。</zh-CN><en>A page-owned view carries the card's top spacing, avoiding scoped styling across the Mini Program custom-component isolation boundary.</en></lang> -->
-          <view class="home-page__featured-card">
+
+          <!-- <lang><zh-CN>D-1 使用 HIA-uView 的局部 USkeleton 与可读文案共同呈现首次加载；页面不创建动画、计时器或第二套请求状态。</zh-CN><en>D-1 combines HIA-uView's local USkeleton with readable copy for initial loading; the page creates no animation, timer, or second request state.</en></lang> -->
+          <view v-if="isCatalogPreparing" class="home-page__state home-page__state--loading">
+            <u-skeleton :loading="true" :rows="2" show-title show-avatar />
+            <text class="home-page__loading-copy">{{ runtimeLocale.t('home.loading') }}</text>
+          </view>
+
+          <!-- <lang><zh-CN>D-2 只把 canonical 首次失败投影为文字优先 UEmpty；只有 outcome 明确可重试时才提供 action。</zh-CN><en>D-2 projects only a canonical initial failure into a text-first UEmpty and offers an action only when the outcome is explicitly retryable.</en></lang> -->
+          <view v-else-if="isInitialCatalogFailure" class="home-page__state home-page__state--terminal">
+            <u-empty
+              class="home-page__terminal-panel"
+              :title="runtimeLocale.t('home.failureTitle')"
+              :description="runtimeLocale.t('home.failureDescription')"
+              :action-text="canRetryCatalogFailure ? runtimeLocale.t('common.retry') : ''"
+              @action="handleRetry"
+            />
+          </view>
+
+          <!-- <lang><zh-CN>D-3 表示 facade 已成功返回空目录；重新加载与 D-2 重试复用同一页面恢复意图，不跳转发现页。</zh-CN><en>D-3 represents a successfully returned empty catalog from the facade; Reload shares the same page recovery intent as D-2 retry and does not navigate to Discover.</en></lang> -->
+          <view v-else-if="isSuccessfulCatalogEmpty" class="home-page__state home-page__state--terminal">
+            <u-empty
+              class="home-page__terminal-panel"
+              :title="runtimeLocale.t('home.emptyTitle')"
+              :description="runtimeLocale.t('home.emptyDescription')"
+              :action-text="runtimeLocale.t('common.reload')"
+              @action="handleRetry"
+            />
+          </view>
+
+          <!-- <lang><zh-CN>已有精选快照时始终保留卡片；刷新失败仅在卡片上方增加非阻断 UNotice，不把可用内容替换成整块失败态。</zh-CN><en>When a featured snapshot exists, the card is always retained; a refresh failure adds only a non-blocking UNotice above it instead of replacing available content with a full failure state.</en></lang> -->
+          <view v-else-if="featuredEntry" class="home-page__featured-card">
+            <view v-if="hasRetainedFeaturedFailure" class="home-page__refresh-notice">
+              <u-notice visible tone="warning" :message="retainedCatalogFailureMessage" />
+            </view>
             <resource-card :entry="featuredEntry" layout="featured" @view="openDetail" />
           </view>
         </view>
@@ -102,6 +122,24 @@ const heroImage = getPresentationImage('home-civic-reading-atrium');
 
 // <lang><zh-CN>首页精选只读取当前 canonical page 的第一项，不复制领域对象或猜测第二项排序。</zh-CN><en>Home feature reads only the first item of the current canonical page and neither duplicates a domain object nor guesses a secondary ordering.</en></lang>
 const featuredEntry = computed(() => demo.catalogEntries.value[0] ?? null);
+
+// <lang><zh-CN>首次 idle/loading 且没有快照时呈现 D-1；同 scope 刷新若已有卡片则继续保留卡片，避免内容闪回骨架。</zh-CN><en>D-1 appears for initial idle/loading without a snapshot; a same-scope refresh with an existing card retains that card instead of flashing back to a skeleton.</en></lang>
+const isCatalogPreparing = computed(() => (demo.catalogPhase.value === 'idle' || demo.catalogPhase.value === 'loading') && featuredEntry.value === null);
+
+// <lang><zh-CN>首次失败只在没有可保留精选快照时成立；已有快照的同一 canonical failure 会走非阻断提示分支。</zh-CN><en>An initial failure exists only when no featured snapshot can be retained; the same canonical failure with a snapshot follows the non-blocking notice branch.</en></lang>
+const isInitialCatalogFailure = computed(() => demo.catalogPhase.value === 'failure' && featuredEntry.value === null);
+
+// <lang><zh-CN>D-2 action 严格服从 canonical outcome 的 retryable 标志，非可重试失败不生成误导按钮。</zh-CN><en>The D-2 action strictly follows the canonical outcome's retryable flag, so a non-retryable failure creates no misleading button.</en></lang>
+const canRetryCatalogFailure = computed(() => isInitialCatalogFailure.value && demo.catalogFailure.value?.retryable === true);
+
+// <lang><zh-CN>D-3 只接受 ready terminal 加空快照，idle/loading/failure 都不得被误报为成功空结果。</zh-CN><en>D-3 accepts only a ready terminal plus an empty snapshot; idle, loading, and failure must never be misreported as a successful empty result.</en></lang>
+const isSuccessfulCatalogEmpty = computed(() => demo.catalogPhase.value === 'ready' && featuredEntry.value === null);
+
+// <lang><zh-CN>刷新失败且已有精选快照时保留卡片，并只根据仍存在的 canonical failure 附加一条局部非阻断反馈。</zh-CN><en>A refresh failure with an existing featured snapshot retains the card and adds one local non-blocking feedback message only while the canonical failure remains present.</en></lang>
+const hasRetainedFeaturedFailure = computed(() => demo.catalogFailure.value !== null && featuredEntry.value !== null);
+
+// <lang><zh-CN>保留快照提示优先使用 facade outcome 的双语消息；极端缺失消息时回退到既有通用不可用文案，避免页面私自扩张错误语义。</zh-CN><en>The retained-snapshot notice prefers the facade outcome's bilingual message and falls back to the existing generic unavailable copy in the exceptional absence of a message, avoiding page-owned expansion of error semantics.</en></lang>
+const retainedCatalogFailureMessage = computed(() => runtimeLocale.localize(demo.catalogFailure.value?.message) || runtimeLocale.t('common.notAvailable'));
 
 // <lang><zh-CN>当前目录只要含关键字或任何发现页筛选，就需要在首页恢复无筛选的 profile 默认视图。</zh-CN><en>The current catalog needs the profile-default unfiltered Home view whenever it contains a keyword or any Discover filter.</en></lang>
 const catalogNeedsHomeReset = computed(() => demo.catalogKeyword.value.length > 0 || Object.values(demo.catalogFilters.value).some((value) => value.length > 0));
@@ -194,10 +232,21 @@ onPullDownRefresh(async () => {
 /* <lang><zh-CN>双入口等宽排列，主操作在左，图标与文字保持单行居中。</zh-CN><en>The two entries share equal width with the primary action on the left, keeping icon and copy centered on one line.</en></lang> */
 .home-page__shortcuts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
 .home-page__shortcut-icon { display: block; flex: 0 0 24px; height: 24px; width: 24px; }
-.home-page__state { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
 /* <lang><zh-CN>8px 容器外距与 USection 内部 44px 居中行共同形成设计板约 18–22px 的按钮至标题可见间距。</zh-CN><en>An 8px container margin combines with USection's centered 44px row to produce the board's roughly 18–22px visible button-to-title gap.</en></lang> */
 .home-page__featured { margin-top: 8px; }
+/* <lang><zh-CN>恢复态与主态卡片共享 10px 区块内距；页面 wrapper 只负责位置，具体骨架与空态视觉继续由 HIA-uView 组件拥有。</zh-CN><en>Recovery states and the ready-state card share a 10px section gap; the page wrapper owns only placement while HIA-uView components retain skeleton and empty-state visuals.</en></lang> */
+.home-page__state { box-sizing: border-box; display: flex; width: 100%; flex-direction: column; gap: 12px; margin-top: 10px; }
+/* <lang><zh-CN>D-1 的页面自有卡面为 USkeleton 提供与精选卡一致的局部表面；它不改变 USkeleton 的公开 token 或内部节点。</zh-CN><en>D-1's page-owned card surface gives USkeleton a local surface aligned with the featured card without changing USkeleton's public tokens or internals.</en></lang> */
+.home-page__state--loading { gap: 12px; height: 128px; min-height: 128px; overflow: hidden; padding: 0; border: 1px solid #f7f9fc; border-radius: 14px; background: var(--u-sys-color-surface-elevated, #ffffff); box-shadow: var(--bp-card-shadow, 0 2px 8px rgb(0 27 46 / 12%)); }
+/* <lang><zh-CN>loading 文案从 40px avatar、12px 左内距与 12px gap 推导为 64px 左起点，并使用 Board D 冻结的 13/20 字体节奏。</zh-CN><en>Loading copy derives its 64px left origin from the 40px avatar, 12px inset, and 12px gap and uses Board D's frozen 13/20 type rhythm.</en></lang> */
+.home-page__loading-copy { display: block; margin: 0 12px 0 64px; color: var(--u-sys-color-text-secondary, #27364a); font-size: 13px; font-weight: 400; line-height: 20px; }
+/* <lang><zh-CN>页面 wrapper 冻结 D-2/D-3 的最小纵向占位；UEmpty 自身继续拥有实际 padding、边界、文案和 action 视觉。</zh-CN><en>The page wrapper freezes the minimum vertical footprint for D-2 and D-3 while UEmpty continues owning actual padding, border, copy, and action visuals.</en></lang> */
+.home-page__state--terminal { min-height: 160px; }
+/* <lang><zh-CN>页面只通过组件公开根 class 固定 D-2/D-3 的可用内容宽度，避免短文案触发 UEmpty 的 auto-margin 收窄；组件仍独占其 token、内部结构与行为。</zh-CN><en>The page fixes D-2/D-3 to the available content width only through the component's public root class, preventing short copy from shrinking UEmpty through auto margins; the component still owns its tokens, internals, and behavior.</en></lang> */
+.home-page__terminal-panel { width: 100%; }
 .home-page__featured-card { margin-top: 10px; }
+/* <lang><zh-CN>刷新反馈位于保留卡片之前并提供固定间距；notice 自身仍是 inline、无计时器且不阻断卡片操作。</zh-CN><en>Refresh feedback precedes the retained card with a fixed gap; the notice itself remains inline, timer-free, and non-blocking to card operation.</en></lang> */
+.home-page__refresh-notice { margin-bottom: 10px; }
 /* <lang><zh-CN>native wrapper 独立提供 16px 卡片间距，避免 margin 落到小程序自定义组件宿主后失效。</zh-CN><en>The native wrapper independently supplies a 16px card gap, avoiding a margin that disappears when attached to a Mini Program custom-component host.</en></lang> */
 .home-page__data-notice { box-sizing: border-box; margin-top: 16px; width: 100%; }
 /* <lang><zh-CN>slot 内容显式采用思源黑体优先栈和设计板的信息色层级；页面只控制其自有节点，不改写 UAlertTips 内部选择器。</zh-CN><en>The slot content explicitly uses the Source Han Sans-first stack and the board's information-color hierarchy; the page controls only its own nodes and does not override UAlertTips internals.</en></lang> */

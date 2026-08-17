@@ -22,6 +22,55 @@ test('booking state obtains catalog, reservation cards, and all writes through p
   assert.equal(demo.catalogFilterOptions.value.venues.length > 0, true);
   assert.equal(demo.catalogSource.value.authority, 'local');
 
+  // <lang><zh-CN>记录 same-scope refresh 前已确认的卡片、分页与 source；刷新开始时这些可见事实必须保留，避免已有内容闪回 skeleton。</zh-CN><en>Record cards, pagination, and source confirmed before a same-scope refresh; these visible facts must remain when refresh starts, avoiding a flash back to the skeleton over existing content.</en></lang>
+  const retainedEntryIds = demo.catalogEntries.value.map((entry) => entry.id);
+  const retainedPaging = { ...demo.catalogPaging.value };
+  const retainedSource = { ...demo.catalogSource.value };
+
+  // <lang><zh-CN>同一空关键字/空筛选显式刷新仍走 facade，但 state 在 terminal 前保留当前 snapshot。</zh-CN><en>An explicit refresh of the same empty-keyword and empty-filter scope still crosses the facade, while state retains its current snapshot before the terminal.</en></lang>
+  const sameScopeRefresh = demo.refreshCatalog('', { venueId: '', resourceTypeId: '', date: '' });
+  assert.equal(demo.catalogPhase.value, 'loading');
+  assert.deepEqual(demo.catalogEntries.value.map((entry) => entry.id), retainedEntryIds);
+  assert.deepEqual({ ...demo.catalogPaging.value }, retainedPaging);
+  assert.deepEqual({ ...demo.catalogSource.value }, retainedSource);
+  await sameScopeRefresh;
+  assert.equal(demo.catalogPhase.value, 'ready');
+  assert.deepEqual(demo.catalogEntries.value.map((entry) => entry.id), retainedEntryIds);
+
+  // <lang><zh-CN>切换到确定无匹配项的新关键字 scope 后，loading 必须立即撤下旧卡片、分页与 source，而不是把 Discover 的旧结果带回其他页面。</zh-CN><en>After switching to a new keyword scope guaranteed to match nothing, loading must immediately withdraw stale cards, pagination, and source rather than carry Discover's old results into another page.</en></lang>
+  const emptyCatalogRead = demo.refreshCatalog('p70-no-such-local-resource', { venueId: '', resourceTypeId: '', date: '' });
+  assert.equal(demo.catalogPhase.value, 'loading');
+  assert.deepEqual(demo.catalogEntries.value, []);
+  assert.deepEqual({ ...demo.catalogPaging.value }, { page: 0, pageSize: 2, total: 0, hasNext: false });
+  assert.deepEqual({ ...demo.catalogSource.value }, { sourceId: null, authority: null, degradedReason: null });
+
+  // <lang><zh-CN>等待 facade 的 successful empty terminal；D-3 只能表现为 ready 加空集合，并保留实际 local source，而不是伪造 failure。</zh-CN><en>Await the facade's successful-empty terminal; D-3 may only become ready plus an empty collection with actual local source, never a fabricated failure.</en></lang>
+  await emptyCatalogRead;
+  assert.equal(demo.catalogPhase.value, 'ready');
+  assert.deepEqual(demo.catalogEntries.value, []);
+  assert.equal(demo.catalogPaging.value.total, 0);
+  assert.equal(demo.catalogSource.value.authority, 'local');
+  assert.equal(demo.catalogFailure.value, null);
+
+  // <lang><zh-CN>恢复默认 scope 供后续详情/预约流程使用；从 successful empty 返回时同样只能通过 facade 重新取得卡片。</zh-CN><en>Restore the default scope for later detail/reservation flow; returning from successful empty must likewise reacquire cards only through the facade.</en></lang>
+  await demo.refreshCatalog('', { venueId: '', resourceTypeId: '', date: '' });
+  assert.equal(demo.catalogPhase.value, 'ready');
+  assert.equal(demo.catalogEntries.value.length > 0, true);
+
+  // <lang><zh-CN>选择 facade 给出的一个有限场馆 ID 形成 filter-only scope 变化；即使关键字不变，旧卡片和页次也必须在 terminal 前撤下。</zh-CN><en>Select one finite venue ID supplied by the facade to create a filter-only scope change; even with an unchanged keyword, stale cards and paging must be withdrawn before the terminal.</en></lang>
+  const venueId = demo.catalogFilterOptions.value.venues[0].value;
+  const filteredCatalogRead = demo.refreshCatalog('', { venueId, resourceTypeId: '', date: '' });
+  assert.equal(demo.catalogPhase.value, 'loading');
+  assert.deepEqual(demo.catalogEntries.value, []);
+  assert.equal(demo.catalogPaging.value.page, 0);
+  assert.equal(demo.catalogSource.value.authority, null);
+  await filteredCatalogRead;
+  assert.equal(demo.catalogPhase.value, 'ready');
+  assert.equal(demo.catalogEntries.value.length > 0, true);
+
+  // <lang><zh-CN>再次恢复默认 scope，使余下测试继续从未筛选 canonical catalog 选择资源。</zh-CN><en>Restore the default scope again so the remaining test continues selecting a resource from the unfiltered canonical catalog.</en></lang>
+  await demo.refreshCatalog('', { venueId: '', resourceTypeId: '', date: '' });
+
   // <lang><zh-CN>详情 ID 只取自 facade 返回的 canonical catalog entry。</zh-CN><en>Take the detail ID only from a canonical catalog entry returned by the facade.</en></lang>
   const resourceId = demo.catalogEntries.value[0].id;
   await demo.loadResourceDetail(resourceId);

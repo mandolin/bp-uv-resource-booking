@@ -11,6 +11,41 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
+ * <lang><zh-CN>显式 Vite 审阅 mode 到首页目录 fixture 状态的完整静态映射。</zh-CN><en>Complete static mapping from explicit Vite review modes to Home catalog fixture states.</en></lang>
+ * @lang zh-CN mode 名称不从环境、URL、文件或外部 registry 发现；只有四项 checked-in key 可以改变审阅状态。
+ * @lang en Mode names are discovered from no environment, URL, file, or external registry; only four checked-in keys can change review state.
+ */
+const HOME_CATALOG_REVIEW_CASE_BY_VITE_MODE = Object.freeze({
+  'review-home-ready': 'ready',
+  'review-home-loading': 'loading',
+  'review-home-failure': 'failure',
+  'review-home-empty': 'empty'
+});
+
+/**
+ * <lang><zh-CN>把 Vite mode 映射为有限首页目录审阅状态。</zh-CN><en>Maps a Vite mode to a finite Home catalog review state.</en></lang>
+ * @param {unknown} mode <lang><zh-CN>Vite 提供的构建 mode 候选值。</zh-CN><en>Build-mode candidate supplied by Vite.</en></lang>
+ * @returns {'ready'|'loading'|'failure'|'empty'} <lang><zh-CN>严格映射结果；普通非审阅 mode 为 ready。</zh-CN><en>Strictly mapped result; an ordinary non-review mode is ready.</en></lang>
+ * @throws {Error} <lang><zh-CN>未知拼写进入保留 `review-home-` namespace 时失败关闭。</zh-CN><en>Fails closed when an unknown spelling enters the reserved `review-home-` namespace.</en></lang>
+ * @lang zh-CN 不做大小写归一化或近似匹配，避免拼写错误静默生成错误审阅产物。
+ * @lang en Performs no case normalization or approximate matching, preventing a typo from silently generating an incorrect review artifact.
+ */
+export function resolveHomeCatalogReviewCaseFromMode(mode) {
+  // <lang><zh-CN>精确命中的 checked-in review mode 一一映射到有限 fixture case。</zh-CN><en>An exactly matched checked-in review mode maps one-to-one onto a finite fixture case.</en></lang>
+  if (typeof mode === 'string' && Object.hasOwn(HOME_CATALOG_REVIEW_CASE_BY_VITE_MODE, mode)) {
+    return HOME_CATALOG_REVIEW_CASE_BY_VITE_MODE[mode];
+  }
+
+  // <lang><zh-CN>进入保留 `review-home-` namespace 的未知拼写严格失败关闭，防止审阅者误把 ready 截图当作目标恢复态。</zh-CN><en>An unknown spelling entering the reserved `review-home-` namespace fails closed, preventing a reviewer from mistaking a ready screenshot for the target recovery state.</en></lang>
+  if (typeof mode === 'string' && mode.startsWith('review-home-')) {
+    throw new Error('Home catalog review Vite mode is not allowed.');
+  }
+
+  // <lang><zh-CN>普通 development、production、自定义非审阅 mode 与非字符串输入均保持公开 ready 行为。</zh-CN><en>Ordinary development, production, custom non-review modes, and non-string inputs all retain public ready behavior.</en></lang>
+  return 'ready';
+}
+
+/**
  * <lang><zh-CN>当前配置所在 BP 仓根目录。</zh-CN><en>BP repository root containing the current configuration.</en></lang>
  * @lang zh-CN 路径由模块 URL 派生，避免从运行 shell 的 cwd 推断项目或 vendor 位置。
  * @lang en The path derives from module URL, avoiding inference of project/vendor locations from the running shell cwd.
@@ -97,25 +132,35 @@ function retainPrimaryTabIconFile(filePath) {
   return undefined;
 }
 
-// <lang><zh-CN>导出唯一官方 transform、可复现 alias 和 target-aware base；不添加隐式 auto-import、网络或后处理 plugin。</zh-CN><en>Export the sole official transform, reproducible aliases, and target-aware base; add no implicit auto-import, network, or post-processing plugin.</en></lang>
-export default defineConfig({
-  // <lang><zh-CN>官方 UniApp plugin 是唯一编译 transform；依赖版本由本仓 pnpm lock 固定。</zh-CN><en>The official UniApp plugin is the sole compilation transform; dependency versions are fixed by this repository's pnpm lock.</en></lang>
-  plugins: [uniPlugin.default()],
-  // <lang><zh-CN>在 H5 下使用唯一公开 Pages path，其他 target 不承继 Web deployment path。</zh-CN><en>Use the single public Pages path on H5; other targets do not inherit a web deployment path.</en></lang>
-  base: h5Base,
-  build: {
-    // <lang><zh-CN>保留八张底栏 PNG 的真实文件 locator；精确 allowlist 以外的资产继续使用默认 4 KiB 内联阈值。</zh-CN><en>Retain real file locators for the eight tab PNGs; assets outside the exact allowlist continue using the default 4 KiB inline threshold.</en></lang>
-    assetsInlineLimit: retainPrimaryTabIconFile
-  },
-  resolve: {
-    // <lang><zh-CN>所有 alias 解析到仓内 Git submodule 或当前 lockfile 的 node_modules，不越出 BP 边界。</zh-CN><en>Every alias resolves to an in-repository Git submodule or this lockfile's node_modules and never escapes the BP boundary.</en></lang>
-    alias: [
-      { find: '@hia-uview/ui/style.css', replacement: uiStyleEntry },
-      { find: '@hia-uview/ui', replacement: uiRuntimeEntry },
-      { find: '@hia-uview/biz-project-runtime', replacement: bizProjectRuntimeEntry },
-      { find: '@hia-uview/biz-async-provider-runtime', replacement: bizAsyncProviderEntry },
-      { find: '@hia-uview/biz-provider-port-runtime', replacement: bizProviderPortEntry },
-      { find: '@hia-uview/biz-solution-profile-runtime', replacement: bizSolutionProfileEntry }
-    ]
-  }
+// <lang><zh-CN>导出唯一官方 transform、可复现 alias、target-aware base 与 compile-time fixture literal；不添加隐式 auto-import、网络或后处理 plugin。</zh-CN><en>Export the sole official transform, reproducible aliases, target-aware base, and compile-time fixture literal; add no implicit auto-import, network, or post-processing plugin.</en></lang>
+export default defineConfig(({ mode }) => {
+  // <lang><zh-CN>每次配置求值只执行有限静态映射；production、development 与自定义非审阅 mode 都生成 ready literal。</zh-CN><en>Each configuration evaluation performs only the finite static mapping; production, development, and custom non-review modes all generate the ready literal.</en></lang>
+  const homeCatalogReviewCase = resolveHomeCatalogReviewCaseFromMode(mode);
+
+  // <lang><zh-CN>返回固定 UniApp 构建关系；审阅状态通过单个不可变 literal 编译进项目组合根。</zh-CN><en>Return the fixed UniApp build relation; review state is compiled into the project composition root through one immutable literal.</en></lang>
+  return {
+    // <lang><zh-CN>官方 UniApp plugin 是唯一编译 transform；依赖版本由本仓 pnpm lock 固定。</zh-CN><en>The official UniApp plugin is the sole compilation transform; dependency versions are fixed by this repository's pnpm lock.</en></lang>
+    plugins: [uniPlugin.default()],
+    // <lang><zh-CN>在 H5 下使用唯一公开 Pages path，其他 target 不承继 Web deployment path。</zh-CN><en>Use the single public Pages path on H5; other targets do not inherit a web deployment path.</en></lang>
+    base: h5Base,
+    define: {
+      // <lang><zh-CN>JSON literal 阻止 mode 文本成为代码；runtime 不再读取 mode 或环境。</zh-CN><en>The JSON literal prevents mode text from becoming code; runtime no longer reads the mode or environment.</en></lang>
+      __HIA_HOME_CATALOG_REVIEW_CASE__: JSON.stringify(homeCatalogReviewCase)
+    },
+    build: {
+      // <lang><zh-CN>保留八张底栏 PNG 的真实文件 locator；精确 allowlist 以外的资产继续使用默认 4 KiB 内联阈值。</zh-CN><en>Retain real file locators for the eight tab PNGs; assets outside the exact allowlist continue using the default 4 KiB inline threshold.</en></lang>
+      assetsInlineLimit: retainPrimaryTabIconFile
+    },
+    resolve: {
+      // <lang><zh-CN>所有 alias 解析到仓内 Git submodule 或当前 lockfile 的 node_modules，不越出 BP 边界。</zh-CN><en>Every alias resolves to an in-repository Git submodule or this lockfile's node_modules and never escapes the BP boundary.</en></lang>
+      alias: [
+        { find: '@hia-uview/ui/style.css', replacement: uiStyleEntry },
+        { find: '@hia-uview/ui', replacement: uiRuntimeEntry },
+        { find: '@hia-uview/biz-project-runtime', replacement: bizProjectRuntimeEntry },
+        { find: '@hia-uview/biz-async-provider-runtime', replacement: bizAsyncProviderEntry },
+        { find: '@hia-uview/biz-provider-port-runtime', replacement: bizProviderPortEntry },
+        { find: '@hia-uview/biz-solution-profile-runtime', replacement: bizSolutionProfileEntry }
+      ]
+    }
+  };
 });

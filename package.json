@@ -11,7 +11,13 @@
     "test": "pnpm run check && node --test test/*.test.mjs",
     "verify:h5-pages": "node scripts/verify-h5-pages-artifact.mjs",
     "build:h5": "uni build -p h5 && node scripts/verify-telemetry-boundary.mjs h5 && node scripts/prepare-h5-pages-artifact.mjs && pnpm run verify:h5-pages",
-    "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin"
+    "build:h5:review-home-loading": "uni build -p h5 --mode review-home-loading && node scripts/verify-telemetry-boundary.mjs h5 && node scripts/prepare-h5-pages-artifact.mjs && pnpm run verify:h5-pages",
+    "build:h5:review-home-failure": "uni build -p h5 --mode review-home-failure && node scripts/verify-telemetry-boundary.mjs h5 && node scripts/prepare-h5-pages-artifact.mjs && pnpm run verify:h5-pages",
+    "build:h5:review-home-empty": "uni build -p h5 --mode review-home-empty && node scripts/verify-telemetry-boundary.mjs h5 && node scripts/prepare-h5-pages-artifact.mjs && pnpm run verify:h5-pages",
+    "build:mp-weixin": "uni build -p mp-weixin && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin",
+    "build:mp-weixin:review-home-loading": "uni build -p mp-weixin --mode review-home-loading && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin",
+    "build:mp-weixin:review-home-failure": "uni build -p mp-weixin --mode review-home-failure && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin",
+    "build:mp-weixin:review-home-empty": "uni build -p mp-weixin --mode review-home-empty && node scripts/prepare-mp-devtools-project.mjs && node scripts/verify-mp-runtime-shell.mjs && node scripts/verify-telemetry-boundary.mjs mp-weixin"
   },
   "dependencies": {
     "@hia-uview/biz-project-runtime": "file:src/vendor/HIA-uView-Biz/packages/project-runtime",

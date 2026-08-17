@@ -13,6 +13,12 @@ import {
 // <lang><zh-CN>adapter factory 拥有 local JSON 与 mock transaction；composition root 只保留 opaque token 和 count getter。</zh-CN><en>The adapter factory owns local JSON and the mock transaction; the composition root retains only an opaque token and count getter.</en></lang>
 import { createLocalResourceBookingAdapter } from '../adapters/local-resource-booking-adapter.mjs';
 
+// <lang><zh-CN>首页审阅模块是 fixture case、exact options 与 loading timing 的唯一事实源；组合根不重复解释 mode。</zh-CN><en>The Home review module is the sole source of truth for fixture cases, exact options, and loading timing; the composition root does not reinterpret modes.</en></lang>
+import {
+  createHomeCatalogReviewFixture,
+  getCompiledHomeCatalogReviewCase
+} from '../review/home-catalog-review.mjs';
+
 // <lang><zh-CN>版本化 domain constant 仅用于项目自有 failure shape。</zh-CN><en>The versioned domain constant serves only the project's own failure shape.</en></lang>
 import { BOOKING_DOMAIN_VERSION } from '../domain/booking-domain.mjs';
 
@@ -38,18 +44,19 @@ function copyJson(value) {
  * @param {string} zhHans <lang><zh-CN>简体中文恢复提示。</zh-CN><en>Simplified-Chinese recovery guidance.</en></lang>
  * @param {string} en <lang><zh-CN>English recovery guidance。</zh-CN><en>English recovery guidance.</en></lang>
  * @param {object} source <lang><zh-CN>runtime 已脱敏的 actual source fact。</zh-CN><en>Actual-source fact already redacted by runtime.</en></lang>
+ * @param {boolean} [retryable=false] <lang><zh-CN>是否允许用户显式发起新的同类读取。</zh-CN><en>Whether the user may explicitly start a new read of the same kind.</en></lang>
  * @returns {object} <lang><zh-CN>不含 request、command、value、exception 或 profile 的 failure。</zh-CN><en>Failure containing no request, command, value, exception, or profile.</en></lang>
  * @lang zh-CN actual source fact 只含 sourceId/authority/degradedReason，便于示例披露 local authority。
  * @lang en The actual-source fact contains only sourceId, authority, and degradedReason so the demo can disclose local authority.
  */
-function createProviderFailure(code, zhHans, en, source) {
+function createProviderFailure(code, zhHans, en, source, retryable = false) {
   // <lang><zh-CN>固定双语 shape 与既有 state failure projection 保持兼容。</zh-CN><en>The fixed bilingual shape remains compatible with existing state failure projection.</en></lang>
   return {
     contractVersion: BOOKING_DOMAIN_VERSION,
     kind: 'failure',
     code,
     message: { 'zh-Hans': zhHans, en },
-    retryable: false,
+    retryable,
     scope: 'provider',
     source: copyJson(source)
   };
@@ -59,11 +66,12 @@ function createProviderFailure(code, zhHans, en, source) {
  * <lang><zh-CN>把 project-runtime terminal envelope 投影为项目 canonical outcome。</zh-CN><en>Projects a project-runtime terminal envelope into a project canonical outcome.</en></lang>
  * @param {object} envelope <lang><zh-CN>受限 async-provider terminal envelope。</zh-CN><en>Bounded async-provider terminal envelope.</en></lang>
  * @param {'read'|'write'} operationKind <lang><zh-CN>高层方法固定的 operation kind。</zh-CN><en>Operation kind fixed by the high-level method.</en></lang>
+ * @param {boolean} [retainProviderRetryable=false] <lang><zh-CN>当前高层读取是否获准保留 provider retryable。</zh-CN><en>Whether the current high-level read may retain provider retryability.</en></lang>
  * @returns {object} <lang><zh-CN>domain/booking value 加 actual source，或双语 bounded failure。</zh-CN><en>Domain or booking value with actual source, or a bilingual bounded failure.</en></lang>
  * @lang zh-CN mapper 不透传 runtime message、exception、request 或 lower host；write unknown 明确要求用户回看列表。
  * @lang en The mapper forwards no runtime message, exception, request, or lower host; write unknown explicitly asks the user to review the list.
  */
-function mapTerminalEnvelope(envelope, operationKind) {
+function mapTerminalEnvelope(envelope, operationKind, retainProviderRetryable = false) {
   // <lang><zh-CN>success value 已由 runtime 隔离；再复制并附加 actual source fact。</zh-CN><en>Runtime has already isolated a success value; copy it again and attach the actual-source fact.</en></lang>
   if (envelope.kind === 'success') {
     const canonicalValue = copyJson(envelope.value);
@@ -93,12 +101,13 @@ function mapTerminalEnvelope(envelope, operationKind) {
     );
   }
 
-  // <lang><zh-CN>所有其他 runtime failure 统一为可恢复 provider failure，不回显 lower code/message。</zh-CN><en>Every other runtime failure becomes a recoverable provider failure without echoing a lower code or message.</en></lang>
+  // <lang><zh-CN>其他 runtime failure 统一为 provider failure；只有获准的 catalog read 且 envelope 明确标记可重试时才保留该能力，不把 P70 语义扩散到其他读取，也不回显 lower code/message。</zh-CN><en>Other runtime failures become provider failures; retryability is retained only for the authorized catalog read when the envelope marks it explicitly, avoiding propagation of the P70 semantic to other reads and echoing no lower code or message.</en></lang>
   return createProviderFailure(
     'provider-unavailable',
     '示例数据暂时不可用，请稍后重试。',
     'Demo data is temporarily unavailable. Please try again.',
-    envelope.source
+    envelope.source,
+    operationKind === 'read' && retainProviderRetryable === true && envelope.retryable === true
   );
 }
 
@@ -106,31 +115,38 @@ function mapTerminalEnvelope(envelope, operationKind) {
  * <lang><zh-CN>包装 runtime handle，只改变 Promise value projection，不改变 cancel lifecycle。</zh-CN><en>Wraps a runtime handle, changing only Promise-value projection and not cancellation lifecycle.</en></lang>
  * @param {{promise: Promise<object>, cancel: Function}} runtimeHandle <lang><zh-CN>raw facade 返回的内部 handle。</zh-CN><en>Internal handle returned by the raw facade.</en></lang>
  * @param {'read'|'write'} operationKind <lang><zh-CN>高层业务方法固定的 kind。</zh-CN><en>Kind fixed by the high-level business method.</en></lang>
+ * @param {boolean} [retainProviderRetryable=false] <lang><zh-CN>是否允许当前读取保留 provider retryable。</zh-CN><en>Whether the current read may retain provider retryability.</en></lang>
  * @returns {{promise: Promise<object>, cancel: Function}} <lang><zh-CN>mapped Promise 与原语义 cancel handle。</zh-CN><en>Mapped promise and cancel handle with original semantics.</en></lang>
  * @lang zh-CN wrapper 不公开 raw handle、host、operation ID 或 facade；caller 只能等待或请求取消当前业务调用。
  * @lang en The wrapper exposes no raw handle, host, operation ID, or facade; callers may only await or request cancellation of the current business call.
  */
-function mapRuntimeHandle(runtimeHandle, operationKind) {
+function mapRuntimeHandle(runtimeHandle, operationKind, retainProviderRetryable = false) {
   // <lang><zh-CN>冻结 outer handle，防止页面替换 promise/cancel 成为隐藏 transport seam。</zh-CN><en>Freeze the outer handle so a page cannot replace promise or cancel and create a hidden transport seam.</en></lang>
   return Object.freeze({
-    promise: runtimeHandle.promise.then((envelope) => mapTerminalEnvelope(envelope, operationKind)),
+    promise: runtimeHandle.promise.then((envelope) => mapTerminalEnvelope(envelope, operationKind, retainProviderRetryable)),
     cancel: runtimeHandle.cancel
   });
 }
 
 /**
  * <lang><zh-CN>创建一个独立、进程内的资源预约 project facade。</zh-CN><en>Creates an isolated in-process resource-booking project facade.</en></lang>
+ * @param {unknown} [options={}] <lang><zh-CN>空 record 或精确 `{ fixtureCase }` 审阅选项。</zh-CN><en>Empty record or exact `{ fixtureCase }` review options.</en></lang>
  * @returns {object} <lang><zh-CN>六项高层业务方法与 doctor/snapshot/source-fact getters。</zh-CN><en>Six high-level business methods plus doctor, snapshot, and source-fact getters.</en></lang>
- * @throws {Error} <lang><zh-CN>checked-in profiles、capability closure 或 adapter relation 无法通过 readiness 时抛出固定错误。</zh-CN><en>Throws a fixed error when checked-in profiles, capability closure, or adapter relations fail readiness.</en></lang>
+ * @throws {Error} <lang><zh-CN>审阅 options 非精确有限合同，或 checked-in composition relation 无法通过 readiness 时抛出固定错误。</zh-CN><en>Throws a fixed error when review options violate the exact finite contract or the checked-in composition relation fails readiness.</en></lang>
  * @lang zh-CN 每个实例拥有独立 local adapter transaction；生产 singleton 由本模块底部创建，测试可用工厂隔离 write lifecycle。
  * @lang en Every instance owns an isolated local-adapter transaction; the production singleton is created at the bottom of this module, while tests may isolate write lifecycles through the factory.
  */
-export function createResourceBookingProject() {
+export function createResourceBookingProject(options = {}) {
+  // <lang><zh-CN>唯一 review factory 执行 plain-record、exact-field 与 finite-case 验证；非法 direct options 严格失败关闭。</zh-CN><en>The sole review factory validates plain records, exact fields, and finite cases; invalid direct options fail closed.</en></lang>
+  const homeCatalogReviewFixture = createHomeCatalogReviewFixture(options);
+
   // <lang><zh-CN>创建全新 declarative profiles，避免跨实例共享 caller-mutable graph。</zh-CN><en>Create fresh declarative profiles, avoiding a caller-mutable graph shared across instances.</en></lang>
   const profiles = createResourceBookingProfiles();
 
   // <lang><zh-CN>adapter fixture 只向组合根提供 opaque token 与 count-only facts。</zh-CN><en>The adapter fixture supplies only an opaque token and count-only facts to the composition root.</en></lang>
-  const localAdapter = createLocalResourceBookingAdapter();
+  const localAdapter = createLocalResourceBookingAdapter({
+    fixtureCase: homeCatalogReviewFixture.fixtureCase
+  });
 
   // <lang><zh-CN>options 精确绑定 local mode，不读取系统、UniApp 或网络状态。</zh-CN><en>Options bind local mode exactly and read no system, UniApp, or network state.</en></lang>
   const runtimeOptions = {
@@ -138,7 +154,8 @@ export function createResourceBookingProject() {
     adapters: [localAdapter.adapter],
     settingMode: 'local',
     environmentId: null,
-    timeoutMs: 5000
+    timeoutMs: 5000,
+    ...homeCatalogReviewFixture.runtimeTiming
   };
 
   // <lang><zh-CN>doctor 与真实 facade 使用同一 options relation；diagnosis 不执行 handler。</zh-CN><en>Doctor and real facade use the same options relation; diagnosis executes no handler.</en></lang>
@@ -164,10 +181,11 @@ export function createResourceBookingProject() {
    * @lang en The request enters project-runtime plain-data isolation directly; the composition root reads no arbitrary getter.
    */
   function queryResourceCatalog(request) {
-    // <lang><zh-CN>稳定 read operation ID 是唯一 dispatch 输入。</zh-CN><en>The stable read-operation ID is the sole dispatch input.</en></lang>
+    // <lang><zh-CN>稳定 read operation ID 是唯一 dispatch 输入；loading 同样使用标准 mapper，其稳定 pending 由 adapter source 与 review-only scheduler 共同保证。</zh-CN><en>The stable read-operation ID is the sole dispatch input; loading uses the standard mapper as well, with stable pending guaranteed jointly by the adapter source and review-only scheduler.</en></lang>
     return mapRuntimeHandle(
       facade.startRead(RESOURCE_BOOKING_OPERATION_IDS.queryCatalog, request),
-      'read'
+      'read',
+      true
     );
   }
 
@@ -304,8 +322,10 @@ export function createResourceBookingProject() {
 }
 
 /**
- * <lang><zh-CN>生产 BP 当前进程唯一共享的资源预约 project facade。</zh-CN><en>Sole shared resource-booking project facade for the current production BP process.</en></lang>
- * @lang zh-CN singleton 使页面读取与 mutation 共享同一 local reservation snapshot；应用刷新后回到 checked-in mock data。
- * @lang en The singleton lets page reads and mutations share one local reservation snapshot; an application refresh returns to checked-in mock data.
+ * <lang><zh-CN>当前 BP 进程唯一共享的资源预约 project facade。</zh-CN><en>Sole shared resource-booking project facade for the current BP process.</en></lang>
+ * @lang zh-CN singleton 使页面读取与 mutation 共享同一 local reservation snapshot；标准构建固定 ready，显式审阅构建只采用 compile-time allowlisted case。
+ * @lang en The singleton lets page reads and mutations share one local reservation snapshot; a standard build is fixed to ready, while an explicit review build uses only a compile-time allowlisted case.
  */
-export const resourceBookingProject = createResourceBookingProject();
+export const resourceBookingProject = createResourceBookingProject({
+  fixtureCase: getCompiledHomeCatalogReviewCase()
+});
