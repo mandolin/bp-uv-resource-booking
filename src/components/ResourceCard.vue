@@ -97,8 +97,8 @@ function handleView() {
 /* <lang><zh-CN>整卡获得键盘焦点时使用既有主题焦点色，确保 Enter/Space 等价激活具有非颜色之外的可见边界。</zh-CN><en>When the whole card receives keyboard focus, use the existing theme focus color so Enter/Space-equivalent activation has a visible boundary beyond color alone.</en></lang> */
 .resource-card__control:focus-visible { outline: 2px solid var(--u-sys-color-focus); outline-offset: -2px; }
 /* #endif */
-/* <lang><zh-CN>首页精选图固定占卡宽约四成，避免 fixed UImage 尺寸挤入正文。</zh-CN><en>The Home-featured image occupies about two-fifths of the card width, preventing a fixed UImage size from intruding into copy.</en></lang> */
-.resource-card__image-shell { flex: 0 0 42%; height: 118px; overflow: hidden; }
+/* <lang><zh-CN>首页精选图固定占卡宽约四成并使用 124px 高度填满已审阅正文行高，避免 fixed UImage 挤入正文或在卡片底部留下白条。</zh-CN><en>The Home-featured image occupies about two-fifths of the card width and uses a 124px height to fill the reviewed body line-height, preventing a fixed UImage from intruding into copy or leaving a white strip at the card bottom.</en></lang> */
+.resource-card__image-shell { flex: 0 0 42%; height: 124px; overflow: hidden; }
 .resource-card__body { box-sizing: border-box; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; padding: 12px 12px 11px; }
 .resource-card__title { display: -webkit-box; overflow: hidden; color: var(--u-sys-color-text); font-size: 16px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .resource-card__venue { overflow: hidden; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }

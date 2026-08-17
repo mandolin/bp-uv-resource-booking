@@ -191,7 +191,7 @@ async function verifyRuntimeI18n() {
 
   // <lang><zh-CN>首页必须同时保留通用变量 fallback 与微信字面 gutter；任一缺失都可能让一条无效 shorthand 再次抹掉整页边距。</zh-CN><en>Home must retain both generic variable fallbacks and the literal WeChat gutter; either omission could let one invalid shorthand erase the entire page inset again.</en></lang>
   const homePageSource = await readFile(resolve(projectRoot, 'src/pages/home/index.vue'), 'utf8');
-  if (!homePageSource.includes('var(--bp-page-inline, 16px)') || !homePageSource.includes('padding: 20px 16px calc(112px + env(safe-area-inset-bottom))')) {
+  if (!homePageSource.includes('var(--bp-page-inline, 16px)') || !homePageSource.includes('padding: 20px 16px calc(88px + env(safe-area-inset-bottom))')) {
     throw new Error('Home must retain its bounded cross-platform content gutter.');
   }
 

@@ -5,10 +5,14 @@
 <template>
   <!-- <lang><zh-CN>根壳提供统一背景和最小视口高度；页面业务内容只通过默认 slot 进入。</zh-CN><en>The root shell provides a shared background and minimum viewport height; page business content enters only through the default slot.</en></lang> -->
   <view class="runtime-page-shell">
-    <!-- <lang><zh-CN>sticky header 先占用 UniApp 状态栏变量；页面可通过受控 header slot 提供已审阅品牌栏，未提供时继续由 `u-navbar` 显示单语言标题和可选返回文字。</zh-CN><en>The sticky header first reserves UniApp's status-bar variable; a page may supply a reviewed brand bar through the bounded header slot, while `u-navbar` continues to render the single-language title and optional back copy by default.</en></lang> -->
+    <!-- <lang><zh-CN>sticky header 先占用现代微信 API 实测或 UniApp 变量回退的状态栏；页面可通过受控 header slot 提供已审阅品牌栏，未提供时继续由 `u-navbar` 显示单语言标题和可选返回文字。</zh-CN><en>The sticky header first reserves either a modern-WeChat-API measurement or the UniApp-variable status-bar fallback; a page may supply a reviewed brand bar through the bounded header slot, while `u-navbar` continues to render the single-language title and optional back copy by default.</en></lang> -->
     <view class="runtime-page-shell__header">
-      <view class="runtime-page-shell__status-bar" />
-      <slot name="header">
+      <view class="runtime-page-shell__status-bar" :style="statusBarStyle" />
+      <!-- <lang><zh-CN>自定义 header 使用首帧已解析的微信导航高度；H5 与平台读数不可用时稳定回退 52px，不在挂载后跳动。</zh-CN><en>A custom header uses the WeChat navigation height resolved before first render; H5 and unavailable platform readings stably fall back to 52px without a post-mount jump.</en></lang> -->
+      <view v-if="$slots.header" class="runtime-page-shell__custom-header" :style="customHeaderStyle">
+        <slot name="header" />
+      </view>
+      <template v-else>
         <u-navbar visible :title="title">
           <template #left>
             <!-- <lang><zh-CN>二级页通过 navbar 的公开 left slot 提供纯箭头 control；可见图形由 CSS 绘制，完整本地化语义保留在 aria-label。</zh-CN><en>Secondary pages provide a chevron-only control through the navbar's public left slot; CSS draws the visible shape while aria-label retains the complete localized meaning.</en></lang> -->
@@ -17,7 +21,7 @@
             </button>
           </template>
         </u-navbar>
-      </slot>
+      </template>
     </view>
 
     <!-- <lang><zh-CN>页面内容保持调用方所有权；壳不读取目录、预约、身份或数据 source。</zh-CN><en>Page content remains caller-owned; the shell reads no catalog, booking, identity, or data source.</en></lang> -->
@@ -34,6 +38,8 @@
 <script setup>
 // <lang><zh-CN>computed 只投影 props 与共享 locale，不创建页面私有 store。</zh-CN><en>Computed values project only props and shared locale and create no page-private store.</en></lang>
 import { computed } from 'vue';
+// <lang><zh-CN>微信头部适配器只读取当前窗口与原生胶囊的有限几何；它不读取设备型号或已废弃系统信息。</zh-CN><en>The WeChat header adapter reads only bounded current-window and native-capsule geometry; it reads no device model or deprecated system information.</en></lang>
+import { resolveWeChatHeaderLayout } from '../adapters/wechat-header-layout.mjs';
 // #ifdef H5
 // <lang><zh-CN>H5 通过响应式 effect 同步浏览器文档语言；当前页标题由 onShow chrome bridge 独占，避免缓存 tab 页互相覆盖。</zh-CN><en>H5 uses a reactive effect to synchronize the browser document language; the onShow chrome bridge exclusively owns the current-page title so cached tab pages cannot overwrite one another.</en></lang>
 import { watchEffect } from 'vue';
@@ -69,6 +75,25 @@ const props = defineProps({
 // <lang><zh-CN>读取应用级 locale surface，使个人信息页的选择可即时重绘所有壳文案。</zh-CN><en>Read the application-level locale surface so a Profile choice immediately redraws every shell label.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
+// <lang><zh-CN>默认 null 保持 H5、测试与旧微信基础库的静态状态栏和 52px 自定义栏合同。</zh-CN><en>A null default preserves the static status bar and 52px custom-bar contract for H5, tests, and older WeChat base libraries.</en></lang>
+let weChatHeaderLayout = null;
+// #ifdef MP-WEIXIN
+// <lang><zh-CN>setup 首帧同步解析现代微信几何，避免 onMounted 后二次下移造成可见抖动。</zh-CN><en>Resolve modern WeChat geometry synchronously during the setup render, avoiding a visible second downward shift after onMounted.</en></lang>
+weChatHeaderLayout = resolveWeChatHeaderLayout(wx);
+// #endif
+
+// <lang><zh-CN>只有合格微信读数才生成状态栏内联样式；空对象让既有 CSS 变量继续承担 fallback。</zh-CN><en>Only a valid WeChat reading produces inline status-bar styles; an empty object leaves the existing CSS variable responsible for fallback.</en></lang>
+const statusBarStyle = weChatHeaderLayout ? Object.freeze({
+  height: `${weChatHeaderLayout.statusBarHeight}px`,
+  minHeight: `${weChatHeaderLayout.statusBarHeight}px`
+}) : Object.freeze({});
+
+// <lang><zh-CN>自定义 header 高度只投影已验证数值；默认 52px 由局部 CSS 提供，普通 UNavbar 不受此值影响。</zh-CN><en>The custom-header height projects only a validated value; local CSS supplies the 52px default, and ordinary UNavbar instances are unaffected.</en></lang>
+const customHeaderStyle = weChatHeaderLayout ? Object.freeze({
+  height: `${weChatHeaderLayout.navigationBarHeight}px`,
+  minHeight: `${weChatHeaderLayout.navigationBarHeight}px`
+}) : Object.freeze({});
+
 // #ifdef H5
 /**
  * <lang><zh-CN>把共享 locale 投影到 H5 根文档语言。</zh-CN><en>Projects the shared locale into the H5 root-document language.</en></lang>
@@ -103,8 +128,10 @@ function handleBack() {
 .runtime-page-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--u-sys-color-surface-subtle); font-family: var(--bp-font-body, "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif); }
 /* <lang><zh-CN>header 在页面滚动时保持可见，并以主题表面遮住其下内容。</zh-CN><en>The header remains visible during page scrolling and uses the themed surface to cover content beneath it.</en></lang> */
 .runtime-page-shell__header { position: sticky; z-index: var(--bp-shell-header-z, 20); top: 0; background: var(--u-sys-color-surface); }
-/* <lang><zh-CN>UniApp 的状态栏变量在 H5 为零、在支持宿主为实际高度；不读取设备标识或同步系统 API。</zh-CN><en>UniApp's status-bar variable is zero on H5 and the actual height on supporting hosts; no device identifier or synchronous system API is read.</en></lang> */
+/* <lang><zh-CN>UniApp 状态栏变量是 H5、旧基础库或异常平台读数的静态 fallback；现代微信首帧以内联实测高度覆盖，且不读取设备标识。</zh-CN><en>The UniApp status-bar variable is the static fallback for H5, older base libraries, or invalid platform readings; modern WeChat overrides it with a first-render inline measurement and reads no device identifier.</en></lang> */
 .runtime-page-shell__status-bar { height: var(--status-bar-height); min-height: var(--status-bar-height); background: var(--u-sys-color-surface); }
+/* <lang><zh-CN>自定义标题 wrapper 拥有稳定的 52px 跨端 fallback；微信首帧内联几何仅覆盖其高度，不改变 slot 内容所有权。</zh-CN><en>The custom-title wrapper owns a stable 52px cross-platform fallback; first-render WeChat geometry overrides only its height without changing slot-content ownership.</en></lang> */
+.runtime-page-shell__custom-header { box-sizing: border-box; height: 52px; min-height: 52px; background: var(--u-sys-color-surface); }
 /* <lang><zh-CN>返回 control 清除宿主 button 外观并保留 40px 触控面；内部双边框形成与视觉板一致的轻量 chevron，不依赖字符字形或外部图标。</zh-CN><en>The back control removes host button chrome while retaining a 40px touch target; two inner borders form the board-aligned lightweight chevron without relying on a text glyph or external icon.</en></lang> */
 .runtime-page-shell__back { display: flex; align-items: center; justify-content: center; height: 40px; width: 40px; margin: 0; padding: 0; appearance: none; background: transparent; border: 0; border-radius: 0; color: var(--u-comp-navbar-control-foreground); }
 .runtime-page-shell__back::after { border: 0; }

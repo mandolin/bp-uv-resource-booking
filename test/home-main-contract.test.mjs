@@ -17,6 +17,7 @@ import test from 'node:test';
 const sourceUrls = Object.freeze({
   app: new URL('../src/App.vue', import.meta.url),
   assetMap: new URL('../src/data/asset-map.mjs', import.meta.url),
+  headerLayout: new URL('../src/adapters/wechat-header-layout.mjs', import.meta.url),
   home: new URL('../src/pages/home/index.vue', import.meta.url),
   messages: new URL('../src/locales/messages.mjs', import.meta.url),
   primaryTab: new URL('../src/components/PrimaryTabBar.vue', import.meta.url),
@@ -63,6 +64,21 @@ test('Home main state keeps the approved presentation, navigation, and accessibi
   assert.match(sources.home, /'home-page__title--zh-hans': runtimeLocale\.locale\.value === 'zh-Hans'/u);
   assert.match(sources.home, /\.home-page__title--zh-hans\s*\{\s*max-width:\s*280px;/u);
   assert.match(sources.home, /\.home-page\s*\{[^}]*background:\s*var\(--u-sys-color-surface\);/u);
+
+  // <lang><zh-CN>首页最终验收几何锁定 8px 精选区外距、24px 底栏额外预留与 124px 精选图；目录卡的 172px 覆盖仍保持独立。</zh-CN><en>Final Home acceptance geometry locks an 8px featured-section margin, 24px extra tab-bar reservation, and a 124px featured image while the catalog card's 172px override remains independent.</en></lang>
+  assert.match(sources.home, /\.home-page__featured\s*\{\s*margin-top:\s*8px;/u);
+  assert.match(sources.home, /calc\(var\(--bp-shell-tabbar-height,\s*64px\)\s*\+\s*24px\s*\+\s*env\(safe-area-inset-bottom\)\)/u);
+  assert.match(sources.home, /padding:\s*20px 16px calc\(88px \+ env\(safe-area-inset-bottom\)\)/u);
+  assert.match(sources.resourceCard, /\.resource-card__image-shell\s*\{[^}]*height:\s*124px;/u);
+  assert.match(sources.resourceCard, /\.resource-card--catalog \.resource-card__image-shell\s*\{[^}]*height:\s*172px;/u);
+
+  // <lang><zh-CN>自定义首页 header 必须在首帧使用现代微信窗口/胶囊 API，并让品牌栏填满壳拥有的实测高度；严禁重新引入废弃系统信息 API。</zh-CN><en>The custom Home header must use modern WeChat window/capsule APIs on the first render and let the brand bar fill the shell-owned measured height; deprecated system-information APIs must never return.</en></lang>
+  assert.match(sources.runtimeShell, /resolveWeChatHeaderLayout\(wx\)/u);
+  assert.match(sources.runtimeShell, /class="runtime-page-shell__custom-header"[^>]*:style="customHeaderStyle"/u);
+  assert.match(sources.home, /\.home-page__brand-bar\s*\{[^}]*height:\s*100%;/u);
+  assert.match(sources.headerLayout, /platformApi\.getWindowInfo\(\)/u);
+  assert.match(sources.headerLayout, /platformApi\.getMenuButtonBoundingClientRect\(\)/u);
+  assert.doesNotMatch(sources.headerLayout, /\.getSystemInfoSync\s*\(/u);
 
   // <lang><zh-CN>H5 adapter 必须消费 HIA-uView UTabbar 和八个 27px 登记 PNG，并只把 value 交给固定应用 helper。</zh-CN><en>The H5 adapter must consume HIA-uView UTabbar and all eight registered 27px PNGs and pass only a value to the fixed application helper.</en></lang>
   assert.match(sources.primaryTab, /<u-tabbar[^>]*:model-value="props\.currentPage"[^>]*:items="tabItems"[^>]*@change="handleTabChange"/u);

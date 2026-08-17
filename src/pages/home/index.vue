@@ -179,9 +179,9 @@ onPullDownRefresh(async () => {
 
 <style scoped>
 /* <lang><zh-CN>首页采用设计板的紧凑纵向节奏，并为微信 official custom tabBar 或 H5 HIA-uView UTabbar 与安全区留出完整滚动空间。</zh-CN><en>Home adopts the board's compact vertical rhythm and reserves complete scroll space for either WeChat's official custom tab bar or H5's HIA-uView UTabbar plus the safe area.</en></lang> */
-.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline, 16px) calc(var(--bp-shell-tabbar-height, 64px) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface); color: var(--u-sys-color-text); }
+.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline, 16px) calc(var(--bp-shell-tabbar-height, 64px) + 24px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface); color: var(--u-sys-color-text); }
 /* <lang><zh-CN>品牌栏是首页唯一顶部标题层；其宽度与高度稳定，不生成第二个居中标题。</zh-CN><en>The brand bar is Home's sole top-title layer; its width and height remain stable and create no second centered heading.</en></lang> */
-.home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 var(--bp-page-inline, 16px); overflow: hidden; background: var(--u-sys-color-surface); }
+.home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 100%; padding: 0 var(--bp-page-inline, 16px); overflow: hidden; background: var(--u-sys-color-surface); }
 .home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "HIA-uView BP Serif SC", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 /* <lang><zh-CN>欢迎语采用思源宋体优先的展示栈；正文、按钮和导航继续继承思源黑体优先栈。</zh-CN><en>Welcome copy uses a Source Han Serif-first display stack while body copy, buttons, and navigation continue to inherit the Source Han Sans-first stack.</en></lang> */
 .home-page__intro { display: flex; flex-direction: column; gap: 6px; }
@@ -195,7 +195,8 @@ onPullDownRefresh(async () => {
 .home-page__shortcuts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
 .home-page__shortcut-icon { display: block; flex: 0 0 24px; height: 24px; width: 24px; }
 .home-page__state { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-.home-page__featured { margin-top: 22px; }
+/* <lang><zh-CN>8px 容器外距与 USection 内部 44px 居中行共同形成设计板约 18–22px 的按钮至标题可见间距。</zh-CN><en>An 8px container margin combines with USection's centered 44px row to produce the board's roughly 18–22px visible button-to-title gap.</en></lang> */
+.home-page__featured { margin-top: 8px; }
 .home-page__featured-card { margin-top: 10px; }
 /* <lang><zh-CN>native wrapper 独立提供 16px 卡片间距，避免 margin 落到小程序自定义组件宿主后失效。</zh-CN><en>The native wrapper independently supplies a 16px card gap, avoiding a margin that disappears when attached to a Mini Program custom-component host.</en></lang> */
 .home-page__data-notice { box-sizing: border-box; margin-top: 16px; width: 100%; }
@@ -205,10 +206,10 @@ onPullDownRefresh(async () => {
 .home-page__data-notice-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; font-family: inherit; }
 .home-page__data-notice-title { display: block; color: var(--u-sys-color-action-primary, #0047ab); font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; }
 .home-page__data-notice-description { display: block; color: var(--u-sys-color-text-secondary, #27364a); font-family: inherit; font-size: 13px; font-weight: 400; line-height: 1.55; }
-/* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；只预留固定安全空间，不读取设备或窗口信息。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; reserve fixed safe space without reading device or window information.</en></lang> */
+/* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；本页只预留固定横向安全空间，纵向中心由页面壳的受限平台几何适配器负责。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; this page reserves only fixed horizontal safe space while the page shell's bounded platform-geometry adapter owns vertical centering.</en></lang> */
 /* #ifdef MP-WEIXIN */
 .home-page__brand-bar { padding: 0 116px 0 16px; background: #ffffff; }
-.home-page { padding: 20px 16px calc(112px + env(safe-area-inset-bottom)); background: #ffffff; color: #001b2e; }
+.home-page { padding: 20px 16px calc(88px + env(safe-area-inset-bottom)); background: #ffffff; color: #001b2e; }
 .home-page__brand { color: #0047ab; }
 .home-page__subtitle { color: #27364a; }
 /* #endif */

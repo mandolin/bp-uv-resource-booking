@@ -409,15 +409,24 @@ async function verifyGeneratedRuntimeShell() {
   const explicitVisibleCount = shellRuntime.match(/visible:!0/gu)?.length ?? 0;
   if (explicitVisibleCount < 1) throw new Error('Generated RuntimePageShell does not explicitly show HIA-uView navbar.');
 
+  // <lang><zh-CN>生成页面壳必须保留自定义 header wrapper，并把现代微信几何适配器接入首帧；固定 adapter 产物只能读取窗口和菜单胶囊 API，不能调用废弃系统信息 API。</zh-CN><en>The generated shell must retain the custom-header wrapper and connect the modern WeChat geometry adapter on the first render; the fixed adapter artifact may read only window and menu-capsule APIs and cannot call deprecated system-information APIs.</en></lang>
+  const shellTemplate = await readFile(resolve(outputRoot, 'components/RuntimePageShell.wxml'), 'utf8');
+  const headerLayoutRuntime = await readFile(resolve(outputRoot, 'adapters/wechat-header-layout.js'), 'utf8');
+  const hasCustomHeaderWrapper = shellTemplate.includes('runtime-page-shell__custom-header') && shellTemplate.includes('<slot name="header"/>');
+  const hasModernHeaderGeometry = shellRuntime.includes('resolveWeChatHeaderLayout') && headerLayoutRuntime.includes('.getWindowInfo()') && headerLayoutRuntime.includes('.getMenuButtonBoundingClientRect()');
+  if (!hasCustomHeaderWrapper || !hasModernHeaderGeometry || headerLayoutRuntime.includes('.getSystemInfoSync(')) {
+    throw new Error('Generated RuntimePageShell is missing its bounded modern WeChat header geometry.');
+  }
+
   // <lang><zh-CN>页面壳生成样式必须保留思源黑体优先的继承根，使 HIA-uView 叶级 control 能取得与页面一致的宿主字体。</zh-CN><en>The generated page-shell style must retain the Source Han Sans-first inheritance root so HIA-uView leaf controls receive the same host font as pages.</en></lang>
   const shellStyle = await readFile(resolve(outputRoot, 'components/RuntimePageShell.wxss'), 'utf8');
-  if (!shellStyle.includes('Source Han Sans SC')) {
+  if (!shellStyle.includes('Source Han Sans SC') || !/\.runtime-page-shell__custom-header(?:\.[a-z0-9-]+)?\{[^}]*height:52px;min-height:52px/u.test(shellStyle)) {
     throw new Error('Generated RuntimePageShell is missing Source Han Sans inheritance.');
   }
 
   // <lang><zh-CN>首页微信样式必须含确定的 16px gutter 与底栏预留；该字面 canary 捕获 app-level 变量让 shorthand 整体失效的回归。</zh-CN><en>The generated Home style must contain a deterministic 16px gutter and tab-bar reservation; this literal canary catches regressions where app-level variables invalidate the entire shorthand.</en></lang>
   const homeStyle = await readFile(resolve(outputRoot, 'pages/home/index.wxss'), 'utf8');
-  if (!/\.home-page(?:\.[a-z0-9-]+)?\{[^}]*padding:20px 16px calc\(112px \+ env\(safe-area-inset-bottom\)\)/u.test(homeStyle)) {
+  if (!/\.home-page(?:\.[a-z0-9-]+)?\{[^}]*padding:20px 16px calc\(88px \+ env\(safe-area-inset-bottom\)\)/u.test(homeStyle)) {
     throw new Error('Generated Home style is missing the bounded WeChat content gutter.');
   }
 
