@@ -18,11 +18,11 @@
 - 首页、发现、我的预约、个人信息四个 tab；目录同时具有触底追加、显式页次和可发现的重试状态。
 - There are four tabs: Home, Discover, My Bookings, and Profile. Catalogs use reach-bottom append, explicit page state, and discoverable retry status together.
 
-- 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 呈现；“个人信息”可选择跟随系统、简体中文或 English。标题继续使用 HIA-uView `u-navbar`，微信主导航通过 official custom tabBar 与 `switchTab` 保持跨页面常驻，并以受控 adapter 对齐 HIA-uView `u-tabbar` 的浅色视觉契约。
-- Page body copy, titles, and all four tabs render from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. Titles continue to use HIA-uView `u-navbar`; WeChat primary navigation remains persistent across pages through the official custom tab bar and `switchTab`, with a controlled adapter aligned to HIA-uView `u-tabbar`'s light visual contract.
+- 页面正文、标题和四项 tab 都从同一 `zh-Hans`/`en` runtime locale 呈现；“个人信息”可选择跟随系统、简体中文或 English。标题继续使用 HIA-uView `u-navbar`；微信主导航通过 official custom tabBar 与 `switchTab` 保持跨页面常驻，H5 则隐藏 Uni 原生 tabBar 并直接使用 HIA-uView 图标型 `u-tabbar`。
+- Page body copy, titles, and all four tabs render from the same `zh-Hans`/`en` runtime locale. Profile can follow the system or select Simplified Chinese or English. Titles continue to use HIA-uView `u-navbar`; WeChat primary navigation remains persistent across pages through the official custom tab bar and `switchTab`, while H5 hides Uni's native tab bar and directly uses HIA-uView's icon-capable `u-tabbar`.
 
-- 字体角色统一为思源黑体承载正文与控件、思源宋体承载少量展示标题、思源等宽仅供代码或技术文本；当前不捆绑字体文件，宿主缺少 Adobe 名称时使用同源 Noto CJK 名称，再降级到 generic family。
-- Typography uses Source Han Sans for body and controls, Source Han Serif for limited display headings, and Source Han Mono only for code or technical text. No font file is currently bundled; when Adobe family names are unavailable, the host uses sibling Noto CJK names before generic-family fallback.
+- 字体角色统一为思源黑体承载正文与控件、思源宋体承载少量展示标题、思源等宽仅供代码或技术文本。仓内固定三份经过改名的思源黑体 Regular/Bold 与思源宋体 Bold WOFF 子集：H5 从当前 origin 加载版本化文件，微信开发工具构建把同一 bytes 写入 CSS data URL，均不请求字体 CDN；未覆盖字形与未捆绑的思源等宽继续使用同源 Noto CJK 或 generic fallback。
+- Typography uses Source Han Sans for body and controls, Source Han Serif for limited display headings, and Source Han Mono only for code or technical text. Three renamed, pinned WOFF subsets—Source Han Sans Regular/Bold and Source Han Serif Bold—are checked in: H5 loads versioned files from the current origin, while the WeChat DevTools build embeds the same bytes in CSS data URLs. Neither target requests a font CDN; uncovered glyphs and the unbundled Source Han Mono role continue through sibling Noto CJK or generic fallbacks.
 
 - 预约仅存在于当前运行时。取消要先露出操作，再进行二次确认；取消后记录保留为“已取消”，不伪装为删除。已确认预约可从详情进入受控改期：先验证并创建新预约，成功后才保留旧记录为“已取消”；它不能换资源，也不接入真实库存、支付或后端。
 - Reservations exist only for the current runtime. Cancellation first reveals an action and then requires confirmation; cancelled records remain visibly cancelled rather than being disguised as deletion. A confirmed booking can enter controlled reschedule from details: it validates and creates a replacement first, then retains the old record as cancelled only after success; it cannot change resource and connects to no live inventory, payment, or backend.
@@ -39,7 +39,7 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `796fe0d839537900aade45b4a7a856721dfe4e4a` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、描边标签、轻量区块操作、纵向步骤连接线、按钮前置装饰以及原生按钮、搜索与提示 control 的宿主字体继承 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, outline tags, lightweight section actions, vertical-step connectors, button leading decorations, and host-font inheritance for native button, search, and alert controls |
+| `src/vendor/HIA-uView` | `91e4a98442fb61f2047fc510b4dab2af063c2841` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、被动标签、信息提示面、图标型 tabBar 与其他已审公共组件 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, passive tags, the information-alert surface, icon-capable tabBar, and other reviewed public components |
 | `src/vendor/HIA-uView-Biz` | `838e0344adb4177327ced50792c2e5b5744b86f7` | 版本化 project/solution profile、capability/operation gate、确定性 source selection、统一 facade/doctor 与底层异步生命周期 / Versioned project/solution profiles, capability/operation gate, deterministic source selection, unified facade/doctor, and lower asynchronous lifecycle |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。
@@ -52,9 +52,9 @@ The current UI pin includes the Mini Program global component-style output repai
 
 ## 本地开发与构建 / Local development and builds
 
-本项目优先使用 mise，而不是系统默认 Node 或临时下载的运行时。`.mise.toml` 固定 Node `24.12.0` 与 pnpm `10.27.0`。
+本项目优先使用 mise，而不是系统默认运行时。`.mise.toml` 固定 Node `24.12.0`、pnpm `10.27.0` 与仅供确定性字体维护使用的 Python `3.12.13`；日常应用构建不调用 Python。
 
-This project prefers mise rather than a system-default Node or a temporarily downloaded runtime. `.mise.toml` pins Node `24.12.0` and pnpm `10.27.0`.
+This project prefers mise rather than system-default runtimes. `.mise.toml` pins Node `24.12.0`, pnpm `10.27.0`, and Python `3.12.13` solely for deterministic font maintenance; routine application builds do not invoke Python.
 
 ```powershell
 mise install

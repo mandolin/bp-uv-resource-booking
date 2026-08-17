@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住页面组件树，使 HIA-uView 的受限 locale context 与 BP 显示语言保持同一 canonical 值。</zh-CN><en>The provider directly wraps the page component tree so HIA-uView's constrained locale context shares the BP display language's canonical value.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>个人信息页壳与语言 radio 共用同一 store，选择变化会在同一渲染周期更新当前标题与全部 tab labels。</zh-CN><en>The Profile shell and language radios share one store, so a selection change updates the current title and every tab label in the same render cycle.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.profile')">
+    <runtime-page-shell :title="runtimeLocale.t('title.profile')" primary-page="profile">
       <view class="profile-page">
         <!-- <lang><zh-CN>示例身份使用 HIA-uView avatar 和正文层级呈现，不成为可编辑账户表单或身份绑定入口。</zh-CN><en>Demo identity uses the HIA-uView avatar and body hierarchy without becoming an editable account form or identity-binding entry.</en></lang> -->
         <view class="profile-page__identity">

@@ -7,7 +7,7 @@
   <!-- <lang><zh-CN>HIA-uView UCard 提供受控表面；页面组件只在其默认 slot 内安排领域事实，不创建第二套卡片基础组件。</zh-CN><en>HIA-uView UCard provides the controlled surface; the page component arranges domain facts only inside its default slot and creates no second card primitive.</en></lang> -->
   <u-card :class="['resource-card', `resource-card--${cardLayout}`]" :padding="0" shadow>
     <!-- <lang><zh-CN>整张摘要是唯一查看 control，避免独立详情按钮与卡片本体产生重复主操作。</zh-CN><en>The whole summary is the sole view control, avoiding duplicate primary actions between a details button and the card body.</en></lang> -->
-    <view class="resource-card__control" role="button" :aria-label="displayTitle" @click="handleView">
+    <view class="resource-card__control" role="button" tabindex="0" :aria-label="displayTitle" @click="handleView" @keydown.enter.prevent="handleView" @keydown.space.prevent="handleView">
       <!-- <lang><zh-CN>图片容器拥有明确几何，UImage 通过公开 fluid prop 填满；不使用跨组件深层选择器。</zh-CN><en>The image container owns explicit geometry and UImage fills it through the public fluid prop; no cross-component deep selector is used.</en></lang> -->
       <view class="resource-card__image-shell">
         <u-image :src="imageUrl || ''" :alt="venueName" fluid shape="rounded" />
@@ -93,6 +93,10 @@ function handleView() {
 /* <lang><zh-CN>卡片根裁切公开 UImage、继承页面字体，并保持设计板较柔和的应用级圆角；它不覆盖 UCard 内部选择器。</zh-CN><en>The card root clips the public UImage, inherits the page font, and retains the board's softer application-level radius without overriding UCard internals.</en></lang> */
 .resource-card { overflow: hidden; border-radius: var(--bp-card-radius, 14px); font-family: inherit; }
 .resource-card__control { display: flex; align-items: stretch; min-width: 0; cursor: pointer; font-family: inherit; }
+/* #ifdef H5 */
+/* <lang><zh-CN>整卡获得键盘焦点时使用既有主题焦点色，确保 Enter/Space 等价激活具有非颜色之外的可见边界。</zh-CN><en>When the whole card receives keyboard focus, use the existing theme focus color so Enter/Space-equivalent activation has a visible boundary beyond color alone.</en></lang> */
+.resource-card__control:focus-visible { outline: 2px solid var(--u-sys-color-focus); outline-offset: -2px; }
+/* #endif */
 /* <lang><zh-CN>首页精选图固定占卡宽约四成，避免 fixed UImage 尺寸挤入正文。</zh-CN><en>The Home-featured image occupies about two-fifths of the card width, preventing a fixed UImage size from intruding into copy.</en></lang> */
 .resource-card__image-shell { flex: 0 0 42%; height: 118px; overflow: hidden; }
 .resource-card__body { box-sizing: border-box; display: flex; flex: 1; flex-direction: column; gap: 5px; min-width: 0; padding: 12px 12px 11px; }

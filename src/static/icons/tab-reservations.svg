@@ -1,4 +1,4 @@
-<!-- <lang><zh-CN>本仓原创的预约未选中线性图标；27 单位网格与 7/3 单位描边提供整数 3x 栅格，日历轮廓不包含真实日期或库存。</zh-CN><en>Repository-original unselected bookings line icon; its 27-unit grid and 7/3-unit stroke provide an integer 3x raster, and the calendar outline contains no live date or inventory.</en></lang> -->
+<!-- <lang><zh-CN>本仓原创的预约未选中线性图标；27 单位网格与明确的 7/3 单位描边直接栅格为 27×27 运行时 PNG，不经历 3x 预放大或运行时缩小；日历轮廓不包含真实日期或库存。</zh-CN><en>Repository-original unselected bookings line icon; its 27-unit grid and explicit 7/3-unit stroke rasterize directly into a 27×27 runtime PNG without 3x preraster enlargement or runtime downscaling, and the calendar outline contains no live date or inventory.</en></lang> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none" stroke="#172536" stroke-width="2.333333" stroke-linecap="round" stroke-linejoin="round">
   <title>My bookings</title>
   <desc>Outline calendar for the My bookings tab.</desc>

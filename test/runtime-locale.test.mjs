@@ -165,58 +165,31 @@ test('platform-managed chrome allows only fixed primary routes and provides a bo
 
 test('primary tab chrome synchronizes WeChat custom state before native host labels', () => {
   // <lang><zh-CN>custom tab 实例只记录当前 value/locale；存在该实例时绝不触发 native tab API。</zh-CN><en>The custom-tab instance records only current value/locale; while it exists, no native-tab API may run.</en></lang>
+  const previousPlatform = process.env.UNI_PLATFORM;
   const customUpdates = [];
   const nativeCalls = [];
   const translate = (messageKey) => ({
     'nav.home': 'Home',
     'nav.discover': 'Discover',
     'nav.reservations': 'My bookings',
-    'nav.profile': 'Profile'
+    'nav.profile': 'Profile',
+    'title.profile': 'Profile'
   })[messageKey];
   const currentPage = { getTabBar: () => ({ setData: (payload) => customUpdates.push(payload) }) };
 
-  // <lang><zh-CN>微信路径同步当前实例后立即返回，不调用作为测试替身提供的 setTabBarItem。</zh-CN><en>The WeChat path returns immediately after synchronizing the current instance and does not call the test-double setTabBarItem.</en></lang>
-  assert.equal(syncPrimaryTabChrome('profile', 'en', translate, {
-    pages: [currentPage],
-    weChat: true,
-    uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
-  }), true);
-  assert.deepEqual(customUpdates, [{ selected: 'profile', locale: 'en' }]);
-  assert.deepEqual(nativeCalls, []);
-
-  // <lang><zh-CN>非微信宿主没有 custom 实例时只更新四个固定 index/text，仍不接收调用方 URL。</zh-CN><en>A non-WeChat host without a custom instance updates only four fixed index/text pairs and still accepts no caller URL.</en></lang>
-  assert.equal(syncPrimaryTabChrome('home', 'en', translate, {
-    pages: [],
-    weChat: false,
-    uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
-  }), true);
-  assert.deepEqual(nativeCalls, [
-    { index: 0, text: 'Home' },
-    { index: 1, text: 'Discover' },
-    { index: 2, text: 'My bookings' },
-    { index: 3, text: 'Profile' }
-  ]);
-});
-
-test('H5 compatibility wx global never suppresses localized native tab labels', () => {
-  // <lang><zh-CN>保存可能存在的 Node 全局，测试结束后逐项恢复，避免影响同进程其他平台测试。</zh-CN><en>Retain any existing Node globals and restore each after the test, preventing impact on other platform tests in the same process.</en></lang>
-  const previousWx = globalThis.wx;
-  const previousDocument = globalThis.document;
-  const nativeCalls = [];
-
-  // <lang><zh-CN>翻译替身只返回四个受审 label，不读取 runtime store 或任意输入。</zh-CN><en>The translation double returns only four reviewed labels and reads neither the runtime store nor arbitrary input.</en></lang>
-  const translate = (messageKey) => ({
-    'nav.home': 'Home',
-    'nav.discover': 'Discover',
-    'nav.reservations': 'My bookings',
-    'nav.profile': 'Profile'
-  })[messageKey];
-
   try {
-    // <lang><zh-CN>复现 UniApp H5：浏览器 document 存在，同时兼容层暴露空 wx；它仍必须进入 injected native tab adapter。</zh-CN><en>Reproduce UniApp H5: browser document exists while the compatibility layer exposes an empty wx; it must still enter the injected native-tab adapter.</en></lang>
-    globalThis.wx = {};
-    globalThis.document = {};
+    // <lang><zh-CN>官方编译平台值为微信时同步当前实例后立即返回，不调用作为测试替身提供的 setTabBarItem。</zh-CN><en>When the official compiled-platform value is WeChat, synchronize the current instance and return immediately without calling the test-double setTabBarItem.</en></lang>
+    process.env.UNI_PLATFORM = 'mp-weixin';
     assert.equal(syncPrimaryTabChrome('profile', 'en', translate, {
+      pages: [currentPage],
+      uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
+    }), true);
+    assert.deepEqual(customUpdates, [{ selected: 'profile', locale: 'en' }]);
+    assert.deepEqual(nativeCalls, []);
+
+    // <lang><zh-CN>其他编译宿主没有 custom 实例时只更新四个固定 index/text，仍不接收调用方 URL。</zh-CN><en>Another compiled host without a custom instance updates only four fixed index/text pairs and still accepts no caller URL.</en></lang>
+    process.env.UNI_PLATFORM = 'app-plus';
+    assert.equal(syncPrimaryTabChrome('home', 'en', translate, {
       pages: [],
       uniApi: { setTabBarItem: (payload) => nativeCalls.push(payload) }
     }), true);
@@ -227,10 +200,49 @@ test('H5 compatibility wx global never suppresses localized native tab labels', 
       { index: 3, text: 'Profile' }
     ]);
   } finally {
+    // <lang><zh-CN>精确恢复测试前的编译平台环境，避免泄漏到其他 runtime 用例。</zh-CN><en>Restore the pre-test compiled-platform environment exactly, preventing leakage into other runtime cases.</en></lang>
+    if (previousPlatform === undefined) delete process.env.UNI_PLATFORM;
+    else process.env.UNI_PLATFORM = previousPlatform;
+  }
+});
+
+test('H5 compatibility wx global never suppresses the application-owned tab boundary', () => {
+  // <lang><zh-CN>保存可能存在的 Node 全局，测试结束后逐项恢复，避免影响同进程其他平台测试。</zh-CN><en>Retain any existing Node globals and restore each after the test, preventing impact on other platform tests in the same process.</en></lang>
+  const previousWx = globalThis.wx;
+  const previousDocument = globalThis.document;
+  const previousPlatform = process.env.UNI_PLATFORM;
+  const nativeCalls = [];
+
+  // <lang><zh-CN>翻译替身只返回四个受审 label 与当前页标题，不读取 runtime store 或任意输入。</zh-CN><en>The translation double returns only four reviewed labels and the current-page title and reads neither the runtime store nor arbitrary input.</en></lang>
+  const translate = (messageKey) => ({
+    'nav.home': 'Home',
+    'nav.discover': 'Discover',
+    'nav.reservations': 'My bookings',
+    'nav.profile': 'Profile',
+    'title.profile': 'Profile'
+  })[messageKey];
+
+  try {
+    // <lang><zh-CN>复现 UniApp H5：浏览器 document 存在，同时兼容层暴露空 wx；显式 H5 分支必须隐藏 native tab，而不是更新已隐藏 label。</zh-CN><en>Reproduce UniApp H5: browser document exists while the compatibility layer exposes an empty wx; the explicit H5 branch must hide the native tab rather than update hidden labels.</en></lang>
+    globalThis.wx = {};
+    globalThis.document = { title: 'Stale tab title' };
+    process.env.UNI_PLATFORM = 'h5';
+    assert.equal(syncPrimaryTabChrome('profile', 'en', translate, {
+      pages: [],
+      uniApi: {
+        hideTabBar: (payload) => nativeCalls.push(['hideTabBar', payload]),
+        setTabBarItem: (payload) => nativeCalls.push(['setTabBarItem', payload])
+      }
+    }), true);
+    assert.deepEqual(nativeCalls, [['hideTabBar', { animation: false }]]);
+    assert.equal(globalThis.document.title, 'Profile');
+  } finally {
     // <lang><zh-CN>不存在的原始全局用删除恢复，已有值则精确写回原引用。</zh-CN><en>Restore an originally absent global by deletion and an existing value by writing back its exact reference.</en></lang>
     if (previousWx === undefined) delete globalThis.wx;
     else globalThis.wx = previousWx;
     if (previousDocument === undefined) delete globalThis.document;
     else globalThis.document = previousDocument;
+    if (previousPlatform === undefined) delete process.env.UNI_PLATFORM;
+    else process.env.UNI_PLATFORM = previousPlatform;
   }
 });

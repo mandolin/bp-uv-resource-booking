@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 直接包住本页，使 UI components、状态标签和领域字段投影使用同一 runtime locale。</zh-CN><en>The provider directly wraps this page so UI components, state labels, and domain-field projection use one runtime locale.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>页面壳用 HIA-uView 呈现当前单语言标题，平台常驻主导航与页面自有预约筛选 tab 保持职责分离。</zh-CN><en>The page shell uses HIA-uView for the current single-language title, keeping platform-persistent primary navigation separate from page-owned reservation-filter tabs.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.reservations')">
+    <runtime-page-shell :title="runtimeLocale.t('title.reservations')" primary-page="reservations">
       <view class="reservations-page">
         <!-- <lang><zh-CN>来源标记紧邻页面筛选，明确列表内容仍是当前运行时的本地示例，而不是账户订单。</zh-CN><en>The source badge sits next to the page filter, making clear that list content remains current-runtime local demo data rather than account orders.</en></lang> -->
         <view class="reservations-page__source"><source-badge :source="demo.reservationSource.value" /></view>

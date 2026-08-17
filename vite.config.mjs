@@ -66,12 +66,47 @@ const bizSolutionProfileEntry = resolve(projectRoot, 'src/vendor/HIA-uView-Biz/p
  */
 const h5Base = process.env.UNI_PLATFORM === 'h5' ? '/bp-uv-resource-booking/' : '/';
 
+/**
+ * <lang><zh-CN>H5 应用自管主导航使用的八张固定 27×27 PNG source 路径。</zh-CN><en>Eight fixed 27×27 PNG source paths used by the H5 application-owned primary navigation.</en></lang>
+ * @lang zh-CN 这些小文件必须保留为 Pages-base URL，而不能被 Vite 内联成 data URI；这样浏览器成品门禁可以逐一绑定原创 SVG 派生物的摘要与实际 DOM locator。
+ * @lang en These small files must remain Pages-base URLs instead of being inlined by Vite as data URIs, allowing the browser-artifact gate to bind every original-SVG derivative digest to the locator used by the DOM.
+ */
+const h5TabIconSourcePaths = new Set([
+  'tab-home.png',
+  'tab-home-active.png',
+  'tab-discover.png',
+  'tab-discover-active.png',
+  'tab-reservations.png',
+  'tab-reservations-active.png',
+  'tab-profile.png',
+  'tab-profile-active.png'
+].map((fileName) => resolve(projectRoot, 'src/static/icons', fileName)));
+
+/**
+ * <lang><zh-CN>仅阻止八张登记主导航 PNG 被内联，其余资产继续采用 Vite 的锁定默认判断。</zh-CN><en>Prevents inlining only for the eight registered primary-navigation PNGs and leaves every other asset to Vite's pinned default decision.</en></lang>
+ * @param {string} filePath <lang><zh-CN>Vite 已解析的候选资产路径。</zh-CN><en>Candidate asset path resolved by Vite.</en></lang>
+ * @returns {boolean | undefined} <lang><zh-CN>登记图标返回 false；其他文件返回 undefined 以保留默认阈值。</zh-CN><en>False for a registered icon; undefined for another file to retain the default threshold.</en></lang>
+ * @lang zh-CN 路径只与仓内冻结 Set 做精确比较，不按扩展名或调用方文本放宽全部 PNG。
+ * @lang en The path is compared exactly with the frozen in-repository set and never broadens all PNGs by extension or caller text.
+ */
+function retainPrimaryTabIconFile(filePath) {
+  // <lang><zh-CN>Vite 提供绝对路径；再次 resolve 只规范化分隔与点段，不读取文件系统。</zh-CN><en>Vite supplies an absolute path; resolving again only normalizes separators and dot segments without reading the file system.</en></lang>
+  if (h5TabIconSourcePaths.has(resolve(filePath))) return false;
+
+  // <lang><zh-CN>undefined 明确委托给 Vite 默认逻辑，字体等较大资产仍生成同源文件。</zh-CN><en>Undefined explicitly delegates to Vite's default logic, so larger assets such as fonts remain same-origin files.</en></lang>
+  return undefined;
+}
+
 // <lang><zh-CN>导出唯一官方 transform、可复现 alias 和 target-aware base；不添加隐式 auto-import、网络或后处理 plugin。</zh-CN><en>Export the sole official transform, reproducible aliases, and target-aware base; add no implicit auto-import, network, or post-processing plugin.</en></lang>
 export default defineConfig({
   // <lang><zh-CN>官方 UniApp plugin 是唯一编译 transform；依赖版本由本仓 pnpm lock 固定。</zh-CN><en>The official UniApp plugin is the sole compilation transform; dependency versions are fixed by this repository's pnpm lock.</en></lang>
   plugins: [uniPlugin.default()],
   // <lang><zh-CN>在 H5 下使用唯一公开 Pages path，其他 target 不承继 Web deployment path。</zh-CN><en>Use the single public Pages path on H5; other targets do not inherit a web deployment path.</en></lang>
   base: h5Base,
+  build: {
+    // <lang><zh-CN>保留八张底栏 PNG 的真实文件 locator；精确 allowlist 以外的资产继续使用默认 4 KiB 内联阈值。</zh-CN><en>Retain real file locators for the eight tab PNGs; assets outside the exact allowlist continue using the default 4 KiB inline threshold.</en></lang>
+    assetsInlineLimit: retainPrimaryTabIconFile
+  },
   resolve: {
     // <lang><zh-CN>所有 alias 解析到仓内 Git submodule 或当前 lockfile 的 node_modules，不越出 BP 边界。</zh-CN><en>Every alias resolves to an in-repository Git submodule or this lockfile's node_modules and never escapes the BP boundary.</en></lang>
     alias: [

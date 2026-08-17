@@ -1,16 +1,26 @@
 /**
  * <lang><zh-CN>BP 的全局样式入口：显式采用已锁定 HIA-uView 默认样式与浅色主题；应用自己的 token 只补充预约示例的非语义布局值。</zh-CN><en>Global-style entry for the BP: explicitly adopts locked HIA-uView default style and light theme; application-owned tokens add only non-semantic booking-demo layout values.</en></lang>
- * @lang zh-CN 本文件不导入外部字体、图片、URL 或动态 CSS。
- * @lang en This file imports no external font, image, URL, or dynamic CSS.
+ * @lang zh-CN 本文件只导入经审计的仓内 UI/theme 与确定性字体声明；不导入远端字体、图片、CDN 样式或动态 CSS。
+ * @lang en This file imports only audited in-repository UI/theme and deterministic font declarations; it imports no remote font, image, CDN style, or dynamic CSS.
  */
 @import '@hia-uview/ui/style.css';
 @import './vendor/HIA-uView/HIA-uView-UI/src/theme/hia-light.css';
 
+/* #ifdef H5 */
+/* <lang><zh-CN>H5 只消费由锁定 WOFF 生成的同源字体声明；生成文件的路径、摘要和规则由专项门禁逐项固定。</zh-CN><en>H5 consumes only same-origin font declarations generated from the pinned WOFFs; the dedicated gate fixes every generated path, digest, and rule.</en></lang> */
+@import './styles/runtime-font-faces-h5.scss';
+/* #endif */
+
+/* #ifdef MP-WEIXIN */
+/* <lang><zh-CN>微信样式只消费由同三份 WOFF 逐字节派生的 data-font 声明；该开发工具演示路径不请求字体网络服务。</zh-CN><en>WeChat styles consume only data-font declarations derived byte-for-byte from the same three WOFFs; this DevTools demo path requests no font network service.</en></lang> */
+@import './styles/runtime-font-faces-mp-weixin.scss';
+/* #endif */
+
 /* <lang><zh-CN>BP 容器 token 同时投影到 H5 根与小程序 page；它不重定义品牌或状态色，并保持可迁移页面对 HIA-uView 主题的继承。</zh-CN><en>BP container tokens project to both the H5 root and Mini Program page; they redefine no brand or state color and preserve page portability through inheritance from the HIA-uView theme.</en></lang> */
 :root,
 page {
-  --bp-font-sans: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
-  --bp-font-serif: "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif;
+  --bp-font-sans: "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+  --bp-font-serif: "HIA-uView BP Serif SC", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif;
   --bp-font-mono: "Source Han Mono SC", "Noto Sans Mono CJK SC", "Sarasa Mono SC", monospace;
   --bp-font-body: var(--bp-font-sans);
   --bp-font-display: var(--bp-font-serif);
@@ -28,7 +38,7 @@ page,
 button,
 input,
 textarea {
-  font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+  font-family: "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
 }
 
 /* <lang><zh-CN>代码或技术文本可显式使用此有限 utility；普通编号与业务数据不因外观需要被误标为代码。</zh-CN><en>Code or technical text may explicitly use this bounded utility; ordinary identifiers and business data are not mislabeled as code for appearance alone.</en></lang> */
@@ -37,6 +47,26 @@ textarea {
 }
 
 /* #ifdef H5 */
+/* <lang><zh-CN>H5 使用应用自管 HIA-uView UTabbar；在脚本 lifecycle 前直接隐藏 Uni 原生底栏，防止首帧闪现或双栏。</zh-CN><en>H5 uses the application-owned HIA-uView UTabbar; hide Uni's native bar before script lifecycles to prevent first-frame flashing or dual bars.</en></lang> */
+.uni-tabbar-bottom {
+  display: none !important;
+}
+
+/* <lang><zh-CN>把 DCloud H5 的窗口底部变量同步归零，使页面布局计算与已隐藏 native surface 保持一致；可见应用底栏仍由页面显式预留。</zh-CN><en>Reset DCloud H5's window-bottom variable so page layout calculations match the hidden native surface; pages still reserve their visible application bar explicitly.</en></lang> */
+:root {
+  --window-bottom: 0px !important;
+}
+
+/* <lang><zh-CN>原生 tab DOM 隐藏后同时恢复页面 wrapper 的完整高度并移除其伪元素占位；页面自己的固定底栏 padding 仍显式保留。</zh-CN><en>After hiding the native tab DOM, restore the page wrapper's full height and remove its pseudo-element placeholder; page-owned fixed-bar padding remains explicit.</en></lang> */
+.uni-app--showtabbar uni-page-wrapper {
+  height: 100% !important;
+}
+
+.uni-app--showtabbar uni-page-wrapper::after {
+  display: none !important;
+  height: 0 !important;
+}
+
 /* <lang><zh-CN>关闭 Uni H5 基础样式注入的远端阴影图片预载动画，确保 Pages 运行只请求同源静态资产；该规则不改变页面可见内容。</zh-CN><en>Disable the remote shadow-image preload animation injected by Uni H5 base styles so the Pages runtime requests only same-origin static assets; this rule changes no visible page content.</en></lang> */
 body::after {
   animation: none !important;

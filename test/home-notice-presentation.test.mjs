@@ -27,8 +27,8 @@ test('home data notice retains native spacing and controlled typography', async 
   assert.match(homeSource, /home-page__data-notice-title/u);
   assert.match(homeSource, /home-page__data-notice-description/u);
 
-  // <lang><zh-CN>slot 内容锁定思源黑体优先栈、品牌蓝标题和次级正文色，防止回退到组件默认字形或单一黑色。</zh-CN><en>The slot content locks a Source Han Sans-first stack, brand-blue title, and secondary body color, preventing a regression to component-default glyphs or one undifferentiated black.</en></lang>
-  assert.match(homeSource, /\.home-page__data-notice-content\s*\{[^}]*color:\s*#27364a;[^}]*font-family:\s*"Source Han Sans SC"/u);
-  assert.match(homeSource, /\.home-page__data-notice-title\s*\{[^}]*color:\s*#0047ab;[^}]*font-size:\s*14px;/u);
-  assert.match(homeSource, /\.home-page__data-notice-description\s*\{[^}]*color:\s*#27364a;[^}]*font-size:\s*13px;/u);
+  // <lang><zh-CN>slot 内容锁定项目改名的思源黑体子集优先栈、品牌蓝标题和次级正文色，防止回退到组件默认字形或单一黑色。</zh-CN><en>The slot content locks the project-renamed Source Han Sans subset first, plus a brand-blue title and secondary body color, preventing a regression to component-default glyphs or one undifferentiated black.</en></lang>
+  assert.match(homeSource, /\.home-page__data-notice-content\s*\{[^}]*color:\s*var\(--u-comp-alert-tips-foreground,\s*#001b2e\);[^}]*font-family:\s*"HIA-uView BP Sans SC",\s*"Source Han Sans SC"/u);
+  assert.match(homeSource, /\.home-page__data-notice-title\s*\{[^}]*color:\s*var\(--u-sys-color-action-primary,\s*#0047ab\);[^}]*font-size:\s*14px;/u);
+  assert.match(homeSource, /\.home-page__data-notice-description\s*\{[^}]*color:\s*var\(--u-sys-color-text-secondary,\s*#27364a\);[^}]*font-size:\s*13px;/u);
 });

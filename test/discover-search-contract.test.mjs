@@ -52,8 +52,8 @@ test('Discover submits the controlled keyword from native confirm and optional s
   assert.match(searchComponentSource, /<input[\s\S]*?@confirm="handleConfirm"[\s\S]*?\/>/u);
   assert.equal(searchComponentSource.includes("emit('confirm', event);"), true);
 
-  // <lang><zh-CN>可选动作按钮仍独立发出 search；这验证两种 intent 的差异是组件契约，而非页面偶发现象。</zh-CN><en>The optional action button still emits search independently; this verifies that the two intents differ by component contract rather than page accident.</en></lang>
-  assert.match(searchComponentSource, /<button\s+v-if="showAction && actionText\.length > 0"[\s\S]*?@click="search"/u);
+  // <lang><zh-CN>可选动作按钮停止 click 冒泡后独立发出 search；这既防止父级重复提交，也验证两种 intent 的差异是组件契约。</zh-CN><en>The optional action button stops click propagation before emitting search independently, preventing parent-level duplicate submission while proving that the two intents differ by component contract.</en></lang>
+  assert.match(searchComponentSource, /<button\s+v-if="showAction && actionText\.length > 0"[\s\S]*?@click\.stop="search"/u);
   assert.equal(searchComponentSource.includes("emit('search', props.modelValue);"), true);
 
   // <lang><zh-CN>提交函数保持无事件参数，并只把受控 keyword 与有限 filter 草稿交给共享 state。</zh-CN><en>The submission function retains no event parameter and passes only the controlled keyword and finite filter draft to shared state.</en></lang>

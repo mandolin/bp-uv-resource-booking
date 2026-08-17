@@ -1,5 +1,6 @@
-# @lang zh-CN BP 的可复现本地工具链：Node/pnpm 由 mise 显式选择，避免依赖系统默认版本或临时下载运行时。
-# @lang en Reproducible local BP toolchain: mise explicitly selects Node/pnpm, avoiding reliance on a system default version or temporary downloaded runtime.
+# @lang zh-CN BP 的可复现本地工具链：Node/pnpm 负责应用构建，Python 仅负责确定性字体维护；三者均由 mise 显式选择，避免依赖系统默认版本。
+# @lang en Reproducible local BP toolchain: Node/pnpm build the app while Python is limited to deterministic font maintenance; mise selects all three explicitly instead of relying on system defaults.
 [tools]
 node = "24.12.0"
 pnpm = "10.27.0"
+python = "3.12.13"

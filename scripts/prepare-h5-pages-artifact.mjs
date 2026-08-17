@@ -93,7 +93,7 @@ const distributionFiles = Object.freeze([
     sourceFileName: 'THIRD_PARTY_NOTICES.md',
     destinationArea: 'licenses',
     destinationFileName: 'HIA-uView-THIRD_PARTY_NOTICES.md',
-    expectedSha256: 'C9FEB554809894CC7F69B90CD14C0B9120BFCCE9CEA95B70C570A16323349F23'
+    expectedSha256: '7C6C57B870EC7ECBD20EF96700A1E4C8B4F7F00F19D395AACF36045CF827AC41'
   }),
   Object.freeze({
     label: 'uView-Pro MIT license',
@@ -102,6 +102,22 @@ const distributionFiles = Object.freeze([
     destinationArea: 'licenses',
     destinationFileName: 'uView-Pro-MIT.txt',
     expectedSha256: '906B494A3FA3B4E270BB08FC69625176E552EB0ACC922C253C4D5FBFA5544627'
+  }),
+  Object.freeze({
+    label: 'Source Han Sans OFL-1.1 license',
+    sourceRoot: licensesSourceRoot,
+    sourceFileName: 'Source-Han-Sans-OFL-1.1.txt',
+    destinationArea: 'licenses',
+    destinationFileName: 'Source-Han-Sans-OFL-1.1.txt',
+    expectedSha256: 'FCAC737E761EC63DBFBDCE11030A1780161920D80315EDBA9C8BEFF1C2BAC5A2'
+  }),
+  Object.freeze({
+    label: 'Source Han Serif OFL-1.1 license',
+    sourceRoot: licensesSourceRoot,
+    sourceFileName: 'Source-Han-Serif-OFL-1.1.txt',
+    destinationArea: 'licenses',
+    destinationFileName: 'Source-Han-Serif-OFL-1.1.txt',
+    expectedSha256: '9FF5BB567E1B92C801FC1069E5FBF992FF8EFCCACB9DB94E5959A5B3BA9BB903'
   }),
   Object.freeze({
     label: 'DCloud Apache-2.0 license',

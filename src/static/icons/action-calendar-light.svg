@@ -1,6 +1,6 @@
 <!--
 @lang zh-CN 首页“选择日期”按钮使用的第一方原创浅色线性日历图标；仅作本地可见装饰，不承载操作名称。
-@lang en First-party original light line-calendar icon for Home's “Choose a date” button; it is local visible decoration and does not carry the action name.
+@lang en First-party original light line-calendar icon for Home's “Select date” button; it is local visible decoration and does not carry the action name.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <title>Calendar / 日历</title>

@@ -6,7 +6,7 @@
   <!-- <lang><zh-CN>provider 让本页的 UI component locale 与 BP 文案/领域投影共享同一 runtime 值。</zh-CN><en>The provider makes this page's UI component locale share one runtime value with BP copy and domain projection.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
     <!-- <lang><zh-CN>页面壳用 HIA-uView navbar 呈现当前 locale，常驻 custom tabBar 通过页面 onShow 同步同一语言与选中态。</zh-CN><en>The page shell renders the current locale through HIA-uView navbar, while the persistent custom tab bar synchronizes the same language and selection on page show.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.discover')">
+    <runtime-page-shell :title="runtimeLocale.t('title.discover')" primary-page="discover">
       <view class="discover-page">
       <!-- <lang><zh-CN>发现页只保留 navbar 的单一标题层；搜索紧随其后，不重复营销标题或 eyebrow。</zh-CN><en>Discover retains only the navbar's single title layer; search follows immediately with no duplicate marketing heading or eyebrow.</en></lang> -->
       <!-- <lang><zh-CN>原生键盘确认与可选搜索动作汇聚到同一显式提交；handler 只读取受控 keyword，不把原始事件当作查询。</zh-CN><en>Native keyboard confirmation and the optional search action converge on the same explicit submission; the handler reads only the controlled keyword and never treats the raw event as a query.</en></lang> -->

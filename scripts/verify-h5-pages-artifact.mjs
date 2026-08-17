@@ -11,6 +11,9 @@ import { dirname, extname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inflateSync } from 'node:zlib';
 
+// <lang><zh-CN>复用唯一字体专项门禁验证 source WOFF 的 CFF/name/cmap、语料、许可与生成链；H5 门禁只把其固定字节身份绑定到 Pages 成品。</zh-CN><en>Reuse the sole font-specific gate for source WOFF CFF/name/cmap, corpus, license, and toolchain verification; the H5 gate only binds those fixed byte identities into the Pages artifact.</en></lang>
+import { verifyFontSubsets } from './verify-font-subsets.mjs';
+
 /**
  * <lang><zh-CN>GitHub Pages 项目站唯一允许的根相对静态 base。</zh-CN><en>The sole root-relative static base allowed for the GitHub Pages project site.</en></lang>
  */
@@ -114,9 +117,9 @@ const forbiddenConfigurationNames = new Set([
 ]);
 
 /**
- * <lang><zh-CN>字体二进制扩展名清单；当前项目只允许宿主 fallback，不重新分发字体文件。</zh-CN><en>Font-binary extension list; the current project permits only host fallback and redistributes no font files.</en></lang>
+ * <lang><zh-CN>始终禁止的字体二进制扩展名；唯一允许的 WOFF 1.0 由下方 manifest/hash/name allowlist 独立治理。</zh-CN><en>Font-binary extensions that remain unconditionally forbidden; the only allowed WOFF 1.0 files are governed separately by the manifest/hash/name allowlist below.</en></lang>
  */
-const forbiddenFontExtensions = new Set(['.eot', '.otf', '.ttc', '.ttf', '.woff', '.woff2']);
+const forbiddenFontExtensions = new Set(['.eot', '.otf', '.ttc', '.ttf', '.woff2']);
 
 /**
  * <lang><zh-CN>PNG signature 与 metadata 解压上限用于区分可审计文字块和不可按文本解释的压缩像素。</zh-CN><en>The PNG signature and metadata inflation limit separate auditable text chunks from compressed pixels that must not be interpreted as text.</en></lang>
@@ -145,6 +148,116 @@ const projectSourceExtensions = new Set(['.css', '.htm', '.html', '.js', '.json'
  * @lang en The dynamic DCloud `loadFontFace` capability only forwards caller parameters and contains none of these static markers; any occurrence in project source or the artifact expands the font boundary.
  */
 const staticFontReferencePattern = /(?:data:(?:font\/|application\/(?:font|x-font))|(?:https?:\/\/|\/|\.\.?\/)[^\s"'`<>()]*\.(?:eot|otf|ttc|ttf|woff2?)(?:[?#][^\s"'`<>()]*)?|https?:\/\/(?:fonts\.(?:googleapis|gstatic)\.com|use\.typekit\.(?:com|net)|fast\.fonts\.net)(?:[/:?#]|$))/iu;
+
+/**
+ * <lang><zh-CN>字体生成 manifest 的固定 source 路径与当前已审字节摘要。</zh-CN><en>Fixed source path and currently reviewed byte digest of the generated font manifest.</en></lang>
+ * @lang zh-CN manifest 是 source 审计输入而不是浏览器资源；任何重建导致的摘要变化都必须显式更新本交付门禁。
+ * @lang en The manifest is a source-audit input rather than a browser resource; any rebuild that changes its digest requires an explicit update to this delivery gate.
+ */
+const fontManifestRelativePath = 'assets/fonts/font-subsets.manifest.json';
+const PINNED_FONT_MANIFEST_SHA256 = '565FEC427F716B53BAD669A67460394106441DE871FC225490F69B7A024946A0';
+
+/**
+ * <lang><zh-CN>source gate 唯一允许承载字体声明的两个生成样式文件。</zh-CN><en>The only two generated style files permitted to carry font declarations through the source gate.</en></lang>
+ */
+const h5FontStyleRelativePath = 'styles/runtime-font-faces-h5.scss';
+const mpWeixinFontStyleRelativePath = 'styles/runtime-font-faces-mp-weixin.scss';
+const reviewedFontStylePaths = new Set([h5FontStyleRelativePath, mpWeixinFontStyleRelativePath]);
+
+/**
+ * <lang><zh-CN>两个生成样式的固定 source 字节摘要；它们把精确 CSS surface 绑定到已审 manifest，而不是只按文件名放行。</zh-CN><en>Pinned source-byte digests for the two generated styles; they bind the exact CSS surface to the reviewed manifest instead of allowing files by name alone.</en></lang>
+ */
+const reviewedFontStyleSha256ByPath = new Map([
+  [h5FontStyleRelativePath, 'D3742B3069C8A5258A87096C5E2E78F0BE211339D9FD23ED3A312D6C636D722C'],
+  [mpWeixinFontStyleRelativePath, 'F3F73A0C96C61A417306BDFE88DAA4422FC5ABACBDAC1FDEDC23D8D2A793AFC7']
+]);
+
+/**
+ * <lang><zh-CN>两份 OFL 载荷的固定路径、摘要与人类可读事实。</zh-CN><en>Fixed paths, digests, and human-readable facts for the two OFL payloads.</en></lang>
+ */
+const expectedFontLicenses = Object.freeze([
+  Object.freeze({
+    path: 'LICENSES/Source-Han-Sans-OFL-1.1.txt',
+    sha256: 'FCAC737E761EC63DBFBDCE11030A1780161920D80315EDBA9C8BEFF1C2BAC5A2',
+    spdx: 'OFL-1.1',
+    reservedFontName: 'Source',
+    copyright: 'Copyright 2014-2025 Adobe'
+  }),
+  Object.freeze({
+    path: 'LICENSES/Source-Han-Serif-OFL-1.1.txt',
+    sha256: '9FF5BB567E1B92C801FC1069E5FBF992FF8EFCCACB9DB94E5959A5B3BA9BB903',
+    spdx: 'OFL-1.1',
+    reservedFontName: 'Source',
+    copyright: 'Copyright 2017-2022 Adobe'
+  })
+]);
+
+/**
+ * <lang><zh-CN>三个可分发 face 的完整身份、source locator、字节摘要与 artifact 文件名规则。</zh-CN><en>Complete identities, source locators, byte digests, and artifact filename rules for the three distributable faces.</en></lang>
+ * @lang zh-CN 该表不从 manifest 自发现 face；manifest 只能逐字段匹配这里的有限 allowlist。
+ * @lang en This table discovers no face from the manifest; the manifest can only match this finite allowlist field by field.
+ */
+const expectedFontFaces = Object.freeze([
+  Object.freeze({
+    id: 'sans-regular',
+    role: 'body',
+    cssFamily: 'HIA-uView BP Sans SC',
+    fontStyle: 'normal',
+    fontWeight: 400,
+    postscriptName: 'HIAuViewBPSansSC-Regular',
+    outputPath: 'src/assets/fonts/hia-uv-bp-sans-sc-regular-v2.005-subset.woff',
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-sans-sc-regular-v2.005-subset.woff',
+    outputBytes: 77_432,
+    outputSha256: 'CB9B1F1E5BC7C188E7122D97502C5467FC17A3899AD295CAB2DF46C5624DD6F5',
+    maxOutputBytes: 180_000,
+    artifactFilePattern: /^assets\/hia-uv-bp-sans-sc-regular-v2\.005-subset-[A-Za-z0-9_-]{8}\.woff$/u,
+    licensePath: 'LICENSES/Source-Han-Sans-OFL-1.1.txt'
+  }),
+  Object.freeze({
+    id: 'sans-bold',
+    role: 'emphasis',
+    cssFamily: 'HIA-uView BP Sans SC',
+    fontStyle: 'normal',
+    fontWeight: 700,
+    postscriptName: 'HIAuViewBPSansSC-Bold',
+    outputPath: 'src/assets/fonts/hia-uv-bp-sans-sc-bold-v2.005-subset.woff',
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-sans-sc-bold-v2.005-subset.woff',
+    outputBytes: 78_744,
+    outputSha256: '63FB549C240FF5C010EA2CAC76C660F49F1EF6641A3AF22D6415688AFD1ED4BC',
+    maxOutputBytes: 180_000,
+    artifactFilePattern: /^assets\/hia-uv-bp-sans-sc-bold-v2\.005-subset-[A-Za-z0-9_-]{8}\.woff$/u,
+    licensePath: 'LICENSES/Source-Han-Sans-OFL-1.1.txt'
+  }),
+  Object.freeze({
+    id: 'serif-bold',
+    role: 'display',
+    cssFamily: 'HIA-uView BP Serif SC',
+    fontStyle: 'normal',
+    fontWeight: 700,
+    postscriptName: 'HIAuViewBPSerifSC-Bold',
+    outputPath: 'src/assets/fonts/hia-uv-bp-serif-sc-bold-v2.003-subset.woff',
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-serif-sc-bold-v2.003-subset.woff',
+    outputBytes: 36_352,
+    outputSha256: '6E5D3B2CBE007F2D3A369EC40ED3D8023DDD8825033331C1F751ECF49B59BEC0',
+    maxOutputBytes: 200_000,
+    artifactFilePattern: /^assets\/hia-uv-bp-serif-sc-bold-v2\.003-subset-[A-Za-z0-9_-]{8}\.woff$/u,
+    licensePath: 'LICENSES/Source-Han-Serif-OFL-1.1.txt'
+  })
+]);
+
+/**
+ * <lang><zh-CN>H5 应用 UTabbar 唯一允许使用的八张 27×27 一方 PNG。</zh-CN><en>The only eight first-party 27×27 PNGs allowed for the H5 application UTabbar.</en></lang>
+ */
+const expectedApplicationTabIcons = Object.freeze([
+  Object.freeze({ fileName: 'tab-home.png', sha256: '3D81AF885146350C9BC8A3E64E0F31834270E9C5FB2585099BBEB14105B6AB2B' }),
+  Object.freeze({ fileName: 'tab-home-active.png', sha256: '9865D1BC5089361E0D80AE150EFEBF885DB4C84FC19527A411306071728A9114' }),
+  Object.freeze({ fileName: 'tab-discover.png', sha256: '3D6EC5ED945C1F10541678352B31A9C79B64DFE17B9201E2037F39F11BB29999' }),
+  Object.freeze({ fileName: 'tab-discover-active.png', sha256: '6BB10C9D1ED5CFC876BBC2FEFB1C128E8E7B6969A7B8F0992A08C66ACC454404' }),
+  Object.freeze({ fileName: 'tab-reservations.png', sha256: '2D422AFA2AC96130889AC31B3F7683B51A272F9E907DFAE55D5B971C141D0D14' }),
+  Object.freeze({ fileName: 'tab-reservations-active.png', sha256: 'CC6EC0B563AEA924685963596E7D8C2B2A868EEF1161B19AA89373C8C6A9E871' }),
+  Object.freeze({ fileName: 'tab-profile.png', sha256: '0A7EFAC937C01BFB0F19D81D31A78E1D6DF4F4633B9D61BA6A6F0B36C02BA83B' }),
+  Object.freeze({ fileName: 'tab-profile-active.png', sha256: '01F955ADC912D01FD53FD93D77953B950AC86583ED76A6F7FD84008F62A737CD' })
+]);
 
 /**
  * <lang><zh-CN>发布根必须携带的入口、顶层声明以及来源固定的完整许可证载荷。</zh-CN><en>Entry, top-level notices, and the complete source-pinned license payload required at the publication root.</en></lang>
@@ -176,13 +289,23 @@ const pinnedLegalPayloads = Object.freeze([
   }),
   Object.freeze({
     relativePath: 'LICENSES/HIA-uView-THIRD_PARTY_NOTICES.md',
-    sha256: 'C9FEB554809894CC7F69B90CD14C0B9120BFCCE9CEA95B70C570A16323349F23',
+    sha256: '7C6C57B870EC7ECBD20EF96700A1E4C8B4F7F00F19D395AACF36045CF827AC41',
     contentAnchors: Object.freeze(['Reviewed MIT component derivations', 'uview-pro@0.6.13', '3bc1948d8f7c5d2bcb1ba3434cede1e709391a62'])
   }),
   Object.freeze({
     relativePath: 'LICENSES/uView-Pro-MIT.txt',
     sha256: '906B494A3FA3B4E270BB08FC69625176E552EB0ACC922C253C4D5FBFA5544627',
     contentAnchors: Object.freeze(['MIT License', 'Copyright (c) 2025 uviewpro.cn'])
+  }),
+  Object.freeze({
+    relativePath: 'LICENSES/Source-Han-Sans-OFL-1.1.txt',
+    sha256: 'FCAC737E761EC63DBFBDCE11030A1780161920D80315EDBA9C8BEFF1C2BAC5A2',
+    contentAnchors: Object.freeze(['Copyright 2014-2025 Adobe', "Reserved Font\nName 'Source'", 'SIL OPEN FONT LICENSE Version 1.1'])
+  }),
+  Object.freeze({
+    relativePath: 'LICENSES/Source-Han-Serif-OFL-1.1.txt',
+    sha256: '9FF5BB567E1B92C801FC1069E5FBF992FF8EFCCACB9DB94E5959A5B3BA9BB903',
+    contentAnchors: Object.freeze(['Copyright 2017-2022 Adobe', "Reserved Font\nName 'Source'", 'SIL OPEN FONT LICENSE Version 1.1'])
   }),
   Object.freeze({
     relativePath: 'LICENSES/DCloud-Apache-2.0.txt',
@@ -229,6 +352,379 @@ const informationalCitationFiles = new Set([
 function failArtifact(message) {
   // <lang><zh-CN>错误只使用调用方提供的受控摘要，不拼接底层文件系统异常。</zh-CN><en>The error uses only the caller-provided controlled summary and never appends a lower-level file-system exception.</en></lang>
   throw new Error(`H5 Pages artifact gate failed: ${message}`);
+}
+
+/**
+ * <lang><zh-CN>计算原始字节的大写 SHA-256，统一 source manifest、生成样式与 artifact 二进制的身份比较。</zh-CN><en>Computes uppercase SHA-256 over raw bytes, unifying identity comparisons for the source manifest, generated styles, and artifact binaries.</en></lang>
+ * @param {Uint8Array} fileBytes <lang><zh-CN>未转码的文件字节。</zh-CN><en>Untranscoded file bytes.</en></lang>
+ * @returns {string} <lang><zh-CN>大写十六进制摘要。</zh-CN><en>Uppercase hexadecimal digest.</en></lang>
+ */
+function calculateSha256(fileBytes) {
+  // <lang><zh-CN>摘要只绑定输入字节，不读取路径、时钟或环境。</zh-CN><en>The digest binds only the input bytes and reads no path, clock, or environment.</en></lang>
+  return createHash('sha256').update(fileBytes).digest('hex').toUpperCase();
+}
+
+/**
+ * <lang><zh-CN>读取并验证固定字体 manifest 的摘要与有限交付字段。</zh-CN><en>Reads and verifies the pinned font manifest digest and bounded delivery fields.</en></lang>
+ * @param {string} sourceRoot <lang><zh-CN>固定项目 source 根或隔离 fixture 根。</zh-CN><en>Fixed project source root or isolated fixture root.</en></lang>
+ * @returns {Promise<object>} <lang><zh-CN>仅供本门禁后续绑定使用的已审 manifest 对象。</zh-CN><en>The reviewed manifest object used only for subsequent bindings in this gate.</en></lang>
+ * @lang zh-CN 路径和 face 数量来自代码内 allowlist；manifest 不能自行扩展要读取或分发的文件集合。
+ * @lang en Paths and face counts come from the in-code allowlist; the manifest cannot expand the set of files to read or distribute by itself.
+ */
+async function readReviewedFontManifest(sourceRoot) {
+  // <lang><zh-CN>只把代码内固定相对路径解析到调用方已验证的 source 根；manifest 正文不能选择读取位置。</zh-CN><en>Resolve only the in-code fixed relative path beneath the caller-validated source root; manifest content cannot select the read location.</en></lang>
+  const fontManifestPath = resolve(sourceRoot, fontManifestRelativePath);
+
+  // <lang><zh-CN>读取失败不回显宿主路径。</zh-CN><en>Do not echo a host path when the read fails.</en></lang>
+  let manifestBytes;
+  try {
+    manifestBytes = await readFile(fontManifestPath);
+  } catch {
+    failArtifact('the reviewed font manifest is missing');
+  }
+
+  // <lang><zh-CN>原始字节摘要阻止空白、顺序或未审字段在不更新门禁时漂移。</zh-CN><en>The raw-byte digest prevents whitespace, ordering, or unreviewed fields from drifting without a gate update.</en></lang>
+  if (calculateSha256(manifestBytes) !== PINNED_FONT_MANIFEST_SHA256) {
+    failArtifact('the reviewed font manifest does not match its pinned SHA-256');
+  }
+
+  // <lang><zh-CN>JSON 解析错误转换为稳定合同错误，不暴露原始正文。</zh-CN><en>Convert a JSON parse error into a stable contract error without exposing source content.</en></lang>
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestBytes.toString('utf8'));
+  } catch {
+    failArtifact('the reviewed font manifest is not valid JSON');
+  }
+
+  // <lang><zh-CN>schema、平台交付说明与数组规模必须等于当前已审边界。</zh-CN><en>The schema, platform-delivery declarations, and array cardinalities must equal the current reviewed boundary.</en></lang>
+  const hasExpectedEnvelope = manifest !== null
+    && typeof manifest === 'object'
+    && manifest.schemaVersion === '1.0'
+    && manifest.policy?.delivery?.h5 === 'same-origin versioned WOFF asset'
+    && manifest.policy?.delivery?.['mp-weixin'] === 'project-owned WOFF embedded byte-for-byte as generated CSS data URLs'
+    && Array.isArray(manifest.faces)
+    && manifest.faces.length === expectedFontFaces.length
+    && Array.isArray(manifest.licenses)
+    && manifest.licenses.length === expectedFontLicenses.length;
+  if (!hasExpectedEnvelope) failArtifact('the reviewed font manifest envelope is outside the allowlist');
+
+  // <lang><zh-CN>许可证逐索引匹配固定路径、摘要与 OFL 事实，禁止同数目的替代载荷。</zh-CN><en>Match licenses by index against fixed paths, digests, and OFL facts, preventing same-cardinality substitute payloads.</en></lang>
+  for (let licenseIndex = 0; licenseIndex < expectedFontLicenses.length; licenseIndex += 1) {
+    // <lang><zh-CN>预期记录来自只读 allowlist。</zh-CN><en>The expected record comes from the read-only allowlist.</en></lang>
+    const expectedLicense = expectedFontLicenses[licenseIndex];
+
+    // <lang><zh-CN>候选记录只从已固定摘要的 manifest 相同位置取得。</zh-CN><en>The candidate comes only from the corresponding position in the digest-pinned manifest.</en></lang>
+    const manifestLicense = manifest.licenses[licenseIndex];
+
+    // <lang><zh-CN>每个可执行判断都绑定发布所需的最小许可身份。</zh-CN><en>Each executable check binds the minimum license identity required for distribution.</en></lang>
+    const matchesExpectedLicense = manifestLicense?.path === expectedLicense.path
+      && String(manifestLicense.sha256 ?? '').toUpperCase() === expectedLicense.sha256
+      && manifestLicense.spdx === expectedLicense.spdx
+      && manifestLicense.reservedFontName === expectedLicense.reservedFontName
+      && manifestLicense.copyright === expectedLicense.copyright;
+    if (!matchesExpectedLicense) failArtifact(`font manifest license ${licenseIndex + 1} is outside the allowlist`);
+  }
+
+  // <lang><zh-CN>三个 face 逐索引绑定 CSS 身份、source 输出、字节摘要、尺寸上限与许可证。</zh-CN><en>Bind all three faces by index to CSS identity, source output, byte digest, size ceiling, and license.</en></lang>
+  for (let faceIndex = 0; faceIndex < expectedFontFaces.length; faceIndex += 1) {
+    // <lang><zh-CN>有限 allowlist 是授权来源。</zh-CN><en>The finite allowlist is the authorization source.</en></lang>
+    const expectedFace = expectedFontFaces[faceIndex];
+
+    // <lang><zh-CN>manifest 记录只能证明自身与 allowlist 一致，不能添加第四个 face。</zh-CN><en>The manifest record can only prove agreement with the allowlist and cannot add a fourth face.</en></lang>
+    const manifestFace = manifest.faces[faceIndex];
+
+    // <lang><zh-CN>字段集合覆盖浏览器声明、二进制身份与法律归属。</zh-CN><en>The field set covers browser declaration, binary identity, and legal attribution.</en></lang>
+    const matchesExpectedFace = manifestFace?.id === expectedFace.id
+      && manifestFace.role === expectedFace.role
+      && manifestFace.cssFamily === expectedFace.cssFamily
+      && manifestFace.fontStyle === expectedFace.fontStyle
+      && manifestFace.fontWeight === expectedFace.fontWeight
+      && manifestFace.postscriptName === expectedFace.postscriptName
+      && manifestFace.format === 'woff'
+      && manifestFace.mimeType === 'font/woff'
+      && manifestFace.outputPath === expectedFace.outputPath
+      && manifestFace.outputBytes === expectedFace.outputBytes
+      && String(manifestFace.outputSha256 ?? '').toUpperCase() === expectedFace.outputSha256
+      && manifestFace.maxOutputBytes === expectedFace.maxOutputBytes
+      && manifestFace.license?.path === expectedFace.licensePath
+      && manifestFace.reservedPrimaryNameCheck === true;
+    if (!matchesExpectedFace) failArtifact(`font manifest face ${expectedFace.id} is outside the allowlist`);
+  }
+
+  // <lang><zh-CN>返回只在当前进程内使用的已验证对象；文件发现仍不读取其中的任意路径。</zh-CN><en>Return the verified object for in-process use only; file discovery still reads no arbitrary path from it.</en></lang>
+  return manifest;
+}
+
+/**
+ * <lang><zh-CN>验证 source 字体目录恰含固定 manifest 与三份 WOFF，并逐文件绑定尺寸、摘要和容器签名。</zh-CN><en>Verifies that the source font directory contains exactly the pinned manifest plus three WOFF files and binds every file to its size, digest, and container signature.</en></lang>
+ * @param {string} sourceRoot <lang><zh-CN>已通过真实目录检查的 source 根。</zh-CN><en>Source root already proven to be a real directory.</en></lang>
+ * @returns {Promise<Readonly<{ fontAssetByteCount: number, fontAssetCount: number }>>} <lang><zh-CN>不含路径、正文或可变 manifest 的有限 source 字体计数。</zh-CN><en>Finite source-font counts containing no paths, content, or mutable manifest.</en></lang>
+ * @lang zh-CN 目录清单和读取路径完全来自代码内 allowlist；fixture 必须自带真实字节，因此隔离负例不会借用工作树字体。
+ * @lang en The directory ledger and read paths come entirely from the in-code allowlist; fixtures must carry the real bytes, so isolated negative cases cannot borrow fonts from the worktree.
+ */
+async function verifyReviewedSourceFontAssets(sourceRoot) {
+  // <lang><zh-CN>字体目录相对位置固定为 source 下的 assets/fonts。</zh-CN><en>The font directory location is fixed to assets/fonts beneath source.</en></lang>
+  const sourceFontRoot = resolve(sourceRoot, 'assets/fonts');
+
+  // <lang><zh-CN>目录读取失败转换为稳定类别。</zh-CN><en>Convert a directory-read failure into a stable category.</en></lang>
+  let fontDirectoryEntries;
+  try {
+    fontDirectoryEntries = await readdir(sourceFontRoot, { withFileTypes: true });
+  } catch {
+    failArtifact('the reviewed source font directory is missing');
+  }
+
+  // <lang><zh-CN>唯一允许的文件名集合由 manifest 固定名和三个 face 的固定 source 路径 basename 构成。</zh-CN><en>The sole allowed filename set consists of the fixed manifest name plus basenames from the three fixed face source paths.</en></lang>
+  const expectedFontFileNames = [
+    'font-subsets.manifest.json',
+    ...expectedFontFaces.map((face) => face.sourceRelativePath.split('/').at(-1) ?? '')
+  ].sort();
+
+  // <lang><zh-CN>排序后的真实目录名必须逐项相等，阻止第四份字体、旧版本或临时文件。</zh-CN><en>Sorted real directory names must match item by item, blocking a fourth font, stale version, or temporary file.</en></lang>
+  const observedFontFileNames = [...fontDirectoryEntries].map((entry) => entry.name).sort();
+  if (observedFontFileNames.length !== expectedFontFileNames.length
+    || observedFontFileNames.some((fileName, fileIndex) => fileName !== expectedFontFileNames[fileIndex])) {
+    failArtifact('the reviewed source font directory contains an unexpected file set');
+  }
+
+  // <lang><zh-CN>每个目录项必须是不可链接替代的普通文件。</zh-CN><en>Every directory entry must be a regular file that is not substituted through a link.</en></lang>
+  for (const fontDirectoryEntry of fontDirectoryEntries) {
+    const fontEntryPath = resolve(sourceFontRoot, fontDirectoryEntry.name);
+    let fontEntryStats;
+    try {
+      fontEntryStats = await lstat(fontEntryPath);
+    } catch {
+      failArtifact(`reviewed source font entry cannot be inspected at ${fontDirectoryEntry.name}`);
+    }
+    if (fontEntryStats.isSymbolicLink() || !fontEntryStats.isFile()) {
+      failArtifact(`reviewed source font entry is not a regular file at ${fontDirectoryEntry.name}`);
+    }
+    if (fontEntryStats.nlink !== 1) failArtifact(`reviewed source font hard link is present at ${fontDirectoryEntry.name}`);
+  }
+
+  // <lang><zh-CN>原始 manifest 先绑定摘要和有限字段。</zh-CN><en>Bind the raw manifest digest and bounded fields first.</en></lang>
+  await readReviewedFontManifest(sourceRoot);
+
+  // <lang><zh-CN>总字节数只用于无路径审计摘要。</zh-CN><en>The total byte count serves only the path-free audit summary.</en></lang>
+  let fontAssetByteCount = 0;
+
+  // <lang><zh-CN>三份 WOFF 逐项读取固定路径，不使用 manifest locator。</zh-CN><en>Read the three WOFF files from fixed paths rather than manifest locators.</en></lang>
+  for (const expectedFace of expectedFontFaces) {
+    let sourceWoffBytes;
+    try {
+      sourceWoffBytes = await readFile(resolve(sourceRoot, expectedFace.sourceRelativePath));
+    } catch {
+      failArtifact(`reviewed source WOFF is missing for ${expectedFace.id}`);
+    }
+
+    // <lang><zh-CN>长度、摘要与 WOFF 1.0 signature 必须同时匹配固定 face。</zh-CN><en>Length, digest, and the WOFF 1.0 signature must all match the pinned face.</en></lang>
+    const hasExpectedWoffIdentity = sourceWoffBytes.byteLength === expectedFace.outputBytes
+      && calculateSha256(sourceWoffBytes) === expectedFace.outputSha256
+      && sourceWoffBytes.subarray(0, 4).toString('ascii') === 'wOFF';
+    if (!hasExpectedWoffIdentity) failArtifact(`reviewed source WOFF does not match face ${expectedFace.id}`);
+
+    // <lang><zh-CN>仅累计固定文件大小，不保留字节或路径。</zh-CN><en>Accumulate only the fixed file size and retain neither bytes nor paths.</en></lang>
+    fontAssetByteCount += sourceWoffBytes.byteLength;
+  }
+
+  // <lang><zh-CN>返回冻结的无路径、无正文摘要。</zh-CN><en>Return a frozen path- and content-free summary.</en></lang>
+  return Object.freeze({ fontAssetByteCount, fontAssetCount: expectedFontFaces.length });
+}
+
+/**
+ * <lang><zh-CN>移除 CSS 注释，使 selector、声明数量和字体规则判断不接受注释中的伪证据。</zh-CN><en>Removes CSS comments so selector, declaration-count, and font-rule checks cannot accept evidence placed in comments.</en></lang>
+ * @param {string} cssText <lang><zh-CN>source SCSS 或构建 CSS 正文。</zh-CN><en>Source SCSS or built CSS text.</en></lang>
+ * @returns {string} <lang><zh-CN>只移除块注释后的正文。</zh-CN><en>Text with block comments removed.</en></lang>
+ */
+function stripCssComments(cssText) {
+  // <lang><zh-CN>当前生成与构建产物只使用标准块注释；不解释字符串内部内容。</zh-CN><en>The current generated and built artifacts use only standard block comments; string content is not interpreted here.</en></lang>
+  return cssText.replace(/\/\*[\s\S]*?\*\//gu, '');
+}
+
+/**
+ * <lang><zh-CN>按不在引号或圆括号中的分号拆分一个扁平 CSS 声明块。</zh-CN><en>Splits one flat CSS declaration block at semicolons outside quotes and parentheses.</en></lang>
+ * @param {string} declarationText <lang><zh-CN>不含花括号的声明正文。</zh-CN><en>Declaration text containing no braces.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>稳定诊断所用相对路径。</zh-CN><en>Relative path used in stable diagnostics.</en></lang>
+ * @returns {Map<string, string>} <lang><zh-CN>小写属性名到原始 trim 值的唯一映射。</zh-CN><en>Unique mapping from lowercase property names to trimmed raw values.</en></lang>
+ */
+function parseCssDeclarations(declarationText, relativePath) {
+  // <lang><zh-CN>片段数组按 source 顺序保留，以便重复属性稳定失败。</zh-CN><en>The fragment array preserves source order so duplicate properties fail deterministically.</en></lang>
+  const declarationFragments = [];
+
+  // <lang><zh-CN>当前片段只在顶层分号处提交。</zh-CN><en>The current fragment is committed only at a top-level semicolon.</en></lang>
+  let currentFragment = '';
+
+  // <lang><zh-CN>quote 与 escape 状态保护 data URI 和 quoted URL。</zh-CN><en>Quote and escape state protect data URIs and quoted URLs.</en></lang>
+  let activeQuote = '';
+  let isEscaped = false;
+
+  // <lang><zh-CN>圆括号深度避免把 `data:...;base64` 中的分号当作声明边界。</zh-CN><en>Parenthesis depth prevents treating the semicolon in `data:...;base64` as a declaration boundary.</en></lang>
+  let parenthesisDepth = 0;
+
+  // <lang><zh-CN>逐字符解析有限生成 surface，不执行 CSS。</zh-CN><en>Parse the bounded generated surface character by character without executing CSS.</en></lang>
+  for (const character of declarationText) {
+    // <lang><zh-CN>前一反斜线转义当前字符时只追加并清除状态。</zh-CN><en>When the preceding backslash escapes this character, append it and clear the state.</en></lang>
+    if (isEscaped) {
+      currentFragment += character;
+      isEscaped = false;
+      continue;
+    }
+
+    // <lang><zh-CN>引号内的反斜线只影响下一个字符。</zh-CN><en>A backslash inside a quote affects only the next character.</en></lang>
+    if (activeQuote !== '' && character === '\\') {
+      currentFragment += character;
+      isEscaped = true;
+      continue;
+    }
+
+    // <lang><zh-CN>引号开闭不改变括号深度。</zh-CN><en>Opening or closing a quote does not alter parenthesis depth.</en></lang>
+    if (character === '"' || character === "'") {
+      if (activeQuote === '') activeQuote = character;
+      else if (activeQuote === character) activeQuote = '';
+      currentFragment += character;
+      continue;
+    }
+
+    // <lang><zh-CN>引号内所有标点都作为 value 字节保留。</zh-CN><en>Preserve all punctuation inside quotes as value bytes.</en></lang>
+    if (activeQuote !== '') {
+      currentFragment += character;
+      continue;
+    }
+
+    // <lang><zh-CN>函数括号只允许平衡嵌套。</zh-CN><en>Function parentheses must remain balanced.</en></lang>
+    if (character === '(') parenthesisDepth += 1;
+    if (character === ')') parenthesisDepth -= 1;
+    if (parenthesisDepth < 0) failArtifact(`font CSS has unbalanced parentheses in ${relativePath}`);
+
+    // <lang><zh-CN>只有顶层分号结束当前声明。</zh-CN><en>Only a top-level semicolon ends the current declaration.</en></lang>
+    if (character === ';' && parenthesisDepth === 0) {
+      declarationFragments.push(currentFragment);
+      currentFragment = '';
+      continue;
+    }
+
+    // <lang><zh-CN>非边界字符原样进入当前片段。</zh-CN><en>A non-boundary character enters the current fragment unchanged.</en></lang>
+    currentFragment += character;
+  }
+
+  // <lang><zh-CN>未闭合 quote/括号不能形成确定 CSS。</zh-CN><en>An unclosed quote or parenthesis cannot form deterministic CSS.</en></lang>
+  if (activeQuote !== '' || parenthesisDepth !== 0 || isEscaped) {
+    failArtifact(`font CSS has an unterminated value in ${relativePath}`);
+  }
+
+  // <lang><zh-CN>最后一个无分号片段仍作为声明处理。</zh-CN><en>Treat the final fragment as a declaration even without a trailing semicolon.</en></lang>
+  declarationFragments.push(currentFragment);
+
+  // <lang><zh-CN>Map 明确拒绝同一属性通过 cascade 隐藏替代值。</zh-CN><en>The Map explicitly rejects a duplicate property hiding a substitute value through cascade.</en></lang>
+  const declarationMap = new Map();
+  for (const declarationFragment of declarationFragments) {
+    // <lang><zh-CN>空白尾片段不构成声明。</zh-CN><en>A whitespace-only trailing fragment is not a declaration.</en></lang>
+    const normalizedFragment = declarationFragment.trim();
+    if (normalizedFragment === '') continue;
+
+    // <lang><zh-CN>第一个冒号分隔属性名；data URI 的后续冒号保留在值中。</zh-CN><en>The first colon separates the property name; later colons in a data URI remain in the value.</en></lang>
+    const separatorIndex = normalizedFragment.indexOf(':');
+    if (separatorIndex <= 0) failArtifact(`font CSS has an invalid declaration in ${relativePath}`);
+
+    // <lang><zh-CN>属性名按 CSS ASCII 语义归一为小写。</zh-CN><en>Normalize the property name to lowercase under CSS ASCII semantics.</en></lang>
+    const propertyName = normalizedFragment.slice(0, separatorIndex).trim().toLowerCase();
+
+    // <lang><zh-CN>值保留引号和 locator 字节，只去掉声明边缘空白。</zh-CN><en>Retain quotes and locator bytes in the value, trimming only declaration-edge whitespace.</en></lang>
+    const propertyValue = normalizedFragment.slice(separatorIndex + 1).trim();
+    if (propertyName === '' || propertyValue === '' || declarationMap.has(propertyName)) {
+      failArtifact(`font CSS has a duplicate or empty declaration in ${relativePath}`);
+    }
+
+    // <lang><zh-CN>登记唯一属性。</zh-CN><en>Register the unique property.</en></lang>
+    declarationMap.set(propertyName, propertyValue);
+  }
+
+  // <lang><zh-CN>返回当前规则的有限声明集。</zh-CN><en>Return the bounded declaration set for the current rule.</en></lang>
+  return declarationMap;
+}
+
+/**
+ * <lang><zh-CN>提取所有完整扁平 `@font-face` 规则，并拒绝畸形或嵌套规则。</zh-CN><en>Extracts every complete flat `@font-face` rule and rejects malformed or nested rules.</en></lang>
+ * @param {string} cssText <lang><zh-CN>待审样式正文。</zh-CN><en>Style text to audit.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>稳定诊断路径。</zh-CN><en>Stable diagnostic path.</en></lang>
+ * @returns {Array<Map<string, string>>} <lang><zh-CN>按出现顺序排列的声明集合。</zh-CN><en>Declaration maps in occurrence order.</en></lang>
+ */
+function extractFontFaceDeclarations(cssText, relativePath) {
+  // <lang><zh-CN>先移除注释，避免注释 marker 被计为真实声明。</zh-CN><en>Remove comments first so a comment marker cannot count as a real declaration.</en></lang>
+  const uncommentedCss = stripCssComments(cssText);
+
+  // <lang><zh-CN>marker 数量用于发现缺失闭括号或嵌套内容。</zh-CN><en>The marker count detects a missing closing brace or nested content.</en></lang>
+  const markerCount = [...uncommentedCss.matchAll(/@font-face\b/giu)].length;
+
+  // <lang><zh-CN>当前生成器只产生无嵌套花括号的 face block。</zh-CN><en>The current generator produces only face blocks without nested braces.</en></lang>
+  const completeBlocks = [...uncommentedCss.matchAll(/@font-face\s*\{([^{}]*)\}/giu)];
+  if (completeBlocks.length !== markerCount) failArtifact(`font-face syntax is invalid in ${relativePath}`);
+
+  // <lang><zh-CN>逐块转成唯一声明映射。</zh-CN><en>Convert every block into a unique declaration map.</en></lang>
+  return completeBlocks.map((fontFaceMatch) => parseCssDeclarations(fontFaceMatch[1] ?? '', relativePath));
+}
+
+/**
+ * <lang><zh-CN>把一个 CSS family 字面值规范为不带成对引号的单一名称。</zh-CN><en>Normalizes one CSS family literal into a single name without matching quotes.</en></lang>
+ * @param {string} rawFamily <lang><zh-CN>`font-family` 原始值。</zh-CN><en>Raw `font-family` value.</en></lang>
+ * @returns {string} <lang><zh-CN>单一 family 名称。</zh-CN><en>Single family name.</en></lang>
+ */
+function normalizeFontFamily(rawFamily) {
+  // <lang><zh-CN>只接受一个双引号、单引号或无引号名称，不接受 fallback 列表。</zh-CN><en>Accept only one double-quoted, single-quoted, or unquoted name and no fallback list.</en></lang>
+  const familyMatch = rawFamily.match(/^(?:"([^"]+)"|'([^']+)'|([^,"']+))$/u);
+  if (!familyMatch) return '';
+
+  // <lang><zh-CN>选择唯一捕获分支并去掉无引号值边缘空白。</zh-CN><en>Select the sole capture branch and trim an unquoted value at its edges.</en></lang>
+  return (familyMatch[1] ?? familyMatch[2] ?? familyMatch[3] ?? '').trim();
+}
+
+/**
+ * <lang><zh-CN>解析只含一个 WOFF `url()` 与精确 `format("woff")` 的 source descriptor。</zh-CN><en>Parses a source descriptor containing exactly one WOFF `url()` and exact `format("woff")`.</en></lang>
+ * @param {string} rawSource <lang><zh-CN>`src` 原始值。</zh-CN><en>Raw `src` value.</en></lang>
+ * @returns {string} <lang><zh-CN>locator；不合格时返回空字符串。</zh-CN><en>Locator, or an empty string when ineligible.</en></lang>
+ */
+function parseSingleWoffLocator(rawSource) {
+  // <lang><zh-CN>locator 可由 compiler 保留双/单引号或去引号，但禁止 fallback source 与额外 format。</zh-CN><en>The compiler may retain double/single quotes or remove them around the locator, but fallback sources and extra formats are forbidden.</en></lang>
+  const sourceMatch = rawSource.match(/^url\(\s*(?:"([^"]+)"|'([^']+)'|([^\s"'()]+))\s*\)\s+format\(\s*(?:"woff"|'woff')\s*\)$/iu);
+  if (!sourceMatch) return '';
+
+  // <lang><zh-CN>返回未解码 locator，使后续 exact/base 检查看到真实输出。</zh-CN><en>Return the undecoded locator so later exact/base checks see the real output.</en></lang>
+  return sourceMatch[1] ?? sourceMatch[2] ?? sourceMatch[3] ?? '';
+}
+
+/**
+ * <lang><zh-CN>把一个 face 声明绑定到三个固定身份之一，并返回其 locator。</zh-CN><en>Binds one face declaration to one of the three fixed identities and returns its locator.</en></lang>
+ * @param {Map<string, string>} declarations <lang><zh-CN>唯一 CSS descriptor 映射。</zh-CN><en>Unique CSS descriptor map.</en></lang>
+ * @param {string} relativePath <lang><zh-CN>稳定诊断路径。</zh-CN><en>Stable diagnostic path.</en></lang>
+ * @returns {{ face: (typeof expectedFontFaces)[number], locator: string }} <lang><zh-CN>固定 face 与声明 locator。</zh-CN><en>Pinned face and declared locator.</en></lang>
+ */
+function bindReviewedFontFace(declarations, relativePath) {
+  // <lang><zh-CN>恰五个 descriptor 阻止 unicode-range、local()、style override 或其他未审行为。</zh-CN><en>Exactly five descriptors prevent unicode-range, `local()`, style overrides, or other unreviewed behavior.</en></lang>
+  const allowedDescriptors = new Set(['font-family', 'font-style', 'font-weight', 'font-display', 'src']);
+  if (declarations.size !== allowedDescriptors.size || [...declarations.keys()].some((key) => !allowedDescriptors.has(key))) {
+    failArtifact(`font-face descriptors are outside the allowlist in ${relativePath}`);
+  }
+
+  // <lang><zh-CN>family、style 与数值 weight 共同选择唯一 face。</zh-CN><en>Family, style, and numeric weight jointly select one face.</en></lang>
+  const family = normalizeFontFamily(declarations.get('font-family') ?? '');
+  const style = (declarations.get('font-style') ?? '').toLowerCase();
+  const weight = Number(declarations.get('font-weight') ?? Number.NaN);
+
+  // <lang><zh-CN>只允许 swap，避免字体加载策略在平台间静默漂移。</zh-CN><en>Allow only `swap`, preventing silent font-loading-policy drift across platforms.</en></lang>
+  if ((declarations.get('font-display') ?? '').toLowerCase() !== 'swap') {
+    failArtifact(`font-face display policy is outside the allowlist in ${relativePath}`);
+  }
+
+  // <lang><zh-CN>精确身份表中必须只有一个匹配。</zh-CN><en>Exactly one identity in the fixed table must match.</en></lang>
+  const matchingFaces = expectedFontFaces.filter((face) => face.cssFamily === family && face.fontStyle === style && face.fontWeight === weight);
+  if (matchingFaces.length !== 1) failArtifact(`font-face identity is outside the allowlist in ${relativePath}`);
+
+  // <lang><zh-CN>src 只能是单一 WOFF locator。</zh-CN><en>The source may only be one WOFF locator.</en></lang>
+  const locator = parseSingleWoffLocator(declarations.get('src') ?? '');
+  if (locator === '') failArtifact(`font-face source is outside the allowlist in ${relativePath}`);
+
+  // <lang><zh-CN>返回固定对象引用，不创建可扩展 face 身份。</zh-CN><en>Return the fixed object reference without creating an extensible face identity.</en></lang>
+  return { face: matchingFaces[0], locator };
 }
 
 /**
@@ -288,7 +784,7 @@ function validateArtifactPath(relativePath, isDirectory) {
   // <lang><zh-CN>私钥与证书容器不属于公开静态站点产物。</zh-CN><en>Private-key and certificate containers do not belong in a public static-site artifact.</en></lang>
   if (/\.(?:key|p12|pfx|pem)$/iu.test(fileName)) failArtifact(`credential container is present at ${relativePath}`);
 
-  // <lang><zh-CN>字体二进制与当前 host-fallback 交付声明冲突。</zh-CN><en>Font binaries contradict the current host-fallback delivery declaration.</en></lang>
+  // <lang><zh-CN>旧字体容器与 WOFF2 仍无条件禁止；WOFF 1.0 只有在后续 manifest、CSS 和哈希三重绑定后才通过。</zh-CN><en>Legacy font containers and WOFF2 remain unconditionally forbidden; WOFF 1.0 passes only after the later manifest, CSS, and digest bindings.</en></lang>
   const fileExtension = extname(fileName).toLowerCase();
   if (forbiddenFontExtensions.has(fileExtension)) failArtifact(`font binary is present at ${relativePath}`);
 }
@@ -515,7 +1011,7 @@ function extractPngMetadataText(pngBytes, relativePath) {
 /**
  * <lang><zh-CN>读取一个已验证普通文件，并建立不会外泄正文的内部记录。</zh-CN><en>Reads one verified regular file and builds an internal record that will never expose its content.</en></lang>
  * @param {{ absolutePath: string, relativePath: string }} artifactFile <lang><zh-CN>已验证文件描述。</zh-CN><en>Verified file descriptor.</en></lang>
- * @returns {Promise<{ relativePath: string, extension: string, sha256: string, text: string }>} <lang><zh-CN>用于策略扫描与法律载荷固定的有限记录。</zh-CN><en>Bounded record used for policy scanning and legal-payload pinning.</en></lang>
+ * @returns {Promise<{ relativePath: string, extension: string, sha256: string, text: string, byteLength: number, bytes?: Buffer }>} <lang><zh-CN>用于文本策略、法律固定及受控 PNG/WOFF 二进制绑定的有限记录。</zh-CN><en>Bounded record used for text policy, legal pinning, and controlled PNG/WOFF binary bindings.</en></lang>
  */
 async function readArtifactRecord(artifactFile) {
   // <lang><zh-CN>读取失败只转换成相对路径诊断。</zh-CN><en>Convert a read failure into a relative-path diagnostic only.</en></lang>
@@ -529,22 +1025,27 @@ async function readArtifactRecord(artifactFile) {
   // <lang><zh-CN>小写扩展名用于选择 HTML/CSS resource parser。</zh-CN><en>The lowercase extension selects the HTML/CSS resource parser.</en></lang>
   const extension = extname(artifactFile.relativePath).toLowerCase();
 
-  // <lang><zh-CN>普通文本完整 UTF-8 解码；PNG 只解码显式 metadata，绝不把 IDAT 压缩像素当作路径/URL 正文。</zh-CN><en>Normal text receives full UTF-8 decoding; PNG decodes only explicit metadata and never treats compressed IDAT pixels as path/URL content.</en></lang>
+  // <lang><zh-CN>PNG 只解码显式 metadata，WOFF 完全不做 UTF-8 文本扫描；其余文件完整解码。</zh-CN><en>PNG decodes only explicit metadata, WOFF receives no UTF-8 text scan, and every other file is decoded in full.</en></lang>
   const text = extension === '.png'
     ? extractPngMetadataText(fileBytes, artifactFile.relativePath)
-    : fileBytes.toString('utf8');
+    : extension === '.woff'
+      ? ''
+      : fileBytes.toString('utf8');
 
   // <lang><zh-CN>原始字节摘要用于许可证来源固定；摘要不能恢复正文，也不包含机器路径。</zh-CN><en>The raw-byte digest pins license provenance; it cannot recover content and contains no machine path.</en></lang>
-  const sha256 = createHash('sha256').update(fileBytes).digest('hex').toUpperCase();
+  const sha256 = calculateSha256(fileBytes);
 
-  // <lang><zh-CN>记录只携带相对路径、摘要和内部正文，不保留绝对路径。</zh-CN><en>The record carries only the relative path, digest, and internal content and retains no absolute path.</en></lang>
-  return { relativePath: artifactFile.relativePath, extension, sha256, text };
+  // <lang><zh-CN>只有需要结构验证的 PNG/WOFF 在内部记录中保留 Buffer；普通文本不重复保留字节。</zh-CN><en>Retain a Buffer in the internal record only for structurally verified PNG/WOFF files; normal text does not duplicate bytes.</en></lang>
+  const bytes = extension === '.png' || extension === '.woff' ? fileBytes : undefined;
+
+  // <lang><zh-CN>记录携带相对路径、摘要、长度与受控内部内容，不保留绝对路径。</zh-CN><en>The record carries a relative path, digest, length, and bounded internal content and retains no absolute path.</en></lang>
+  return { relativePath: artifactFile.relativePath, extension, sha256, text, byteLength: fileBytes.byteLength, bytes };
 }
 
 /**
  * <lang><zh-CN>只读枚举 BP 自有 source 的有限文本文件，并明确跳过顶层锁定 `vendor` 输入。</zh-CN><en>Read-only enumerates finite BP-owned source text files while explicitly skipping the top-level locked `vendor` inputs.</en></lang>
  * @param {string} sourceRoot <lang><zh-CN>BP 自有 `src` 根或测试 fixture 根。</zh-CN><en>BP-owned `src` root or test-fixture root.</en></lang>
- * @returns {Promise<Array<{ relativePath: string, extension: string, text: string }>>} <lang><zh-CN>稳定排序的 source 内容记录。</zh-CN><en>Stably sorted source-content records.</en></lang>
+ * @returns {Promise<Array<{ relativePath: string, extension: string, sha256: string, text: string }>>} <lang><zh-CN>稳定排序且带原始字节摘要的 source 内容记录。</zh-CN><en>Stably sorted source-content records carrying raw-byte digests.</en></lang>
  * @lang zh-CN verifier 不读取 source submodule；其 commit、许可证和自身字体边界由既有 pin/consumer 门禁治理。
  * @lang en The verifier does not read source submodules; existing pin/consumer gates govern their commits, licenses, and own font boundaries.
  */
@@ -624,15 +1125,19 @@ async function collectProjectSourceRecords(sourceRoot) {
       if (!projectSourceExtensions.has(extension)) continue;
 
       // <lang><zh-CN>读取失败继续只报告项目相对路径。</zh-CN><en>A read failure continues to report only the project-relative path.</en></lang>
-      let sourceText;
+      let sourceBytes;
       try {
-        sourceText = await readFile(absolutePath, 'utf8');
+        sourceBytes = await readFile(absolutePath);
       } catch {
         failArtifact(`project source file cannot be read at ${relativePath}`);
       }
 
-      // <lang><zh-CN>登记有限内部文本供纯静态字体边界检查。</zh-CN><en>Register finite internal text for the purely static font-boundary check.</en></lang>
-      sourceRecords.push({ relativePath, extension, text: sourceText });
+      // <lang><zh-CN>UTF-8 正文用于静态 surface 扫描，原始摘要用于绑定两个生成样式。</zh-CN><en>UTF-8 text serves static-surface scans, while the raw digest binds the two generated styles.</en></lang>
+      const sourceText = sourceBytes.toString('utf8');
+      const sha256 = calculateSha256(sourceBytes);
+
+      // <lang><zh-CN>登记有限内部记录，不保留绝对路径。</zh-CN><en>Register a bounded internal record without retaining an absolute path.</en></lang>
+      sourceRecords.push({ relativePath, extension, sha256, text: sourceText });
     }
   }
 
@@ -641,9 +1146,88 @@ async function collectProjectSourceRecords(sourceRoot) {
 }
 
 /**
- * <lang><zh-CN>验证 BP 自有 source 未采用字体加载或广告能力：不调用 `loadFontFace`/`create*Ad`，不声明 `@font-face`/`<ad>`/`adpid`，也不写入静态字体或 dormant ad manager 的 endpoint/storage key。</zh-CN><en>Verifies that BP-owned source adopts neither font loading nor advertising: it invokes no `loadFontFace`/`create*Ad`, declares no `@font-face`/`<ad>`/`adpid`, and writes neither static font locations nor dormant-ad-manager endpoint/storage keys.</en></lang>
+ * <lang><zh-CN>验证 source 中恰有两个已生成字体样式，并把 H5 locator 与微信 data WOFF 逐 face 绑定到固定 manifest。</zh-CN><en>Verifies that source contains exactly the two generated font styles and binds each H5 locator and WeChat data WOFF face to the pinned manifest.</en></lang>
+ * @param {Array<{ relativePath: string, extension: string, sha256: string, text: string }>} sourceRecords <lang><zh-CN>BP 自有 source 记录。</zh-CN><en>BP-owned source records.</en></lang>
+ * @returns {Readonly<{ fontFaceCount: number, fontStyleFileCount: number }>} <lang><zh-CN>不含路径与内容的字体 source 摘要。</zh-CN><en>Path- and content-free font-source summary.</en></lang>
+ */
+function verifyReviewedSourceFontStyles(sourceRecords) {
+  // <lang><zh-CN>恰好两个精确相对路径可承载声明；不存在按目录或后缀放宽。</zh-CN><en>Exactly two relative paths may carry declarations; no directory- or suffix-wide relaxation exists.</en></lang>
+  const reviewedStyleRecords = sourceRecords.filter((sourceRecord) => reviewedFontStylePaths.has(sourceRecord.relativePath));
+  if (reviewedStyleRecords.length !== reviewedFontStylePaths.size) {
+    failArtifact('the complete generated font-style pair is missing from project source');
+  }
+
+  // <lang><zh-CN>两个文件各自必须包含三个唯一 face。</zh-CN><en>Each of the two files must contain three unique faces.</en></lang>
+  let totalFontFaceCount = 0;
+
+  // <lang><zh-CN>逐个生成样式验证字节与平台 locator 模式。</zh-CN><en>Verify bytes and platform-specific locator mode for each generated style.</en></lang>
+  for (const styleRecord of reviewedStyleRecords) {
+    // <lang><zh-CN>文件名匹配不够；原始字节必须等于生成器当前已审输出。</zh-CN><en>A matching filename is insufficient; raw bytes must equal the generator's currently reviewed output.</en></lang>
+    const expectedStyleSha256 = reviewedFontStyleSha256ByPath.get(styleRecord.relativePath);
+    if (typeof expectedStyleSha256 !== 'string' || styleRecord.sha256 !== expectedStyleSha256) {
+      failArtifact(`generated font style does not match its pinned SHA-256 at ${styleRecord.relativePath}`);
+    }
+
+    // <lang><zh-CN>真实规则数必须精确为三。</zh-CN><en>The number of real rules must be exactly three.</en></lang>
+    const faceDeclarations = extractFontFaceDeclarations(styleRecord.text, styleRecord.relativePath);
+    if (faceDeclarations.length !== expectedFontFaces.length) {
+      failArtifact(`generated font style must declare exactly three faces at ${styleRecord.relativePath}`);
+    }
+
+    // <lang><zh-CN>Set 防止复制一个合格 face 三次替代完整字重集合。</zh-CN><en>The Set prevents three copies of one eligible face from substituting for the full weight set.</en></lang>
+    const seenFaceIds = new Set();
+    for (const declarations of faceDeclarations) {
+      // <lang><zh-CN>公共 descriptor validator 先绑定有限身份。</zh-CN><en>The shared descriptor validator first binds a bounded identity.</en></lang>
+      const { face, locator } = bindReviewedFontFace(declarations, styleRecord.relativePath);
+      if (seenFaceIds.has(face.id)) failArtifact(`generated font style duplicates face ${face.id} at ${styleRecord.relativePath}`);
+      seenFaceIds.add(face.id);
+
+      // <lang><zh-CN>固定 source 输出的 basename 是 H5 相对 locator 的唯一目标。</zh-CN><en>The basename of the pinned source output is the sole target of the H5 relative locator.</en></lang>
+      const sourceFileName = face.outputPath.split('/').at(-1) ?? '';
+
+      // <lang><zh-CN>H5 样式只能引用同项目 source WOFF，交由 Vite 产生 Pages-base hashed 文件。</zh-CN><en>The H5 style may reference only the same-project source WOFF, which Vite turns into a Pages-base hashed file.</en></lang>
+      if (styleRecord.relativePath === h5FontStyleRelativePath) {
+        const expectedLocator = `./assets/fonts/${sourceFileName}`;
+        if (locator !== expectedLocator) failArtifact(`H5 generated font locator is outside the allowlist for ${face.id}`);
+        continue;
+      }
+
+      // <lang><zh-CN>微信生成样式只允许 canonical base64 data WOFF，不能混入 URL 或 MIME 变体。</zh-CN><en>The generated WeChat style permits only canonical base64 data WOFF and no URL or MIME variant.</en></lang>
+      const dataPrefix = 'data:font/woff;base64,';
+      if (!locator.startsWith(dataPrefix)) failArtifact(`WeChat generated font locator is outside the allowlist for ${face.id}`);
+
+      // <lang><zh-CN>payload 必须使用标准 base64 字符集与尾部 padding。</zh-CN><en>The payload must use the standard base64 alphabet and terminal padding.</en></lang>
+      const encodedWoff = locator.slice(dataPrefix.length);
+      if (!/^[A-Za-z0-9+/]+={0,2}$/u.test(encodedWoff)) failArtifact(`WeChat generated font data is not canonical for ${face.id}`);
+
+      // <lang><zh-CN>Node 解码后再次编码必须逐字符相等，阻止宽松 decoder 接受隐藏字节。</zh-CN><en>Re-encoding after Node decoding must match character for character, preventing the permissive decoder from accepting hidden bytes.</en></lang>
+      const decodedWoff = Buffer.from(encodedWoff, 'base64');
+      if (decodedWoff.toString('base64') !== encodedWoff) failArtifact(`WeChat generated font data is not canonical for ${face.id}`);
+
+      // <lang><zh-CN>解码字节长度、摘要与 WOFF signature 同时绑定 source face。</zh-CN><en>Decoded byte length, digest, and WOFF signature jointly bind the source face.</en></lang>
+      const hasExpectedBinary = decodedWoff.byteLength === face.outputBytes
+        && calculateSha256(decodedWoff) === face.outputSha256
+        && decodedWoff.subarray(0, 4).toString('ascii') === 'wOFF';
+      if (!hasExpectedBinary) failArtifact(`WeChat generated font data does not match face ${face.id}`);
+    }
+
+    // <lang><zh-CN>每份样式都必须覆盖 allowlist 全集。</zh-CN><en>Each style must cover the complete allowlist.</en></lang>
+    if (seenFaceIds.size !== expectedFontFaces.length) {
+      failArtifact(`generated font style does not cover every reviewed face at ${styleRecord.relativePath}`);
+    }
+
+    // <lang><zh-CN>累计的是已绑定规则而不是 marker 文本。</zh-CN><en>Accumulate bound rules rather than marker text.</en></lang>
+    totalFontFaceCount += faceDeclarations.length;
+  }
+
+  // <lang><zh-CN>冻结有限摘要供 source verifier 合并。</zh-CN><en>Freeze the bounded summary for the source verifier to compose.</en></lang>
+  return Object.freeze({ fontFaceCount: totalFontFaceCount, fontStyleFileCount: reviewedStyleRecords.length });
+}
+
+/**
+ * <lang><zh-CN>验证 BP 自有 source 只通过两个精确生成样式交付字体，且不调用动态字体或广告能力。</zh-CN><en>Verifies that BP-owned source delivers fonts only through the two exact generated styles and invokes neither dynamic-font nor advertising capabilities.</en></lang>
  * @param {string} sourceRoot <lang><zh-CN>固定项目 source 根或隔离测试根。</zh-CN><en>Fixed project source root or isolated test root.</en></lang>
- * @returns {Promise<Readonly<{ fileCount: number }>>} <lang><zh-CN>不含路径与正文的有限摘要。</zh-CN><en>Finite summary containing no paths or content.</en></lang>
+ * @returns {Promise<Readonly<{ fileCount: number, fontAssetByteCount: number, fontAssetCount: number, fontFaceCount: number, fontStyleFileCount: number }>>} <lang><zh-CN>不含路径与正文的有限字体 source 摘要。</zh-CN><en>Finite font-source summary containing no paths or content.</en></lang>
  * @lang zh-CN 该负面证据与 artifact 的 dormant font/ad framework 结构门禁共同证明“能力存在但项目未采用”；它不是浏览器运行时网络 smoke 的替代品。
  * @lang en This negative evidence combines with the artifact's dormant font/ad framework shape gates to prove that capabilities exist but the project does not adopt them; it is not a substitute for a browser runtime network smoke.
  */
@@ -657,6 +1241,15 @@ export async function verifyH5FontSourceBoundary(sourceRoot) {
   // <lang><zh-CN>只取得 BP 自有文本记录，跳过 vendor。</zh-CN><en>Obtain only BP-owned text records and skip vendor.</en></lang>
   const sourceRecords = await collectProjectSourceRecords(resolvedSourceRoot);
 
+  // <lang><zh-CN>隔离根内的 manifest 与三份 WOFF 必须自足并逐字节通过；验证不回退到真实工作树。</zh-CN><en>The manifest and three WOFF files inside the isolated root must be self-contained and pass byte-for-byte; verification never falls back to the real worktree.</en></lang>
+  const fontAssetSummary = await verifyReviewedSourceFontAssets(resolvedSourceRoot);
+
+  // <lang><zh-CN>仅真实固定 source 再复用专项门禁完成 CFF/name/cmap、corpus 与工具链深审；fixture 仍由上方字节固定保持隔离。</zh-CN><en>Only the real fixed source additionally reuses the dedicated gate for CFF/name/cmap, corpus, and toolchain depth; fixtures remain isolated through the byte pins above.</en></lang>
+  if (resolvedSourceRoot === fixedSourceRoot) await verifyFontSubsets();
+
+  // <lang><zh-CN>两个生成样式先完成摘要、规则与逐字节绑定。</zh-CN><en>The two generated styles first complete digest, rule, and byte-for-byte bindings.</en></lang>
+  const fontStyleSummary = verifyReviewedSourceFontStyles(sourceRecords);
+
   // <lang><zh-CN>逐文件检查实际调用形状与字体声明，不把普通 font-family 名称误作字体交付。</zh-CN><en>Check actual call shapes and font declarations file by file without mistaking ordinary font-family names for font delivery.</en></lang>
   for (const sourceRecord of sourceRecords) {
     // <lang><zh-CN>模板 `<ad>`、adpid、uni-ad、任意 `create*Ad(...)` 与固定 endpoint/key 均表示 BP 已采用 framework 广告 surface。</zh-CN><en>A template `<ad>`, adpid, uni-ad, any `create*Ad(...)`, or a fixed endpoint/key means the BP has adopted the framework advertising surface.</en></lang>
@@ -667,6 +1260,9 @@ export async function verifyH5FontSourceBoundary(sourceRoot) {
     // <lang><zh-CN>覆盖 `uni.loadFontFace(...)`、`wx.loadFontFace(...)`、直接函数调用与 computed member 调用。</zh-CN><en>Cover `uni.loadFontFace(...)`, `wx.loadFontFace(...)`, direct function calls, and computed-member calls.</en></lang>
     const invokesLoadFontFace = /(?:\b(?:uni|wx)\s*\.\s*loadFontFace\s*\(|\bloadFontFace\s*\(|\[\s*["']loadFontFace["']\s*\]\s*\()/u.test(sourceRecord.text);
     if (invokesLoadFontFace) failArtifact(`project source invokes loadFontFace at ${sourceRecord.relativePath}`);
+
+    // <lang><zh-CN>固定 manifest 与两个已完整验证样式是仅有的 source 例外。</zh-CN><en>The pinned manifest and two fully verified styles are the only source exceptions.</en></lang>
+    if (sourceRecord.relativePath === fontManifestRelativePath || reviewedFontStylePaths.has(sourceRecord.relativePath)) continue;
 
     // <lang><zh-CN>项目自有 source 中的 CSS 字体声明无条件扩大交付边界。</zh-CN><en>A CSS font declaration in project-owned source unconditionally expands the delivery boundary.</en></lang>
     if (/@font-face\b/iu.test(sourceRecord.text)) {
@@ -680,7 +1276,128 @@ export async function verifyH5FontSourceBoundary(sourceRoot) {
   }
 
   // <lang><zh-CN>冻结无路径摘要供 test/CI 记录。</zh-CN><en>Freeze a path-free summary for test/CI records.</en></lang>
-  return Object.freeze({ fileCount: sourceRecords.length });
+  return Object.freeze({
+    fileCount: sourceRecords.length,
+    fontAssetByteCount: fontAssetSummary.fontAssetByteCount,
+    fontAssetCount: fontAssetSummary.fontAssetCount,
+    fontFaceCount: fontStyleSummary.fontFaceCount,
+    fontStyleFileCount: fontStyleSummary.fontStyleFileCount
+  });
+}
+
+/**
+ * <lang><zh-CN>把 Pages 成品中恰三份 hashed WOFF 与恰三条 CSS face 声明逐项绑定到固定 source 字节。</zh-CN><en>Binds exactly three hashed WOFF files and exactly three CSS face declarations in the Pages artifact to the pinned source bytes.</en></lang>
+ * @param {Array<{ relativePath: string, extension: string, sha256: string, text: string, byteLength: number, bytes?: Buffer }>} artifactRecords <lang><zh-CN>已通过文件系统门禁的成品记录。</zh-CN><en>Artifact records that have passed the file-system gates.</en></lang>
+ * @returns {Readonly<{ fontAssetByteCount: number, fontAssetCount: number, fontCssPaths: Set<string>, fontFaceCount: number, fontFaces: ReadonlyArray<Readonly<{ id: string, byteLength: number, sha256: string }>> }>} <lang><zh-CN>供后续内容门禁与公开摘要使用的已审字体事实。</zh-CN><en>Reviewed font facts used by later content gates and the public summary.</en></lang>
+ * @lang zh-CN 文件名只定位 Vite 版本化输出；授权最终由固定摘要、尺寸、CSS 身份、locator 与 WOFF signature 共同决定。
+ * @lang en Filenames only locate Vite-versioned outputs; authorization ultimately requires the pinned digest, size, CSS identity, locator, and WOFF signature together.
+ */
+function verifyReviewedArtifactFonts(artifactRecords) {
+  // <lang><zh-CN>所有 WOFF 1.0 文件都必须进入本函数，不能在其他目录保留第四份未引用副本。</zh-CN><en>Every WOFF 1.0 file must enter this function; no fourth unreferenced copy may remain elsewhere.</en></lang>
+  const artifactWoffRecords = artifactRecords.filter((artifactRecord) => artifactRecord.extension === '.woff');
+  if (artifactWoffRecords.length !== expectedFontFaces.length) {
+    failArtifact('Pages artifact must contain exactly three reviewed WOFF files');
+  }
+
+  // <lang><zh-CN>face ID 到唯一成品文件的内部映射只在本次调用存活。</zh-CN><en>The internal face-ID-to-artifact mapping lives only for this invocation.</en></lang>
+  const artifactWoffByFaceId = new Map();
+
+  // <lang><zh-CN>逐 face 以版本化文件名规则定位唯一候选，再绑定完整二进制身份。</zh-CN><en>For each face, locate one candidate through its versioned filename rule and then bind its complete binary identity.</en></lang>
+  for (const expectedFace of expectedFontFaces) {
+    // <lang><zh-CN>候选路径必须命中该 face 的精确 Vite 输出命名规则。</zh-CN><en>The candidate path must match the exact Vite output naming rule for this face.</en></lang>
+    const matchingWoffRecords = artifactWoffRecords.filter((artifactRecord) => expectedFace.artifactFilePattern.test(artifactRecord.relativePath));
+    if (matchingWoffRecords.length !== 1) failArtifact(`Pages WOFF filename is outside the allowlist for ${expectedFace.id}`);
+
+    // <lang><zh-CN>唯一候选仍不能只凭文件名获准。</zh-CN><en>The sole candidate is not authorized by filename alone.</en></lang>
+    const matchingWoffRecord = matchingWoffRecords[0];
+    if (!matchingWoffRecord?.bytes) failArtifact(`Pages WOFF bytes are unavailable for ${expectedFace.id}`);
+
+    // <lang><zh-CN>摘要、长度与 signature 同时等于 source face 才能进入 CSS 绑定。</zh-CN><en>The digest, length, and signature must all equal the source face before CSS binding.</en></lang>
+    const hasExpectedArtifactWoffIdentity = matchingWoffRecord.sha256 === expectedFace.outputSha256
+      && matchingWoffRecord.byteLength === expectedFace.outputBytes
+      && matchingWoffRecord.bytes.subarray(0, 4).toString('ascii') === 'wOFF';
+    if (!hasExpectedArtifactWoffIdentity) failArtifact(`Pages WOFF does not match face ${expectedFace.id}`);
+
+    // <lang><zh-CN>登记唯一 record 供 locator 精确反查。</zh-CN><en>Register the unique record for exact locator lookup.</en></lang>
+    artifactWoffByFaceId.set(expectedFace.id, matchingWoffRecord);
+  }
+
+  // <lang><zh-CN>只有 CSS 可以承载静态字体声明；JS 中仍只保留 dormant Uni capability。</zh-CN><en>Only CSS may carry static font declarations; JavaScript still retains only the dormant Uni capability.</en></lang>
+  const fontCssRecords = artifactRecords.filter((artifactRecord) => artifactRecord.extension === '.css' && /@font-face\b/iu.test(artifactRecord.text));
+
+  // <lang><zh-CN>内部路径集合只让通用内容扫描识别已经完整绑定的 CSS。</zh-CN><en>An internal path set lets the general content scan recognize CSS that has already been fully bound.</en></lang>
+  const fontCssPaths = new Set(fontCssRecords.map((fontCssRecord) => fontCssRecord.relativePath));
+
+  // <lang><zh-CN>三个固定 face ID 必须各出现一次。</zh-CN><en>Each of the three fixed face IDs must appear exactly once.</en></lang>
+  const seenFontFaceIds = new Set();
+
+  // <lang><zh-CN>实际规则总数防止没有声明或额外第四条声明。</zh-CN><en>The actual rule count prevents either missing declarations or an extra fourth declaration.</en></lang>
+  let artifactFontFaceCount = 0;
+
+  // <lang><zh-CN>逐 CSS 验证声明，并拒绝规则之外的字体 locator。</zh-CN><en>Verify declarations CSS file by CSS file and reject font locators outside the rules.</en></lang>
+  for (const fontCssRecord of fontCssRecords) {
+    // <lang><zh-CN>完整 flat face 列表不能由注释 marker 伪造。</zh-CN><en>The complete flat face list cannot be forged through comment markers.</en></lang>
+    const fontFaceDeclarations = extractFontFaceDeclarations(fontCssRecord.text, fontCssRecord.relativePath);
+
+    // <lang><zh-CN>当前 CSS 中已绑定 locator 用于与静态引用列表逐项相等。</zh-CN><en>Bound locators in the current CSS are used for exact equality with its static-reference list.</en></lang>
+    const boundFontLocators = [];
+
+    // <lang><zh-CN>每条声明绑定唯一 face 和对应成品文件。</zh-CN><en>Bind every declaration to one face and its corresponding artifact file.</en></lang>
+    for (const fontFaceDeclaration of fontFaceDeclarations) {
+      const { face, locator } = bindReviewedFontFace(fontFaceDeclaration, fontCssRecord.relativePath);
+      if (seenFontFaceIds.has(face.id)) failArtifact(`Pages CSS duplicates font face ${face.id}`);
+
+      // <lang><zh-CN>locator 必须是精确 Pages base 加该 face 的唯一 hashed 成品路径。</zh-CN><en>The locator must be the exact Pages base plus the sole hashed artifact path for this face.</en></lang>
+      const matchingWoffRecord = artifactWoffByFaceId.get(face.id);
+      if (!matchingWoffRecord) failArtifact(`Pages WOFF mapping is missing for ${face.id}`);
+      const expectedLocator = `${PROJECT_BASE}${matchingWoffRecord.relativePath}`;
+      if (locator !== expectedLocator) failArtifact(`Pages font locator is outside the allowlist for ${face.id}`);
+
+      // <lang><zh-CN>登记 face 与 locator，供全集及额外引用检查。</zh-CN><en>Register the face and locator for completeness and extra-reference checks.</en></lang>
+      seenFontFaceIds.add(face.id);
+      boundFontLocators.push(locator);
+    }
+
+    // <lang><zh-CN>删除全部已解析 face 后，剩余 CSS 不能出现远程、data 或其他静态字体 marker。</zh-CN><en>After removing every parsed face, the remaining CSS may contain no remote, data, or other static-font marker.</en></lang>
+    const cssWithoutFontFaces = stripCssComments(fontCssRecord.text).replace(/@font-face\s*\{[^{}]*\}/giu, '');
+    if (staticFontReferencePattern.test(cssWithoutFontFaces)) {
+      failArtifact(`unreviewed static font resource is present in ${fontCssRecord.relativePath}`);
+    }
+
+    // <lang><zh-CN>CSS parser 观察到的字体引用必须与三条声明产生的 locator 同序同数。</zh-CN><en>Font references observed by the CSS parser must equal the declaration locators in both order and cardinality.</en></lang>
+    const observedFontLocators = extractCssReferences(fontCssRecord.text).filter((resourceReference) => staticFontReferencePattern.test(resourceReference));
+    if (observedFontLocators.length !== boundFontLocators.length
+      || observedFontLocators.some((locator, locatorIndex) => locator !== boundFontLocators[locatorIndex])) {
+      failArtifact(`Pages CSS font references are outside the allowlist in ${fontCssRecord.relativePath}`);
+    }
+
+    // <lang><zh-CN>累计已绑定规则数。</zh-CN><en>Accumulate the number of bound rules.</en></lang>
+    artifactFontFaceCount += fontFaceDeclarations.length;
+  }
+
+  // <lang><zh-CN>全集 cardinality 同时证明没有漏项和未知第四项。</zh-CN><en>Complete-set cardinality proves both absence of omissions and absence of an unknown fourth item.</en></lang>
+  if (artifactFontFaceCount !== expectedFontFaces.length || seenFontFaceIds.size !== expectedFontFaces.length) {
+    failArtifact('Pages artifact must declare exactly three reviewed font faces');
+  }
+
+  // <lang><zh-CN>返回值按固定 face 顺序公开 ID、字节数与摘要，不公开宿主或成品路径。</zh-CN><en>The result exposes ID, byte count, and digest in fixed face order without exposing host or artifact paths.</en></lang>
+  const fontFaces = Object.freeze(expectedFontFaces.map((expectedFace) => Object.freeze({
+    id: expectedFace.id,
+    byteLength: expectedFace.outputBytes,
+    sha256: expectedFace.outputSha256
+  })));
+
+  // <lang><zh-CN>总字节数由固定 face 清单相加。</zh-CN><en>The total byte count is the sum of the fixed face ledger.</en></lang>
+  const fontAssetByteCount = expectedFontFaces.reduce((byteCount, expectedFace) => byteCount + expectedFace.outputBytes, 0);
+
+  // <lang><zh-CN>冻结外层摘要；Set 仅在同一 verifier 内部读取。</zh-CN><en>Freeze the outer summary; the Set is read only inside the same verifier.</en></lang>
+  return Object.freeze({
+    fontAssetByteCount,
+    fontAssetCount: artifactWoffRecords.length,
+    fontCssPaths,
+    fontFaceCount: artifactFontFaceCount,
+    fontFaces
+  });
 }
 
 /**
@@ -1074,9 +1791,10 @@ function validateResourceReference(rawReference, relativePath, allowDormantDclou
 /**
  * <lang><zh-CN>验证单文件不含 source-map 注释、机器路径、内部 WorkZone、凭据、遥测、字体注入或未知绝对外链。</zh-CN><en>Verifies that one file contains no source-map comment, machine path, internal WorkZone, credential, telemetry, font injection, or unknown absolute external URL.</en></lang>
  * @param {{ relativePath: string, extension: string, text: string }} artifactRecord <lang><zh-CN>内部成品记录。</zh-CN><en>Internal artifact record.</en></lang>
+ * @param {Set<string>} reviewedFontCssPaths <lang><zh-CN>已经过逐 face/WOFF 绑定的 CSS 相对路径。</zh-CN><en>CSS relative paths already bound face by face to WOFF bytes.</en></lang>
  * @returns {number} <lang><zh-CN>本文件已审计的声明式资源引用数量。</zh-CN><en>Number of declarative resource references audited in this file.</en></lang>
  */
-function validateArtifactRecord(artifactRecord) {
+function validateArtifactRecord(artifactRecord, reviewedFontCssPaths) {
   // <lang><zh-CN>sourceMappingURL 即使未附带 `.map` 文件也会暴露或请求调试映射。</zh-CN><en>A sourceMappingURL can disclose or request debug mappings even without an accompanying `.map` file.</en></lang>
   if (/sourceMappingURL\s*=/iu.test(artifactRecord.text)) {
     failArtifact(`source-map reference is present in ${artifactRecord.relativePath}`);
@@ -1112,17 +1830,21 @@ function validateArtifactRecord(artifactRecord) {
   // <lang><zh-CN>法律文本可陈述许可证 URL、排除项与 dormant capability，但不会由浏览器作为 runtime 代码执行；它仍已完成机器路径、内部 marker、secret 与遥测扫描。</zh-CN><en>Legal text may describe license URLs, exclusions, and dormant capabilities but is not executed by the browser as runtime code; it has still completed machine-path, internal-marker, secret, and telemetry scans.</en></lang>
   const allowsInformationalCitations = informationalCitationFiles.has(artifactRecord.relativePath);
 
-  // <lang><zh-CN>CSS/HTML/SVG 中的 `@font-face` 会直接声明字体；JS 只允许锁定 UniApp 的唯一 dormant capability 结构。</zh-CN><en>An `@font-face` in CSS/HTML/SVG directly declares a font; JavaScript permits only the sole pinned UniApp dormant-capability shape.</en></lang>
+  // <lang><zh-CN>只有已逐字节绑定的 CSS 可静态声明三条 face；JS 仍只允许锁定 UniApp 的唯一 dormant capability 结构。</zh-CN><en>Only byte-bound CSS may statically declare the three faces; JavaScript still permits only the sole pinned UniApp dormant-capability shape.</en></lang>
   const containsFontFace = /@font-face\b/iu.test(artifactRecord.text);
   if (!allowsInformationalCitations && containsFontFace) {
+    // <lang><zh-CN>预审 CSS 路径由同一次 artifact 字节记录生成，不接受调用方输入。</zh-CN><en>The pre-reviewed CSS paths come from the same artifact byte records and accept no caller input.</en></lang>
+    const isReviewedStaticFontCss = artifactRecord.extension === '.css' && reviewedFontCssPaths.has(artifactRecord.relativePath);
+
     const isJavaScript = artifactRecord.extension === '.js' || artifactRecord.extension === '.mjs';
-    if (!isJavaScript || !isReviewedDormantLoadFontFaceCapability(artifactRecord.text)) {
+    if (!isReviewedStaticFontCss && (!isJavaScript || !isReviewedDormantLoadFontFaceCapability(artifactRecord.text))) {
       failArtifact(`font-face rule is present outside the reviewed dormant capability in ${artifactRecord.relativePath}`);
     }
   }
 
-  // <lang><zh-CN>runtime 文本中的静态 font 路径、data font 或远程字体样式服务均表示实际字体交付面扩大；该检查位于结构判断之后以保留更精确的 CSS/HTML 错误。</zh-CN><en>A static font path, data font, or remote font-style service in runtime text expands the actual font-delivery surface; this check follows shape classification to retain the more precise CSS/HTML error.</en></lang>
-  if (!allowsInformationalCitations && runtimeTextExtensions.has(artifactRecord.extension) && staticFontReferencePattern.test(artifactRecord.text)) {
+  // <lang><zh-CN>除已经完成三 face/WOFF 全绑定的 CSS 外，runtime 文本中的静态 font 路径、data font 或远程字体服务仍无条件失败。</zh-CN><en>Except for CSS that completed the three-face/WOFF binding, any static font path, data font, or remote font service in runtime text still fails unconditionally.</en></lang>
+  const isReviewedFontCss = artifactRecord.extension === '.css' && reviewedFontCssPaths.has(artifactRecord.relativePath);
+  if (!allowsInformationalCitations && !isReviewedFontCss && runtimeTextExtensions.has(artifactRecord.extension) && staticFontReferencePattern.test(artifactRecord.text)) {
     failArtifact(`static font resource is present in ${artifactRecord.relativePath}`);
   }
 
@@ -1225,7 +1947,7 @@ function validateTopLevelIndex(indexRecord, artifactRecords) {
 /**
  * <lang><zh-CN>验证一个 H5 Pages 成品根并返回无路径、无正文的确定性摘要。</zh-CN><en>Verifies one H5 Pages artifact root and returns a deterministic summary containing no paths or content.</en></lang>
  * @param {string} artifactRoot <lang><zh-CN>直接入口的固定输出根或测试创建的隔离 fixture 根。</zh-CN><en>The direct entry's fixed output root or an isolated fixture root created by tests.</en></lang>
- * @returns {Promise<Readonly<{ base: string, dormantAdManagerCount: number, dormantFontCapabilityCount: number, fileCount: number, resourceReferenceCount: number }>>} <lang><zh-CN>可公开记录的有限统计。</zh-CN><en>Finite statistics safe to record publicly.</en></lang>
+ * @returns {Promise<Readonly<{ base: string, dormantAdManagerCount: number, dormantFontCapabilityCount: number, fileCount: number, fontAssetByteCount: number, fontAssetCount: number, fontFaceCount: number, fontFaces: ReadonlyArray<Readonly<{ id: string, byteLength: number, sha256: string }>>, resourceReferenceCount: number }>>} <lang><zh-CN>含固定字体 ID/摘要但不含路径或正文的可审计有限统计。</zh-CN><en>Auditable finite statistics containing pinned font IDs/digests but no paths or content.</en></lang>
  * @lang zh-CN 调用方路径只决定测试或固定构建根，不会进入错误、成功摘要或 artifact。
  * @lang en The caller path selects only the fixture or fixed build root and enters neither errors, the success summary, nor the artifact.
  */
@@ -1247,6 +1969,9 @@ export async function verifyH5PagesArtifact(artifactRoot) {
   for (const artifactFile of artifactFiles) {
     artifactRecords.push(await readArtifactRecord(artifactFile));
   }
+
+  // <lang><zh-CN>在通用 runtime 扫描前，把唯一三份 WOFF、三条 CSS 声明及 locator 完整绑定。</zh-CN><en>Before the general runtime scan, fully bind the sole three WOFF files, three CSS declarations, and their locators.</en></lang>
+  const artifactFontSummary = verifyReviewedArtifactFonts(artifactRecords);
 
   // <lang><zh-CN>逐项取得精确顶层入口与 NOTICE；嵌套或大小写变体均不能替代。</zh-CN><en>Obtain the exact top-level entry and NOTICE one by one; nested or case-variant files cannot substitute for them.</en></lang>
   const requiredRecordByPath = new Map();
@@ -1315,7 +2040,7 @@ export async function verifyH5PagesArtifact(artifactRoot) {
   // <lang><zh-CN>逐文件累加已验证资源引用数，不输出具体 URL 或正文。</zh-CN><en>Accumulate the count of verified resource references without outputting URLs or content.</en></lang>
   let resourceReferenceCount = 0;
   for (const artifactRecord of artifactRecords) {
-    resourceReferenceCount += validateArtifactRecord(artifactRecord);
+    resourceReferenceCount += validateArtifactRecord(artifactRecord, artifactFontSummary.fontCssPaths);
   }
 
   // <lang><zh-CN>通用内容门禁完成后，再以实际属性证明顶层静态 base。</zh-CN><en>After the general content gate, prove the top-level static base from actual attributes.</en></lang>
@@ -1327,6 +2052,10 @@ export async function verifyH5PagesArtifact(artifactRoot) {
     dormantAdManagerCount: dormantAdManagerRecords.length,
     dormantFontCapabilityCount: dormantFontCapabilityRecords.length,
     fileCount: artifactRecords.length,
+    fontAssetByteCount: artifactFontSummary.fontAssetByteCount,
+    fontAssetCount: artifactFontSummary.fontAssetCount,
+    fontFaceCount: artifactFontSummary.fontFaceCount,
+    fontFaces: artifactFontSummary.fontFaces,
     resourceReferenceCount
   });
 }

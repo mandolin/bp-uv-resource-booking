@@ -1,0 +1,33 @@
+/**
+ * @lang zh-CN 此文件由 scripts/build-runtime-font-styles.mjs 根据已锁 WOFF 与 provenance 确定性生成；禁止手工编辑，修改输入后应重建并运行专项门禁。
+ * @lang en This file is generated deterministically by scripts/build-runtime-font-styles.mjs from pinned WOFF files and provenance; do not edit it manually, and rebuild plus run the dedicated gate after changing inputs.
+ * @lang zh-CN 平台交付模式：H5 使用项目内相对 WOFF locator，由 Vite 输出同源资产。
+ * @lang en Delivery mode: H5 uses relative project-owned WOFF locators that Vite emits as same-origin assets.
+ */
+/* @lang zh-CN sans-regular 使用经审计的项目字体名、400 字重和 WOFF 摘要 cb9b1f1e5bc7c188e7122d97502c5467fc17a3899ad295cab2df46c5624dd6f5；OFL 许可与上游 provenance 由 font-subsets.manifest.json 绑定。 */
+/* @lang en sans-regular uses the audited project family, weight 400, and WOFF digest cb9b1f1e5bc7c188e7122d97502c5467fc17a3899ad295cab2df46c5624dd6f5; font-subsets.manifest.json binds OFL licensing and upstream provenance. */
+@font-face {
+  font-family: "HIA-uView BP Sans SC";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/hia-uv-bp-sans-sc-regular-v2.005-subset.woff") format("woff");
+}
+/* @lang zh-CN sans-bold 使用经审计的项目字体名、700 字重和 WOFF 摘要 63fb549c240ff5c010ea2cac76c660f49f1ef6641a3af22d6415688afd1ed4bc；OFL 许可与上游 provenance 由 font-subsets.manifest.json 绑定。 */
+/* @lang en sans-bold uses the audited project family, weight 700, and WOFF digest 63fb549c240ff5c010ea2cac76c660f49f1ef6641a3af22d6415688afd1ed4bc; font-subsets.manifest.json binds OFL licensing and upstream provenance. */
+@font-face {
+  font-family: "HIA-uView BP Sans SC";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/hia-uv-bp-sans-sc-bold-v2.005-subset.woff") format("woff");
+}
+/* @lang zh-CN serif-bold 使用经审计的项目字体名、700 字重和 WOFF 摘要 6e5d3b2cbe007f2d3a369ec40ed3d8023ddd8825033331c1f751ecf49b59bec0；OFL 许可与上游 provenance 由 font-subsets.manifest.json 绑定。 */
+/* @lang en serif-bold uses the audited project family, weight 700, and WOFF digest 6e5d3b2cbe007f2d3a369ec40ed3d8023ddd8825033331c1f751ecf49b59bec0; font-subsets.manifest.json binds OFL licensing and upstream provenance. */
+@font-face {
+  font-family: "HIA-uView BP Serif SC";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/hia-uv-bp-serif-sc-bold-v2.003-subset.woff") format("woff");
+}

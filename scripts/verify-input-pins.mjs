@@ -15,7 +15,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // <lang><zh-CN>所有公开 source 输入均以路径、远端 URL 与精确 commit 三元组显式声明。</zh-CN><en>Every public source input is explicitly declared as a path, remote URL, and exact commit triple.</en></lang>
 const expectedInputs = Object.freeze([
-  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '796fe0d839537900aade45b4a7a856721dfe4e4a' }),
+  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '91e4a98442fb61f2047fc510b4dab2af063c2841' }),
   Object.freeze({ path: 'src/vendor/HIA-uView-Biz', remote: 'https://github.com/mandolin/HIA-uView-Biz.git', commit: '838e0344adb4177327ced50792c2e5b5744b86f7' })
 ]);
 
@@ -145,6 +145,7 @@ async function verifyInputs() {
   // <lang><zh-CN>当前所有 BP 页面、通用资源卡片与应用自管页面壳只使用模板 u-* 标签与静态 resolver；它们不能重新导入 UI 公共 runtime entry 破坏小程序产物边界。</zh-CN><en>All current BP pages, the generic resource card, and the application-owned page shell use template u-* tags with the static resolver only; they must not reimport the UI public runtime entry and break Mini Program output boundaries.</en></lang>
   const staticConsumerPaths = Object.freeze([
     'src/components/ResourceCard.vue',
+    'src/components/PrimaryTabBar.vue',
     'src/components/RuntimePageShell.vue',
     'src/components/SourceBadge.vue',
     'src/pages/home/index.vue',

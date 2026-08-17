@@ -1,6 +1,6 @@
 <!--
-@lang zh-CN BP 的应用自管页面壳：用 HIA-uView `u-navbar` 呈现当前 runtime locale 的标题并处理状态栏与有限返回意图；主导航由平台管理的 tab chrome 常驻呈现。
-@lang en Application-owned page shell for the BP: renders the current-runtime-locale title with HIA-uView `u-navbar` and handles the status bar plus bounded back intent; platform-managed tab chrome persistently renders primary navigation.
+@lang zh-CN BP 的应用自管页面壳：用 HIA-uView `u-navbar` 呈现当前 runtime locale 的标题并处理状态栏与有限返回意图；微信主导航由 official custom tabBar 常驻，H5 一级页由应用适配器组合 HIA-uView `UTabbar`。
+@lang en Application-owned page shell for the BP: renders the current-runtime-locale title with HIA-uView `u-navbar` and handles the status bar plus bounded back intent; WeChat retains its official custom tab bar, while H5 primary pages compose HIA-uView `UTabbar` through the application adapter.
 -->
 <template>
   <!-- <lang><zh-CN>根壳提供统一背景和最小视口高度；页面业务内容只通过默认 slot 进入。</zh-CN><en>The root shell provides a shared background and minimum viewport height; page business content enters only through the default slot.</en></lang> -->
@@ -23,14 +23,25 @@
     <!-- <lang><zh-CN>页面内容保持调用方所有权；壳不读取目录、预约、身份或数据 source。</zh-CN><en>Page content remains caller-owned; the shell reads no catalog, booking, identity, or data source.</en></lang> -->
     <view class="runtime-page-shell__body"><slot /></view>
 
+    <!-- #ifdef H5 -->
+    <!-- <lang><zh-CN>H5 仅在一级页面声明固定 value 时呈现 HIA-uView 主导航；二级详情/确认页不生成底栏。</zh-CN><en>H5 presents HIA-uView primary navigation only when a primary page declares a fixed value; secondary detail/confirmation pages generate no bottom bar.</en></lang> -->
+    <primary-tab-bar v-if="props.primaryPage" :current-page="props.primaryPage" />
+    <!-- #endif -->
+
   </view>
 </template>
 
 <script setup>
 // <lang><zh-CN>computed 只投影 props 与共享 locale，不创建页面私有 store。</zh-CN><en>Computed values project only props and shared locale and create no page-private store.</en></lang>
 import { computed } from 'vue';
+// #ifdef H5
+// <lang><zh-CN>H5 通过响应式 effect 同步浏览器文档语言；当前页标题由 onShow chrome bridge 独占，避免缓存 tab 页互相覆盖。</zh-CN><en>H5 uses a reactive effect to synchronize the browser document language; the onShow chrome bridge exclusively owns the current-page title so cached tab pages cannot overwrite one another.</en></lang>
+import { watchEffect } from 'vue';
+// <lang><zh-CN>H5 专用适配器在编译期从微信产物移除，确保 official custom tabBar 保持唯一微信底栏。</zh-CN><en>The H5-only adapter is removed from the WeChat artifact at compile time, keeping the official custom tab bar as the sole WeChat bottom bar.</en></lang>
+import PrimaryTabBar from './PrimaryTabBar.vue';
+// #endif
 // <lang><zh-CN>返回 helper 只接受固定 fallback 主页面；页面壳不直接拼接或解释 URL。</zh-CN><en>The back helper accepts only a fixed fallback primary page; the page shell never concatenates or interprets URLs directly.</en></lang>
-import { navigateBackOrOpenPrimaryPage } from '../localization/runtime-chrome.mjs';
+import { isPrimaryPage, navigateBackOrOpenPrimaryPage } from '../localization/runtime-chrome.mjs';
 // <lang><zh-CN>标题、返回文字与 tab labels 共用唯一 runtime locale store。</zh-CN><en>Title, back copy, and tab labels share the sole runtime locale store.</en></lang>
 import { useRuntimeLocale } from '../localization/runtime-locale.mjs';
 
@@ -46,11 +57,30 @@ const props = defineProps({
   // <lang><zh-CN>页面直接提供当前 locale 的 title，壳不再依赖跨自定义组件的复合 key 属性桥接。</zh-CN><en>The page supplies the current-locale title directly, so the shell no longer depends on bridging a compound key prop across custom components.</en></lang>
   title: { type: String, required: true },
   // <lang><zh-CN>只有详情与确认等栈内页面显式开放返回 control。</zh-CN><en>Only stack-internal pages such as details and confirmation explicitly enable the back control.</en></lang>
-  back: { type: Boolean, default: false }
+  back: { type: Boolean, default: false },
+  // <lang><zh-CN>一级页以固定 value 请求 H5 主导航；空值保留二级页面无 tab 的现有边界。</zh-CN><en>A primary page requests H5 navigation with a fixed value; an empty value preserves the existing tab-free boundary for secondary pages.</en></lang>
+  primaryPage: {
+    type: String,
+    default: '',
+    validator: (value) => value === '' || isPrimaryPage(value)
+  }
 });
 
 // <lang><zh-CN>读取应用级 locale surface，使个人信息页的选择可即时重绘所有壳文案。</zh-CN><en>Read the application-level locale surface so a Profile choice immediately redraws every shell label.</en></lang>
 const runtimeLocale = useRuntimeLocale();
+
+// #ifdef H5
+/**
+ * <lang><zh-CN>把共享 locale 投影到 H5 根文档语言。</zh-CN><en>Projects the shared locale into the H5 root-document language.</en></lang>
+ * @returns {void} <lang><zh-CN>无返回值；effect 只写所有缓存页面共享的 `lang`。</zh-CN><en>No return value; the effect writes only the `lang` shared by all cached pages.</en></lang>
+ * @lang zh-CN 该同步不读取 UA、系统语言或路由；canonical locale 已由共享 store 决定，当前可见页标题由 onShow chrome bridge 同步，微信在编译期移除整个节点。
+ * @lang en This synchronization reads no user agent, system language, or route; the shared store already determined the canonical locale, the onShow chrome bridge synchronizes the currently visible page title, and WeChat removes the entire node at compile time.
+ */
+watchEffect(function synchronizeH5DocumentLanguage() {
+  // <lang><zh-CN>只允许两个已支持的 BCP 47 值进入根文档，未知值确定性回退简体中文。</zh-CN><en>Allow only the two supported BCP 47 values into the root document and deterministically fall back to Simplified Chinese.</en></lang>
+  document.documentElement.lang = runtimeLocale.locale.value === 'en' ? 'en' : 'zh-Hans';
+});
+// #endif
 
 // <lang><zh-CN>返回文字仅在页面声明返回 control 时存在，避免主页面出现无意义空按钮。</zh-CN><en>Back copy exists only when the page declares a back control, preventing meaningless empty controls on primary pages.</en></lang>
 const backText = computed(() => props.back ? runtimeLocale.t('common.back') : '');
@@ -70,7 +100,7 @@ function handleBack() {
 
 <style scoped>
 /* <lang><zh-CN>根壳填满视口、建立思源黑体优先的正文继承根并继承 HIA-uView 浅色表面；所有层级值由 BP 自有布局 token 提供。</zh-CN><en>The root shell fills the viewport, establishes a Source Han Sans-first body inheritance root, and inherits the HIA-uView light surface; all layering values come from BP-owned layout tokens.</en></lang> */
-.runtime-page-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--u-sys-color-surface-subtle); font-family: var(--bp-font-body, "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif); }
+.runtime-page-shell { display: flex; flex-direction: column; min-height: 100vh; background: var(--u-sys-color-surface-subtle); font-family: var(--bp-font-body, "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif); }
 /* <lang><zh-CN>header 在页面滚动时保持可见，并以主题表面遮住其下内容。</zh-CN><en>The header remains visible during page scrolling and uses the themed surface to cover content beneath it.</en></lang> */
 .runtime-page-shell__header { position: sticky; z-index: var(--bp-shell-header-z, 20); top: 0; background: var(--u-sys-color-surface); }
 /* <lang><zh-CN>UniApp 的状态栏变量在 H5 为零、在支持宿主为实际高度；不读取设备标识或同步系统 API。</zh-CN><en>UniApp's status-bar variable is zero on H5 and the actual height on supporting hosts; no device identifier or synchronous system API is read.</en></lang> */

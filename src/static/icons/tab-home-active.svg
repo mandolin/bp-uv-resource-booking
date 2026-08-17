@@ -1,4 +1,4 @@
-<!-- <lang><zh-CN>本仓原创的首页选中实心图标；27 单位网格把 24 单位钴蓝房屋剪影直接栅格为 81×81 的整数 3x 资产，不承载文字或业务状态。</zh-CN><en>Repository-original selected Home solid icon; its 27-unit grid rasterizes the 24-unit cobalt house silhouette directly into an integer 3x 81×81 asset and carries no text or business state.</en></lang> -->
+<!-- <lang><zh-CN>本仓原创的首页选中实心图标；27 单位网格把钴蓝房屋剪影直接栅格为 27×27 运行时 PNG，不经历预放大后缩小，也不承载文字或业务状态。</zh-CN><en>Repository-original selected Home solid icon; its 27-unit grid rasterizes the cobalt house silhouette directly into a 27×27 runtime PNG without enlargement followed by downscaling, and carries no text or business state.</en></lang> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected Home</title>
   <desc>Solid cobalt house for the selected Home tab.</desc>

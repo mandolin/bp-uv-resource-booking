@@ -20,7 +20,7 @@
   padding: 5px 0 calc(5px + env(safe-area-inset-bottom));
   border-top: 1px solid #dfe5ec;
   background: #ffffff;
-  font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+  font-family: "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
 }
 
 /* <lang><zh-CN>每项严格占四分之一宽度，并以 27px 图标、13px 文字和 52px 触控高度构成稳定纵向导航；使用原生 view 可避免微信 button 的灰底、内边距与字号重置。</zh-CN><en>Each item occupies exactly one quarter of the width and forms stable vertical navigation from a 27px icon, 13px text, and a 52px touch height; a native view avoids WeChat button gray surfaces, padding, and font resets.</en></lang> */
@@ -57,7 +57,7 @@
   font-weight: 600;
 }
 
-/* <lang><zh-CN>四项统一使用 27px 几何框；运行时 PNG 由 27 单位 SVG 源稿直接按 3x 生成 81×81，并在常见 3x 屏按整数比例呈现，前后两段都不再发生非整数重采样。</zh-CN><en>All four items use a 27px geometry box; runtime PNGs are generated directly at 3x from 27-unit SVG sources into 81×81 assets and render at an integer ratio on common 3x screens, avoiding non-integer resampling in both stages.</en></lang> */
+/* <lang><zh-CN>四项统一使用 27px 几何框；运行时 PNG 由 27 单位 SVG 源稿直接以 1x 栅格为 27×27，使资源固有尺寸与展示框一致，不再运行时缩小。</zh-CN><en>All four items use a 27px geometry box; runtime PNGs are rasterized directly at 1x from 27-unit SVG sources into 27×27 assets, matching intrinsic size to the presentation box without runtime downscaling.</en></lang> */
 .bp-custom-tabbar__icon {
   display: block;
   flex: none;

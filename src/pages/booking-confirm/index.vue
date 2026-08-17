@@ -230,7 +230,7 @@ function backToDiscover() {
 .booking-confirm-page__authority-row { display: flex; align-items: center; gap: 10px; color: var(--u-sys-color-text-secondary); font-size: 12px; line-height: 1.5; }
 .booking-confirm-page__source-badge { flex: 0 0 auto; }
 .booking-confirm-page__eyebrow { color: var(--u-sys-color-action-primary); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
-.booking-confirm-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 27px; font-weight: 700; }
+.booking-confirm-page__title { color: var(--u-sys-color-text); font-family: var(--bp-font-display, "HIA-uView BP Serif SC", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 27px; font-weight: 700; }
 .booking-confirm-page__actions { display: flex; gap: 10px; flex-direction: column; }
 .booking-confirm-page__confirm-actions { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; }
 

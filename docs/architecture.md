@@ -57,9 +57,9 @@ Booking creation, cancellation, and reschedule all reach an in-process mock tran
 
 ## 主题装载边界 / Theme-loading boundary
 
-`src/App.vue` 作为唯一全局样式发射点显式导入 `src/uni.scss`。该文件再显式导入已锁定的 HIA-uView 样式与浅色 token；页面与组件只消费 token，不复制主题值。此入口必须随 H5 与 mp-weixin 构建一同验证，避免组件 CSS 已存在而主题 token 未装载的视觉退化。
+`src/App.vue` 保留一个不含 CSS 声明的 SCSS 编译单元，使 UniApp 把特殊入口 `src/uni.scss` 标准预注入一次；App 不再显式 `@import` 它，避免双重注入。`uni.scss` 显式导入已锁定的 HIA-uView 样式、浅色 token 与目标平台字体声明；页面与组件只消费 token，不复制主题值。此入口必须随 H5 与 mp-weixin 构建一同验证，并由字体成品门禁拒绝缺失或重复声明，避免组件 CSS 已存在而主题/token/字体未正确装载的视觉退化。
 
-`src/App.vue` explicitly imports `src/uni.scss` as the sole global-style emission point. That file explicitly imports the locked HIA-uView styles and light tokens; pages and components consume tokens without copying theme values. This entry must be verified with both H5 and mp-weixin builds, preventing visual degradation where component CSS exists but theme tokens are not loaded.
+`src/App.vue` retains an SCSS compilation unit with no CSS declarations so UniApp performs one standard pre-injection of the special `src/uni.scss` entry; App no longer `@import`s it explicitly, avoiding double injection. `uni.scss` explicitly imports the locked HIA-uView styles, light tokens, and target-specific font declarations; pages and components consume tokens without copying theme values. Both H5 and mp-weixin builds must verify this entry, and the font artifact gates reject missing or duplicate declarations, preventing visual degradation where component CSS exists but theme, tokens, or fonts are not loaded correctly.
 
 ## 隐私与遥测边界 / Privacy and telemetry boundary
 

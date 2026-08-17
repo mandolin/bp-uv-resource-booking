@@ -5,8 +5,8 @@
 <template>
   <!-- <lang><zh-CN>provider 直接包住页面，使 HIA-uView locale context、BP runtime 文案和领域投影始终使用同一种运行时语言。</zh-CN><en>The provider directly wraps the page so the HIA-uView locale context, BP runtime copy, and domain projection always use one runtime language.</en></lang> -->
   <u-config-provider :locale="runtimeLocale.locale.value">
-    <!-- <lang><zh-CN>首页使用应用自管品牌栏；其余页面继续使用 RuntimePageShell 的默认 HIA-uView navbar，平台 custom tabBar 仍常驻。</zh-CN><en>Home supplies an application-owned brand bar; other pages continue using RuntimePageShell's default HIA-uView navbar while the platform custom tab bar remains persistent.</en></lang> -->
-    <runtime-page-shell :title="runtimeLocale.t('title.home')">
+    <!-- <lang><zh-CN>首页使用应用自管品牌栏；其余页面继续使用 RuntimePageShell 的默认 HIA-uView navbar。微信 official custom tabBar 由宿主常驻，H5 则由页面壳呈现 HIA-uView UTabbar。</zh-CN><en>Home supplies an application-owned brand bar, while other pages continue using RuntimePageShell's default HIA-uView navbar. The host retains WeChat's official custom tab bar, whereas the H5 page shell renders HIA-uView UTabbar.</en></lang> -->
+    <runtime-page-shell :title="runtimeLocale.t('title.home')" primary-page="home">
       <template #header>
         <!-- <lang><zh-CN>品牌与 source badge 保持同一可发现层级；微信条件样式为右侧原生胶囊预留空间。</zh-CN><en>Brand and source badge stay at one discoverable level; WeChat-specific styling reserves space for the native capsule on the right.</en></lang> -->
         <view class="home-page__brand-bar">
@@ -18,7 +18,8 @@
       <view class="home-page">
         <!-- <lang><zh-CN>欢迎标题与说明独立位于主图之前，拒绝使用渐变覆盖层压缩文字或改变图片可读性。</zh-CN><en>The welcome heading and description sit independently before the hero image, avoiding a gradient overlay that compresses copy or changes image readability.</en></lang> -->
         <view class="home-page__intro">
-          <text class="home-page__title">{{ runtimeLocale.t('home.title') }}</text>
+          <!-- <lang><zh-CN>中文标题使用设计板的 10+4 字符节奏；英文保留完整内容宽度，避免把相同像素宽度误作跨语言等价。</zh-CN><en>The Chinese heading uses the board's 10+4-character rhythm, while English retains the full content width instead of treating one pixel width as cross-language equivalence.</en></lang> -->
+          <text class="home-page__title" :class="{ 'home-page__title--zh-hans': runtimeLocale.locale.value === 'zh-Hans' }">{{ runtimeLocale.t('home.title') }}</text>
           <text class="home-page__subtitle">{{ runtimeLocale.t('home.subtitle') }}</text>
         </view>
 
@@ -30,10 +31,10 @@
         <!-- <lang><zh-CN>两个入口均使用 HIA-uView UButton；第一方图标只是可见装饰，文字继续承担完整操作语义。</zh-CN><en>Both entries use HIA-uView UButton; first-party icons are visible decoration while text continues to carry the complete action meaning.</en></lang> -->
         <view class="home-page__shortcuts">
           <u-button :label="runtimeLocale.t('home.chooseDate')" size="lg" block @click="browseResources">
-            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-calendar-light.svg" mode="aspectFit" /></template>
+            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-calendar-light.svg" mode="aspectFit" aria-hidden="true" /></template>
           </u-button>
           <u-button :label="runtimeLocale.t('home.browseVenues')" variant="secondary" size="lg" block @click="browseResources">
-            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-venue-primary.svg" mode="aspectFit" /></template>
+            <template #leading><image class="home-page__shortcut-icon" src="/static/icons/action-venue-primary.svg" mode="aspectFit" aria-hidden="true" /></template>
           </u-button>
         </view>
 
@@ -85,7 +86,7 @@ import { onPullDownRefresh, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
 import SourceBadge from '../../components/SourceBadge.vue';
-import { getVenueImage } from '../../data/asset-map.mjs';
+import { getPresentationImage } from '../../data/asset-map.mjs';
 import { openPrimaryPage, syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
@@ -96,8 +97,8 @@ const demo = useBookingDemo();
 // <lang><zh-CN>唯一共享 locale surface 为所有静态文案和领域投影提供当前单语言。</zh-CN><en>The sole shared locale surface supplies the current single language for all static copy and domain projection.</en></lang>
 const runtimeLocale = useRuntimeLocale();
 
-// <lang><zh-CN>hero 使用资产 allowlist 中的中性阅览空间；未知 ID 时 UImage 显示受控 fallback。</zh-CN><en>The hero uses the neutral reading space from the asset allowlist; UImage shows its controlled fallback for an unknown ID.</en></lang>
-const heroImage = getVenueImage('harbor-reading-hall');
+// <lang><zh-CN>hero 使用独立 presentation allowlist 中的双层公共阅览空间，不与精选场馆卡重复；未知 ID 时 UImage 显示受控 fallback。</zh-CN><en>The hero uses the double-height public reading space from the separate presentation allowlist without duplicating the featured venue card; UImage shows its controlled fallback for an unknown ID.</en></lang>
+const heroImage = getPresentationImage('home-civic-reading-atrium');
 
 // <lang><zh-CN>首页精选只读取当前 canonical page 的第一项，不复制领域对象或猜测第二项排序。</zh-CN><en>Home feature reads only the first item of the current canonical page and neither duplicates a domain object nor guesses a secondary ordering.</en></lang>
 const featuredEntry = computed(() => demo.catalogEntries.value[0] ?? null);
@@ -177,14 +178,16 @@ onPullDownRefresh(async () => {
 </script>
 
 <style scoped>
-/* <lang><zh-CN>首页采用设计板的紧凑纵向节奏，并为固定 custom tabBar 与安全区留出完整滚动空间。</zh-CN><en>Home adopts the board's compact vertical rhythm and reserves complete scroll space for the fixed custom tab bar and safe area.</en></lang> */
-.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline, 16px) calc(var(--bp-shell-tabbar-height, 64px) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface-subtle); color: var(--u-sys-color-text); }
+/* <lang><zh-CN>首页采用设计板的紧凑纵向节奏，并为微信 official custom tabBar 或 H5 HIA-uView UTabbar 与安全区留出完整滚动空间。</zh-CN><en>Home adopts the board's compact vertical rhythm and reserves complete scroll space for either WeChat's official custom tab bar or H5's HIA-uView UTabbar plus the safe area.</en></lang> */
+.home-page { box-sizing: border-box; min-height: 100%; padding: 20px var(--bp-page-inline, 16px) calc(var(--bp-shell-tabbar-height, 64px) + 48px + env(safe-area-inset-bottom)); background: var(--u-sys-color-surface); color: var(--u-sys-color-text); }
 /* <lang><zh-CN>品牌栏是首页唯一顶部标题层；其宽度与高度稳定，不生成第二个居中标题。</zh-CN><en>The brand bar is Home's sole top-title layer; its width and height remain stable and create no second centered heading.</en></lang> */
 .home-page__brand-bar { box-sizing: border-box; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 var(--bp-page-inline, 16px); overflow: hidden; background: var(--u-sys-color-surface); }
-.home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.home-page__brand { min-width: 0; overflow: hidden; color: var(--u-sys-color-action-primary); font-family: var(--bp-font-display, "HIA-uView BP Serif SC", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 21px; font-weight: 700; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 /* <lang><zh-CN>欢迎语采用思源宋体优先的展示栈；正文、按钮和导航继续继承思源黑体优先栈。</zh-CN><en>Welcome copy uses a Source Han Serif-first display stack while body copy, buttons, and navigation continue to inherit the Source Han Sans-first stack.</en></lang> */
 .home-page__intro { display: flex; flex-direction: column; gap: 6px; }
-.home-page__title { display: block; max-width: 330px; font-family: var(--bp-font-display, "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 26px; font-weight: 700; line-height: 1.38; letter-spacing: .01em; }
+.home-page__title { display: block; max-width: 100%; font-family: var(--bp-font-display, "HIA-uView BP Serif SC", "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC", serif); font-size: 26px; font-weight: 700; line-height: 1.38; letter-spacing: .01em; }
+/* <lang><zh-CN>280px 宽度在已锁思源宋体子集中稳定形成设计板的中文 10+4 断行；英文不继承此限制。</zh-CN><en>A 280px width produces the board's stable Chinese 10+4 wrap with the pinned Source Han Serif subset; English does not inherit this limit.</en></lang> */
+.home-page__title--zh-hans { max-width: 280px; }
 .home-page__subtitle { display: block; color: var(--u-sys-color-text-secondary); font-size: 14px; line-height: 1.55; }
 /* <lang><zh-CN>页面拥有 216px hero 几何，UImage 仅通过 fluid 填满，图片不再依靠深层选择器或覆盖文案。</zh-CN><en>The page owns 216px hero geometry and UImage only fills it through fluid, with no deep selector or overlaid copy.</en></lang> */
 .home-page__hero { height: 216px; margin-top: 14px; overflow: hidden; border-radius: 16px; box-shadow: var(--bp-card-shadow, 0 2px 8px rgb(0 27 46 / 12%)); }
@@ -197,15 +200,15 @@ onPullDownRefresh(async () => {
 /* <lang><zh-CN>native wrapper 独立提供 16px 卡片间距，避免 margin 落到小程序自定义组件宿主后失效。</zh-CN><en>The native wrapper independently supplies a 16px card gap, avoiding a margin that disappears when attached to a Mini Program custom-component host.</en></lang> */
 .home-page__data-notice { box-sizing: border-box; margin-top: 16px; width: 100%; }
 /* <lang><zh-CN>slot 内容显式采用思源黑体优先栈和设计板的信息色层级；页面只控制其自有节点，不改写 UAlertTips 内部选择器。</zh-CN><en>The slot content explicitly uses the Source Han Sans-first stack and the board's information-color hierarchy; the page controls only its own nodes and does not override UAlertTips internals.</en></lang> */
-.home-page__data-notice-content { box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; width: 100%; color: #27364a; font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; }
-.home-page__data-notice-icon { display: block; flex: 0 0 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: #0047ab; color: #ffffff; font-family: "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
+.home-page__data-notice-content { box-sizing: border-box; display: flex; align-items: flex-start; gap: 10px; width: 100%; color: var(--u-comp-alert-tips-foreground, #001b2e); font-family: "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; }
+.home-page__data-notice-icon { display: block; flex: 0 0 18px; height: 18px; margin-top: 1px; border-radius: 50%; background: var(--u-sys-color-action-primary, #0047ab); color: var(--u-sys-color-on-action-primary, #ffffff); font-family: "HIA-uView BP Sans SC", "Source Han Sans SC", "Noto Sans SC", "Noto Sans CJK SC", sans-serif; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
 .home-page__data-notice-copy { display: flex; flex: 1; flex-direction: column; gap: 4px; min-width: 0; font-family: inherit; }
-.home-page__data-notice-title { display: block; color: #0047ab; font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; }
-.home-page__data-notice-description { display: block; color: #27364a; font-family: inherit; font-size: 13px; font-weight: 400; line-height: 1.55; }
+.home-page__data-notice-title { display: block; color: var(--u-sys-color-action-primary, #0047ab); font-family: inherit; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.home-page__data-notice-description { display: block; color: var(--u-sys-color-text-secondary, #27364a); font-family: inherit; font-size: 13px; font-weight: 400; line-height: 1.55; }
 /* <lang><zh-CN>微信原生菜单胶囊占据品牌栏右侧；只预留固定安全空间，不读取设备或窗口信息。</zh-CN><en>The native WeChat menu capsule occupies the brand bar's right side; reserve fixed safe space without reading device or window information.</en></lang> */
 /* #ifdef MP-WEIXIN */
 .home-page__brand-bar { padding: 0 116px 0 16px; background: #ffffff; }
-.home-page { padding: 20px 16px calc(112px + env(safe-area-inset-bottom)); background: #f7f9fc; color: #001b2e; }
+.home-page { padding: 20px 16px calc(112px + env(safe-area-inset-bottom)); background: #ffffff; color: #001b2e; }
 .home-page__brand { color: #0047ab; }
 .home-page__subtitle { color: #27364a; }
 /* #endif */

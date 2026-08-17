@@ -20,7 +20,7 @@ import { verifyH5FontSourceBoundary, verifyH5PagesArtifact } from '../scripts/ve
 const fixtureProjectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * <lang><zh-CN>把九项法律载荷目标映射到其公开、版本固定的 source；fixture 复制真实 canonical 输入，从而真实验证 verifier 中不可伪造的 digest。</zh-CN><en>Maps the nine legal-payload destinations to their public, version-pinned sources; fixtures copy the real canonical inputs so the verifier's non-bypassable digests are tested honestly.</en></lang>
+ * <lang><zh-CN>把十一项法律载荷目标映射到其公开、版本固定的 source；fixture 复制真实 canonical 输入，从而真实验证 verifier 中不可伪造的 digest。</zh-CN><en>Maps the eleven legal-payload destinations to their public, version-pinned sources; fixtures copy the real canonical inputs so the verifier's non-bypassable digests are tested honestly.</en></lang>
  */
 const fixtureLegalSources = Object.freeze([
   Object.freeze({ destination: 'LICENSE', source: resolve(fixtureProjectRoot, 'LICENSE') }),
@@ -29,10 +29,53 @@ const fixtureLegalSources = Object.freeze([
   Object.freeze({ destination: 'LICENSES/HIA-uView-Biz-MIT.txt', source: resolve(fixtureProjectRoot, 'src/vendor/HIA-uView-Biz/LICENSE') }),
   Object.freeze({ destination: 'LICENSES/HIA-uView-THIRD_PARTY_NOTICES.md', source: resolve(fixtureProjectRoot, 'src/vendor/HIA-uView/THIRD_PARTY_NOTICES.md') }),
   Object.freeze({ destination: 'LICENSES/uView-Pro-MIT.txt', source: resolve(fixtureProjectRoot, 'LICENSES/uView-Pro-MIT.txt') }),
+  Object.freeze({ destination: 'LICENSES/Source-Han-Sans-OFL-1.1.txt', source: resolve(fixtureProjectRoot, 'LICENSES/Source-Han-Sans-OFL-1.1.txt') }),
+  Object.freeze({ destination: 'LICENSES/Source-Han-Serif-OFL-1.1.txt', source: resolve(fixtureProjectRoot, 'LICENSES/Source-Han-Serif-OFL-1.1.txt') }),
   Object.freeze({ destination: 'LICENSES/DCloud-Apache-2.0.txt', source: resolve(fixtureProjectRoot, 'node_modules/@dcloudio/uni-app/LICENSE') }),
   Object.freeze({ destination: 'LICENSES/Vue-MIT.txt', source: resolve(fixtureProjectRoot, 'node_modules/vue/LICENSE') }),
   Object.freeze({ destination: 'LICENSES/Vue-Router-MIT.txt', source: resolve(fixtureProjectRoot, 'LICENSES/Vue-Router-MIT.txt') })
 ]);
+
+/**
+ * <lang><zh-CN>三份 H5 fixture WOFF 逐项绑定真实 source 字节、固定 face 身份与模拟 Vite 八字符版本名。</zh-CN><en>Binds the three H5 fixture WOFF files to real source bytes, pinned face identities, and synthetic eight-character Vite-versioned names.</en></lang>
+ */
+const fixtureFontFaces = Object.freeze([
+  Object.freeze({
+    id: 'sans-regular',
+    family: 'HIA-uView BP Sans SC',
+    weight: 400,
+    source: resolve(fixtureProjectRoot, 'src/assets/fonts/hia-uv-bp-sans-sc-regular-v2.005-subset.woff'),
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-sans-sc-regular-v2.005-subset.woff',
+    artifactRelativePath: 'assets/hia-uv-bp-sans-sc-regular-v2.005-subset-A1b2C3d4.woff',
+    byteLength: 77_432,
+    sha256: 'CB9B1F1E5BC7C188E7122D97502C5467FC17A3899AD295CAB2DF46C5624DD6F5'
+  }),
+  Object.freeze({
+    id: 'sans-bold',
+    family: 'HIA-uView BP Sans SC',
+    weight: 700,
+    source: resolve(fixtureProjectRoot, 'src/assets/fonts/hia-uv-bp-sans-sc-bold-v2.005-subset.woff'),
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-sans-sc-bold-v2.005-subset.woff',
+    artifactRelativePath: 'assets/hia-uv-bp-sans-sc-bold-v2.005-subset-E5f6G7h8.woff',
+    byteLength: 78_744,
+    sha256: '63FB549C240FF5C010EA2CAC76C660F49F1EF6641A3AF22D6415688AFD1ED4BC'
+  }),
+  Object.freeze({
+    id: 'serif-bold',
+    family: 'HIA-uView BP Serif SC',
+    weight: 700,
+    source: resolve(fixtureProjectRoot, 'src/assets/fonts/hia-uv-bp-serif-sc-bold-v2.003-subset.woff'),
+    sourceRelativePath: 'assets/fonts/hia-uv-bp-serif-sc-bold-v2.003-subset.woff',
+    artifactRelativePath: 'assets/hia-uv-bp-serif-sc-bold-v2.003-subset-I9j0K1l2.woff',
+    byteLength: 36_352,
+    sha256: '6E5D3B2CBE007F2D3A369EC40ED3D8023DDD8825033331C1F751ECF49B59BEC0'
+  })
+]);
+
+/**
+ * <lang><zh-CN>构建形态正例只含三个精确 descriptor 集合，并通过 Pages base 指向三个 hashed WOFF。</zh-CN><en>The build-shaped positive case contains only three exact descriptor sets pointing through the Pages base to the three hashed WOFF files.</en></lang>
+ */
+const passingFontFaceCss = fixtureFontFaces.map((fontFace) => `@font-face{font-family:"${fontFace.family}";font-style:normal;font-weight:${fontFace.weight};font-display:swap;src:url("/bp-uv-resource-booking/${fontFace.artifactRelativePath}") format("woff")}`).join('\n');
 
 /**
  * <lang><zh-CN>隔离入口与真实 prepare 共同使用的唯一精确 favicon tag。</zh-CN><en>The sole exact favicon tag shared by the isolated entry and real preparation output.</en></lang>
@@ -59,7 +102,8 @@ const passingIndexHtml = `<!doctype html>
 /**
  * <lang><zh-CN>正例 CSS 模拟锁定 DCloud shadow 预载，并在同文件后置规则中同时禁用动画与背景请求；data image 仍是本地内联资产。</zh-CN><en>The positive CSS simulates the pinned DCloud shadow preload and disables both animation and background request in a later same-file rule; the data image remains a local inline asset.</en></lang>
  */
-const passingCss = `body:after{animation:shadow-preload .1s;background-image:url(https://cdn.dcloud.net.cn/img/shadow-grey.png)}
+const passingCss = `${passingFontFaceCss}
+body:after{animation:shadow-preload .1s;background-image:url(https://cdn.dcloud.net.cn/img/shadow-grey.png)}
 body:after{animation:none!important;background-image:none!important}
 .local-image{background-image:url(data:image/svg+xml;base64,PHN2Zy8+)}
 `;
@@ -119,6 +163,48 @@ async function writeLegalFixturePayload(fixtureRoot) {
 
     // <lang><zh-CN>写入临时目标后由 verifier 独立核对 nlink、digest 与正文事实。</zh-CN><en>After writing the temporary destination, the verifier independently checks nlink, digest, and content facts.</en></lang>
     await writeFixtureFile(fixtureRoot, fixtureLegalSource.destination, canonicalLegalBytes);
+  }
+}
+
+/**
+ * <lang><zh-CN>把三份真实已锁 WOFF 复制到模拟 Vite hashed 目标，供 artifact 正负例从同一合格基线开始。</zh-CN><en>Copies the three real pinned WOFF files to synthetic Vite-hashed targets so artifact positive and negative cases share one eligible baseline.</en></lang>
+ * @param {string} fixtureRoot <lang><zh-CN>当前隔离 artifact 根。</zh-CN><en>Current isolated artifact root.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>三份独立普通文件写入后完成。</zh-CN><en>Completes after writing three independent regular files.</en></lang>
+ */
+async function writeArtifactFontFixturePayload(fixtureRoot) {
+  // <lang><zh-CN>固定 face 顺序与 verifier 的 allowlist 一致。</zh-CN><en>The pinned face order matches the verifier allowlist.</en></lang>
+  for (const fixtureFontFace of fixtureFontFaces) {
+    // <lang><zh-CN>只读取仓内已锁 WOFF，不读取 dist 或操作系统字体。</zh-CN><en>Read only the pinned in-repository WOFF and never dist or operating-system fonts.</en></lang>
+    const sourceWoffBytes = await readFile(fixtureFontFace.source);
+
+    // <lang><zh-CN>fixture 写入独立字节副本，后续负例不会修改真实 source。</zh-CN><en>The fixture writes an independent byte copy so later negative cases cannot modify real source.</en></lang>
+    await writeFixtureFile(fixtureRoot, fixtureFontFace.artifactRelativePath, sourceWoffBytes);
+  }
+}
+
+/**
+ * <lang><zh-CN>把真实 manifest、两份生成样式与三份 WOFF 复制到隔离 source 根，证明 source 门禁不借用固定工作树。</zh-CN><en>Copies the real manifest, two generated styles, and three WOFF files into an isolated source root, proving that the source gate does not borrow the fixed worktree.</en></lang>
+ * @param {string} sourceRoot <lang><zh-CN>当前隔离 source 根。</zh-CN><en>Current isolated source root.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>六项已锁输入写入后完成。</zh-CN><en>Completes after writing the six pinned inputs.</en></lang>
+ */
+async function writeSourceFontFixturePayload(sourceRoot) {
+  // <lang><zh-CN>manifest 与两个生成样式路径是 verifier 的精确 source 例外。</zh-CN><en>The manifest and two generated-style paths are the verifier's exact source exceptions.</en></lang>
+  const sourceTextPayloads = Object.freeze([
+    Object.freeze({ relativePath: 'assets/fonts/font-subsets.manifest.json', source: resolve(fixtureProjectRoot, 'src/assets/fonts/font-subsets.manifest.json') }),
+    Object.freeze({ relativePath: 'styles/runtime-font-faces-h5.scss', source: resolve(fixtureProjectRoot, 'src/styles/runtime-font-faces-h5.scss') }),
+    Object.freeze({ relativePath: 'styles/runtime-font-faces-mp-weixin.scss', source: resolve(fixtureProjectRoot, 'src/styles/runtime-font-faces-mp-weixin.scss') })
+  ]);
+
+  // <lang><zh-CN>逐项复制真实生成文本，使摘要漂移负例保持在临时根内。</zh-CN><en>Copy the real generated text item by item so digest-drift negatives remain inside the temporary root.</en></lang>
+  for (const sourceTextPayload of sourceTextPayloads) {
+    const sourceBytes = await readFile(sourceTextPayload.source);
+    await writeFixtureFile(sourceRoot, sourceTextPayload.relativePath, sourceBytes);
+  }
+
+  // <lang><zh-CN>三份 WOFF 使用 source 相对名而不是 artifact hashed 名。</zh-CN><en>The three WOFF files use source-relative names rather than artifact-hashed names.</en></lang>
+  for (const fixtureFontFace of fixtureFontFaces) {
+    const sourceWoffBytes = await readFile(fixtureFontFace.source);
+    await writeFixtureFile(sourceRoot, fixtureFontFace.sourceRelativePath, sourceWoffBytes);
   }
 }
 
@@ -230,7 +316,10 @@ async function createPassingFixture(testContext) {
   // <lang><zh-CN>主 JS 只保留非资源 identifier。</zh-CN><en>The main JavaScript retains only non-resource identifiers.</en></lang>
   await writeFixtureFile(fixtureRoot, 'assets/app.js', passingJavaScript);
 
-  // <lang><zh-CN>九项真实 canonical 法律文本进入精确目标，形成 digest 与正文锚点正例。</zh-CN><en>Nine real canonical legal texts enter their exact destinations, forming the positive digest and content-anchor case.</en></lang>
+  // <lang><zh-CN>三份真实 WOFF 以模拟 hashed 名进入成品，并由主 CSS 精确引用。</zh-CN><en>Three real WOFF files enter the artifact under synthetic hashed names and are referenced exactly by the main CSS.</en></lang>
+  await writeArtifactFontFixturePayload(fixtureRoot);
+
+  // <lang><zh-CN>十一项真实 canonical 法律文本进入精确目标，形成 digest 与正文锚点正例。</zh-CN><en>Eleven real canonical legal texts enter their exact destinations, forming the positive digest and content-anchor case.</en></lang>
   await writeLegalFixturePayload(fixtureRoot);
 
   // <lang><zh-CN>人工 PNG 的 IDAT 含机器路径形状像素，安全 metadata 证明二进制与文字边界。</zh-CN><en>The synthetic PNG has machine-path-shaped pixels in IDAT, while safe metadata proves the binary/text boundary.</en></lang>
@@ -262,6 +351,9 @@ async function createPassingSourceFixture(testContext) {
 
   // <lang><zh-CN>普通 JSON 配置参与有限 source 枚举，但不含动态脚本或字体地址。</zh-CN><en>Ordinary JSON configuration enters finite source enumeration but contains no dynamic script or font location.</en></lang>
   await writeFixtureFile(sourceRoot, 'config/runtime.json', '{"source":"local"}');
+
+  // <lang><zh-CN>source 正例自带真实 manifest、两份生成样式和三份 WOFF，不借用固定项目路径。</zh-CN><en>The source positive case carries the real manifest, two generated styles, and three WOFF files without borrowing fixed project paths.</en></lang>
+  await writeSourceFontFixturePayload(sourceRoot);
 
   // <lang><zh-CN>vendor canary 故意包含上游字体 capability 形状；顶层 vendor 边界必须完全跳过，不把外部锁定输入归为 BP 自有调用。</zh-CN><en>The vendor canary intentionally contains an upstream font-capability shape; the top-level vendor boundary must be skipped completely rather than classifying a locked external input as a BP-owned invocation.</en></lang>
   await writeFixtureFile(sourceRoot, 'vendor/locked-runtime.js', `uni.loadFontFace({ family: 'IgnoredVendor', source: 'url(/ignored-vendor.woff2)' });`);
@@ -295,11 +387,11 @@ test('accepts the exact project base, required notices, same-origin resources, a
   // <lang><zh-CN>验证结果仅包含固定 base 与有限计数。</zh-CN><en>The verification result contains only the fixed base and finite counts.</en></lang>
   const result = await verifyH5PagesArtifact(fixtureRoot);
 
-  // <lang><zh-CN>三个 runtime 文件、九项法律载荷、一张 PNG 和一个独立 SVG 均为 link count 为 1 的普通文件。</zh-CN><en>Three runtime files, nine legal-payload files, one PNG, and one standalone SVG are regular files whose link count is one.</en></lang>
-  assert.equal(result.fileCount, 14);
+  // <lang><zh-CN>三个 runtime 文件、三份 WOFF、十一项法律载荷、一张 PNG 和一个独立 SVG 均为 link count 为 1 的普通文件。</zh-CN><en>Three runtime files, three WOFF files, eleven legal-payload files, one PNG, and one standalone SVG are regular files whose link count is one.</en></lang>
+  assert.equal(result.fileCount, 19);
 
-  // <lang><zh-CN>入口三项与 CSS 两项静态引用都已通过 resource policy。</zh-CN><en>All three entry references and both CSS references pass resource policy.</en></lang>
-  assert.equal(result.resourceReferenceCount, 5);
+  // <lang><zh-CN>入口三项、CSS 三项字体和两项既有静态引用都已通过 resource policy。</zh-CN><en>The three entry references, three CSS font references, and two existing CSS references all pass resource policy.</en></lang>
+  assert.equal(result.resourceReferenceCount, 8);
 
   // <lang><zh-CN>成功摘要保持精确项目 base。</zh-CN><en>The success summary retains the exact project base.</en></lang>
   assert.equal(result.base, '/bp-uv-resource-booking/');
@@ -309,6 +401,14 @@ test('accepts the exact project base, required notices, same-origin resources, a
 
   // <lang><zh-CN>两个 endpoint/key 同处一份未调用的惰性 manager surface。</zh-CN><en>The two endpoint/key pairs coexist in one uninvoked lazy-manager surface.</en></lang>
   assert.equal(result.dormantAdManagerCount, 1);
+
+  // <lang><zh-CN>成功摘要固定三份字体、三条 face、总字节数与逐 face 摘要。</zh-CN><en>The success summary pins three font assets, three faces, the total byte count, and per-face digests.</en></lang>
+  assert.equal(result.fontAssetCount, 3);
+  assert.equal(result.fontFaceCount, 3);
+  assert.equal(result.fontAssetByteCount, 192_528);
+  assert.deepEqual(result.fontFaces, fixtureFontFaces.map((fontFace) => ({ id: fontFace.id, byteLength: fontFace.byteLength, sha256: fontFace.sha256 })));
+  assert.equal(Object.isFrozen(result.fontFaces), true);
+  assert.equal(result.fontFaces.every((fontFace) => Object.isFrozen(fontFace)), true);
 
   // <lang><zh-CN>冻结结果防止调用方事后篡改审计摘要。</zh-CN><en>A frozen result prevents callers from altering the audit summary afterward.</en></lang>
   assert.equal(Object.isFrozen(result), true);
@@ -450,7 +550,7 @@ test('rejects unknown external resources and an unsuppressed DCloud preload', as
   }, /unknown external URL/u);
 
   // <lang><zh-CN>精确 DCloud URL 只有预载规则而没有后置关闭时仍必须失败。</zh-CN><en>The exact DCloud URL must still fail when it has only the preload rule and no later suppression.</en></lang>
-  const unsuppressedCss = `body:after{animation:shadow-preload .1s;background-image:url(https://cdn.dcloud.net.cn/img/shadow-grey.png)}`;
+  const unsuppressedCss = `${passingFontFaceCss}\nbody:after{animation:shadow-preload .1s;background-image:url(https://cdn.dcloud.net.cn/img/shadow-grey.png)}`;
   await expectFixtureFailure(testContext, async (fixtureRoot) => {
     await writeFixtureFile(fixtureRoot, 'assets/app.css', unsuppressedCss);
   }, /DCloud shadow preload/u);
@@ -560,17 +660,51 @@ test('rejects environment/private configuration files and credential markers', a
   }, /GitHub token marker/u);
 });
 
-test('rejects font binaries and font-face rules', async function verifyFontRejection(testContext) {
-  // <lang><zh-CN>任意字体二进制扩展名都与 host-fallback 声明冲突。</zh-CN><en>Every font-binary extension contradicts the host-fallback declaration.</en></lang>
+test('rejects unreviewed, altered, remote, data, and incorrectly declared font delivery', async function verifyFontRejection(testContext) {
+  // <lang><zh-CN>WOFF2 仍不属于当前三份 WOFF 1.0 交付边界。</zh-CN><en>WOFF2 remains outside the current three-WOFF-1.0 delivery boundary.</en></lang>
   await expectFixtureFailure(testContext, async (fixtureRoot) => {
     await writeFixtureFile(fixtureRoot, 'assets/example.woff2', new Uint8Array([0x77, 0x4f, 0x46, 0x32]));
   }, /font binary is present/u);
 
-  // <lang><zh-CN>即使字体 URL 位于正确项目 base，`@font-face` 仍表示仓库开始交付字体。</zh-CN><en>Even when a font URL uses the correct project base, `@font-face` means the repository has begun delivering a font.</en></lang>
-  const fontFaceCss = `@font-face{font-family:Fixture;src:url('/bp-uv-resource-booking/assets/example.woff2')} body{font-family:Fixture}`;
+  // <lang><zh-CN>第四份 WOFF 1.0 即使未引用也必须被完整集合门禁拒绝。</zh-CN><en>A fourth WOFF 1.0 must be rejected by the complete-set gate even when unreferenced.</en></lang>
   await expectFixtureFailure(testContext, async (fixtureRoot) => {
-    await writeFixtureFile(fixtureRoot, 'assets/app.css', fontFaceCss);
-  }, /font-face rule is present/u);
+    await writeFixtureFile(fixtureRoot, 'assets/extra-font-A1b2C3d4.woff', await readFile(fixtureFontFaces[0].source));
+  }, /exactly three reviewed WOFF files/u);
+
+  // <lang><zh-CN>保持文件名和长度、只翻转一个 payload byte 仍必须由 SHA-256 阻断。</zh-CN><en>Keeping the filename and length while flipping one payload byte must still be blocked by SHA-256.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    const targetFontFace = fixtureFontFaces[0];
+    const alteredWoffBytes = Buffer.from(await readFile(join(fixtureRoot, targetFontFace.artifactRelativePath)));
+    alteredWoffBytes[alteredWoffBytes.length - 1] ^= 0x01;
+    await writeFixtureFile(fixtureRoot, targetFontFace.artifactRelativePath, alteredWoffBytes);
+  }, /Pages WOFF does not match face sans-regular/u);
+
+  // <lang><zh-CN>未知 family 即使复用已审 locator 也不是已授权 face。</zh-CN><en>An unknown family is not an authorized face even when reusing a reviewed locator.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    await writeFixtureFile(fixtureRoot, 'assets/app.css', passingCss.replace('font-family:"HIA-uView BP Sans SC"', 'font-family:"Fixture Sans"'));
+  }, /font-face identity is outside the allowlist/u);
+
+  // <lang><zh-CN>font-display 必须保持 swap，不能以 optional 或 block 改变加载语义。</zh-CN><en>font-display must remain swap and cannot change loading semantics through optional or block.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    await writeFixtureFile(fixtureRoot, 'assets/app.css', passingCss.replace('font-display:swap', 'font-display:optional'));
+  }, /font-face display policy is outside the allowlist/u);
+
+  // <lang><zh-CN>远程 WOFF locator 不能借正确 family/weight 获准。</zh-CN><en>A remote WOFF locator cannot be authorized through a correct family and weight.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    const localLocator = `/bp-uv-resource-booking/${fixtureFontFaces[0].artifactRelativePath}`;
+    await writeFixtureFile(fixtureRoot, 'assets/app.css', passingCss.replace(localLocator, 'https://fonts.example.invalid/replacement.woff'));
+  }, /Pages font locator is outside the allowlist/u);
+
+  // <lang><zh-CN>data WOFF 同样不属于 H5 同源版本化文件模式。</zh-CN><en>A data WOFF likewise falls outside the H5 same-origin versioned-file mode.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    const localLocator = `/bp-uv-resource-booking/${fixtureFontFaces[0].artifactRelativePath}`;
+    await writeFixtureFile(fixtureRoot, 'assets/app.css', passingCss.replace(localLocator, 'data:font/woff;base64,d09GRg=='));
+  }, /Pages font locator is outside the allowlist/u);
+
+  // <lang><zh-CN>第四条 face 声明不能通过引用既有字节规避完整声明集合。</zh-CN><en>A fourth face declaration cannot evade the complete declaration set by referencing existing bytes.</en></lang>
+  await expectFixtureFailure(testContext, async (fixtureRoot) => {
+    await writeFixtureFile(fixtureRoot, 'assets/app.css', `${passingCss}\n${passingFontFaceCss.split('\n')[0]}`);
+  }, /duplicates font face sans-regular/u);
 
   // <lang><zh-CN>JS 中任意不具备完整 framework 注册、原生分支与动态模板形状的 `@font-face` 字符串仍是未知注入。</zh-CN><en>Any JavaScript `@font-face` string lacking the complete framework registration, native branch, and dynamic-template shape remains an unknown injection.</en></lang>
   const unknownJavaScriptFontFace = 'const injectedStyle = `@font-face{font-family:"Unknown";src:local("Unknown")}`; void injectedStyle;';
@@ -585,12 +719,44 @@ test('rejects font binaries and font-face rules', async function verifyFontRejec
   }, /static font resource/u);
 });
 
-test('proves BP-owned source does not invoke or declare font delivery while skipping locked vendor', async function verifyProjectFontSourceBoundary(testContext) {
-  // <lang><zh-CN>合格 source 只有 host family 名称；vendor canary 不计入 BP-owned 文件数或判断。</zh-CN><en>Eligible source has only host family names; the vendor canary contributes neither to the BP-owned file count nor the judgment.</en></lang>
+test('binds the reviewed source font delivery while rejecting other font or advertising surfaces', async function verifyProjectFontSourceBoundary(testContext) {
+  // <lang><zh-CN>合格 source 恰含 manifest、两份生成样式和三份 WOFF；vendor canary 不计入 BP-owned 文件数或判断。</zh-CN><en>Eligible source contains exactly the manifest, two generated styles, and three WOFF files; the vendor canary contributes neither to the BP-owned file count nor the judgment.</en></lang>
   const passingSourceRoot = await createPassingSourceFixture(testContext);
   const passingResult = await verifyH5FontSourceBoundary(passingSourceRoot);
-  assert.equal(passingResult.fileCount, 2);
+  assert.equal(passingResult.fileCount, 5);
+  assert.equal(passingResult.fontAssetCount, 3);
+  assert.equal(passingResult.fontAssetByteCount, 192_528);
+  assert.equal(passingResult.fontFaceCount, 6);
+  assert.equal(passingResult.fontStyleFileCount, 2);
   assert.equal(Object.isFrozen(passingResult), true);
+
+  // <lang><zh-CN>隔离 manifest 的单字节漂移必须失败，证明 verifier 没有回退读取真实项目 manifest。</zh-CN><en>A one-byte drift in the isolated manifest must fail, proving that the verifier does not fall back to the real project manifest.</en></lang>
+  const driftingManifestSourceRoot = await createPassingSourceFixture(testContext);
+  const fixtureManifestPath = join(driftingManifestSourceRoot, 'assets', 'fonts', 'font-subsets.manifest.json');
+  const fixtureManifestBytes = await readFile(fixtureManifestPath);
+  await writeFixtureFile(driftingManifestSourceRoot, 'assets/fonts/font-subsets.manifest.json', Buffer.concat([fixtureManifestBytes, Buffer.from('\n')]));
+  await assert.rejects(() => verifyH5FontSourceBoundary(driftingManifestSourceRoot), /font manifest does not match its pinned SHA-256/u);
+
+  // <lang><zh-CN>隔离 H5 生成样式的字节漂移必须由固定摘要拒绝。</zh-CN><en>Byte drift in the isolated generated H5 style must be rejected by its pinned digest.</en></lang>
+  const driftingStyleSourceRoot = await createPassingSourceFixture(testContext);
+  const fixtureH5StylePath = join(driftingStyleSourceRoot, 'styles', 'runtime-font-faces-h5.scss');
+  const fixtureH5StyleBytes = await readFile(fixtureH5StylePath);
+  await writeFixtureFile(driftingStyleSourceRoot, 'styles/runtime-font-faces-h5.scss', Buffer.concat([fixtureH5StyleBytes, Buffer.from('\n')]));
+  await assert.rejects(() => verifyH5FontSourceBoundary(driftingStyleSourceRoot), /generated font style does not match its pinned SHA-256/u);
+
+  // <lang><zh-CN>隔离 WOFF 保持文件名但改变一个字节仍必须按 face 身份失败。</zh-CN><en>An isolated WOFF retaining its filename but changing one byte must still fail its face identity.</en></lang>
+  const driftingWoffSourceRoot = await createPassingSourceFixture(testContext);
+  const fixtureSourceFontFace = fixtureFontFaces[2];
+  const fixtureSourceWoffPath = join(driftingWoffSourceRoot, ...fixtureSourceFontFace.sourceRelativePath.split('/'));
+  const fixtureSourceWoffBytes = Buffer.from(await readFile(fixtureSourceWoffPath));
+  fixtureSourceWoffBytes[fixtureSourceWoffBytes.length - 1] ^= 0x01;
+  await writeFixtureFile(driftingWoffSourceRoot, fixtureSourceFontFace.sourceRelativePath, fixtureSourceWoffBytes);
+  await assert.rejects(() => verifyH5FontSourceBoundary(driftingWoffSourceRoot), /reviewed source WOFF does not match face serif-bold/u);
+
+  // <lang><zh-CN>字体目录中的第四份 WOFF 即使字节合法也扩大 source 分发集合。</zh-CN><en>A fourth WOFF in the font directory expands the source distribution set even when its bytes are valid.</en></lang>
+  const extraWoffSourceRoot = await createPassingSourceFixture(testContext);
+  await writeFixtureFile(extraWoffSourceRoot, 'assets/fonts/extra.woff', await readFile(fixtureFontFaces[0].source));
+  await assert.rejects(() => verifyH5FontSourceBoundary(extraWoffSourceRoot), /source font directory contains an unexpected file set/u);
 
   // <lang><zh-CN>项目自有 `uni.loadFontFace` 调用即使指向示例地址也扩大运行能力边界。</zh-CN><en>A project-owned `uni.loadFontFace` call expands runtime capability even when it points at a synthetic location.</en></lang>
   const invokingSourceRoot = await createPassingSourceFixture(testContext);

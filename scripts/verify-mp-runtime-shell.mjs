@@ -1,11 +1,12 @@
 /**
- * <lang><zh-CN>验证已生成微信小程序的应用自管 title 与平台常驻 custom tab 壳：全部应用页面必须关闭原生导航并引用 HIA-uView navbar 页面壳，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定 `dist/build/mp-weixin`。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title and platform-persistent custom-tab shell: every application page must disable native navigation and reference the HIA-uView-navbar page shell, while four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed `dist/build/mp-weixin`.</en></lang>
+ * <lang><zh-CN>验证已生成微信小程序的应用自管 title、项目内嵌字体与平台常驻 custom tab 壳：全部应用页面必须关闭原生导航并引用 HIA-uView navbar 页面壳，三张字体必须与 manifest 逐字节一致，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定输入。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title, project-embedded fonts, and platform-persistent custom-tab shell: every application page must disable native navigation and reference the HIA-uView-navbar page shell, all three fonts must match the manifest byte for byte, and four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed inputs.</en></lang>
  * @lang zh-CN 本门禁验证编译产物契约，不替代开发者工具中的实际布局、点击、语言切换和安全区视觉检查。
  * @lang en This gate verifies the compiled-artifact contract and does not replace actual layout, clicks, language switching, and safe-area visual inspection in Developer Tools.
  */
 
 // <lang><zh-CN>只使用 Node 内建文件与路径 API，不执行产物或连接微信开发者工具。</zh-CN><en>Use only Node built-in file and path APIs; execute no artifact and connect to no WeChat Developer Tools.</en></lang>
-import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { access, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -36,6 +37,248 @@ const expectedTabIconPaths = Object.freeze([
   'static/icons/tab-profile.png',
   'static/icons/tab-profile-active.png'
 ]);
+
+/**
+ * <lang><zh-CN>微信根样式中唯一允许的三张项目字体 face，按确定性生成顺序固定。</zh-CN><en>The only three project font faces allowed in the WeChat root stylesheet, fixed in deterministic generation order.</en></lang>
+ * @lang zh-CN 此独立 allowlist 不从 manifest 推导 identity，避免被一份同时漂移的 provenance 文件放宽成品门禁。
+ * @lang en This independent allowlist does not derive identities from the manifest, preventing a concurrently drifted provenance file from weakening the artifact gate.
+ */
+const expectedMpFontFaces = Object.freeze([
+  Object.freeze({ id: 'sans-regular', family: 'HIA-uView BP Sans SC', compiledFamily: 'HIA-uView BP Sans SC', style: 'normal', weight: 400, display: 'swap', format: 'woff', mimeType: 'font/woff' }),
+  Object.freeze({ id: 'sans-bold', family: 'HIA-uView BP Sans SC', compiledFamily: 'HIA-uView BP Sans SC', style: 'normal', weight: 700, display: 'swap', format: 'woff', mimeType: 'font/woff' }),
+  Object.freeze({ id: 'serif-bold', family: 'HIA-uView BP Serif SC', compiledFamily: '"HIA-uView BP Serif SC"', style: 'normal', weight: 700, display: 'swap', format: 'woff', mimeType: 'font/woff' })
+]);
+
+/**
+ * <lang><zh-CN>单张生成字体规则唯一允许的五个 CSS property。</zh-CN><en>The only five CSS properties allowed in one generated font-face rule.</en></lang>
+ * @lang zh-CN 精确 property 集合阻止额外 locator、unicode-range 或未审阅行为悄然进入微信成品。
+ * @lang en The exact property set prevents an extra locator, unicode range, or unreviewed behavior from silently entering the WeChat artifact.
+ */
+const expectedMpFontProperties = Object.freeze(['font-family', 'font-style', 'font-weight', 'font-display', 'src']);
+
+/**
+ * <lang><zh-CN>移除 CSS block comment，并拒绝未闭合 comment。</zh-CN><en>Removes CSS block comments and rejects an unterminated comment.</en></lang>
+ * @param {string} stylesheet <lang><zh-CN>待验证的微信根样式全文。</zh-CN><en>Complete WeChat root stylesheet to verify.</en></lang>
+ * @returns {string} <lang><zh-CN>不含 comment 的样式。</zh-CN><en>Stylesheet without comments.</en></lang>
+ * @lang zh-CN 先移除 comment，防止说明文字中的 `@font-face` 被误计为真实规则。
+ * @lang en Comments are removed first so explanatory `@font-face` text cannot be counted as a real rule.
+ */
+function removeCssComments(stylesheet) {
+  // <lang><zh-CN>输入必须是文本；类型错误不得被隐式字符串化后通过。</zh-CN><en>The input must be text; a type error must not pass after implicit string conversion.</en></lang>
+  if (typeof stylesheet !== 'string') throw new Error('Generated app.wxss must be text.');
+
+  // <lang><zh-CN>有限 block-comment 表达式只删除完整配对；后续残留起始符即表示损坏的 CSS。</zh-CN><en>The bounded block-comment expression removes only complete pairs; a remaining opener therefore means damaged CSS.</en></lang>
+  const uncommentedStylesheet = stylesheet.replace(/\/\*[\s\S]*?\*\//gu, '');
+  if (uncommentedStylesheet.includes('/*') || uncommentedStylesheet.includes('*/')) {
+    throw new Error('Generated app.wxss contains an unterminated CSS comment.');
+  }
+
+  return uncommentedStylesheet;
+}
+
+/**
+ * <lang><zh-CN>从微信根样式提取全部且仅限简单顶层 `@font-face` rule body。</zh-CN><en>Extracts every—and only simple top-level—`@font-face` rule body from the WeChat root stylesheet.</en></lang>
+ * @param {string} stylesheet <lang><zh-CN>待验证的微信根样式全文。</zh-CN><en>Complete WeChat root stylesheet to verify.</en></lang>
+ * @returns {string[]} <lang><zh-CN>按出现顺序排列的三张 rule body。</zh-CN><en>The three rule bodies in occurrence order.</en></lang>
+ * @lang zh-CN 生成合同不允许嵌套 brace；token 数与可解析 block 数必须同为三，避免畸形或额外规则绕过。
+ * @lang en The generation contract allows no nested braces; token and parseable-block counts must both be three so malformed or extra rules cannot bypass the gate.
+ */
+function extractMpFontFaceRules(stylesheet) {
+  // <lang><zh-CN>comment 清理后的文本是唯一解析输入。</zh-CN><en>Comment-stripped text is the sole parser input.</en></lang>
+  const uncommentedStylesheet = removeCssComments(stylesheet);
+
+  // <lang><zh-CN>分别计数所有 directive token 与简单 block，任何数量或结构差异都拒绝。</zh-CN><en>Count every directive token and simple block separately, rejecting any count or structural difference.</en></lang>
+  const directiveCount = uncommentedStylesheet.match(/@font-face\b/giu)?.length ?? 0;
+  const ruleBodies = [...uncommentedStylesheet.matchAll(/@font-face\s*\{([^{}]*)\}/gu)].map((match) => match[1]);
+  if (directiveCount !== expectedMpFontFaces.length || ruleBodies.length !== expectedMpFontFaces.length) {
+    throw new Error('Generated app.wxss must contain exactly three simple @font-face rules.');
+  }
+
+  return ruleBodies;
+}
+
+/**
+ * <lang><zh-CN>在不切断 quoted Data URL 分号的前提下，把一张简单字体规则拆成 declaration。</zh-CN><en>Splits one simple font rule into declarations without cutting the semicolon inside a quoted Data URL.</en></lang>
+ * @param {string} ruleBody <lang><zh-CN>不含 brace 的单张 `@font-face` 内容。</zh-CN><en>One brace-free `@font-face` body.</en></lang>
+ * @returns {string[]} <lang><zh-CN>去除边缘空白后的非空 declaration。</zh-CN><en>Nonempty declarations with edge whitespace removed.</en></lang>
+ * @lang zh-CN 扫描器只跟踪 CSS quote、escape 与 parenthesis 深度；生成合同之外的不平衡结构立即失败。
+ * @lang en The scanner tracks only CSS quotes, escapes, and parenthesis depth; unbalanced structure outside the generation contract fails immediately.
+ */
+function splitMpFontDeclarations(ruleBody) {
+  // <lang><zh-CN>累积完整 declaration、当前片段以及最小 CSS 状态。</zh-CN><en>Accumulate complete declarations, the current fragment, and minimal CSS state.</en></lang>
+  const declarations = [];
+  let currentDeclaration = '';
+  let activeQuote = '';
+  let escaped = false;
+  let parenthesisDepth = 0;
+
+  for (const character of ruleBody) {
+    // <lang><zh-CN>当前字符始终写入片段；状态只决定分号是否为顶层终止符。</zh-CN><en>Always append the current character; state only decides whether a semicolon is a top-level terminator.</en></lang>
+    currentDeclaration += character;
+
+    if (escaped) {
+      // <lang><zh-CN>反斜杠后的单字符只解除 escape，不参与 quote 或括号切换。</zh-CN><en>The single character after a backslash only clears escape and cannot toggle quotes or parentheses.</en></lang>
+      escaped = false;
+      continue;
+    }
+    if (character === '\\') {
+      // <lang><zh-CN>记录下一字符被 escape，保持 quoted locator 的原始字节语义。</zh-CN><en>Mark the next character escaped, preserving the quoted locator's original byte semantics.</en></lang>
+      escaped = true;
+      continue;
+    }
+    if (activeQuote) {
+      // <lang><zh-CN>只有与当前 quote 相同的字符才关闭字符串。</zh-CN><en>Only a character matching the active quote closes the string.</en></lang>
+      if (character === activeQuote) activeQuote = '';
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      // <lang><zh-CN>进入 quoted value，使 Data URL 的 MIME 分号保持在同一 declaration。</zh-CN><en>Enter a quoted value so the Data-URL MIME semicolon remains in the same declaration.</en></lang>
+      activeQuote = character;
+      continue;
+    }
+    if (character === '(') {
+      // <lang><zh-CN>进入函数参数；函数内未加引号的分号也不能终止 declaration。</zh-CN><en>Enter function arguments; even an unquoted semicolon inside a function cannot terminate the declaration.</en></lang>
+      parenthesisDepth += 1;
+      continue;
+    }
+    if (character === ')') {
+      // <lang><zh-CN>先拒绝多余右括号，再退出一层函数参数。</zh-CN><en>Reject an extra closing parenthesis before leaving one function-argument level.</en></lang>
+      if (parenthesisDepth === 0) throw new Error('Generated font-face contains unbalanced parentheses.');
+      parenthesisDepth -= 1;
+      continue;
+    }
+    if (character === ';' && parenthesisDepth === 0) {
+      // <lang><zh-CN>顶层分号完成一项；去掉终止符并忽略纯空白片段。</zh-CN><en>A top-level semicolon completes an item; remove the terminator and ignore a whitespace-only fragment.</en></lang>
+      const completedDeclaration = currentDeclaration.slice(0, -1).trim();
+      if (completedDeclaration) declarations.push(completedDeclaration);
+      currentDeclaration = '';
+    }
+  }
+
+  // <lang><zh-CN>任何未闭合 quote、escape 或括号都表示非 canonical 成品。</zh-CN><en>Any unclosed quote, escape, or parenthesis marks a noncanonical artifact.</en></lang>
+  if (activeQuote || escaped || parenthesisDepth !== 0) {
+    throw new Error('Generated font-face contains an unbalanced CSS value.');
+  }
+
+  // <lang><zh-CN>允许最后一项省略尾分号，但仍将其作为完整 declaration 解析。</zh-CN><en>Allow the final item to omit its trailing semicolon while still parsing it as a complete declaration.</en></lang>
+  const trailingDeclaration = currentDeclaration.trim();
+  if (trailingDeclaration) declarations.push(trailingDeclaration);
+
+  return declarations;
+}
+
+/**
+ * <lang><zh-CN>把一张字体规则解析成拒绝重复 property 的精确 map。</zh-CN><en>Parses one font rule into an exact map that rejects duplicate properties.</en></lang>
+ * @param {string} ruleBody <lang><zh-CN>不含 brace 的单张 `@font-face` 内容。</zh-CN><en>One brace-free `@font-face` body.</en></lang>
+ * @returns {Map<string, string>} <lang><zh-CN>property 到未改写 value 的映射。</zh-CN><en>Property-to-unmodified-value mapping.</en></lang>
+ * @lang zh-CN property 名仅接受小写 ASCII 与连字符；生成 CSS 不使用 custom property、vendor prefix 或 fallback declaration。
+ * @lang en Property names accept only lowercase ASCII and hyphens; generated CSS uses no custom properties, vendor prefixes, or fallback declarations.
+ */
+function parseMpFontFaceDeclarations(ruleBody) {
+  // <lang><zh-CN>每张规则从空 map 开始，避免跨 face 共享状态。</zh-CN><en>Start each rule with an empty map so no state is shared across faces.</en></lang>
+  const declarations = new Map();
+
+  for (const declaration of splitMpFontDeclarations(ruleBody)) {
+    // <lang><zh-CN>第一处冒号分开 property 与 value；Data URL 后续冒号属于 value。</zh-CN><en>The first colon separates property and value; later Data-URL colons belong to the value.</en></lang>
+    const separatorIndex = declaration.indexOf(':');
+    if (separatorIndex <= 0) throw new Error('Generated font-face contains an invalid declaration.');
+
+    // <lang><zh-CN>只规范边缘空白，不重写 family、locator 或 format 的语义。</zh-CN><en>Normalize edge whitespace only, without rewriting family, locator, or format semantics.</en></lang>
+    const propertyName = declaration.slice(0, separatorIndex).trim();
+    const propertyValue = declaration.slice(separatorIndex + 1).trim();
+    if (!/^[a-z][a-z-]*$/u.test(propertyName) || !propertyValue) {
+      throw new Error('Generated font-face contains an unsupported property or empty value.');
+    }
+    if (declarations.has(propertyName)) throw new Error(`Generated font-face repeats ${propertyName}.`);
+
+    // <lang><zh-CN>保留原值供 canonical 精确比较。</zh-CN><en>Retain the original value for an exact canonical comparison.</en></lang>
+    declarations.set(propertyName, propertyValue);
+  }
+
+  // <lang><zh-CN>精确集合同时拒绝缺失与额外 property。</zh-CN><en>The exact set rejects both missing and extra properties.</en></lang>
+  const generatedPropertyNames = [...declarations.keys()].sort();
+  const expectedPropertyNames = [...expectedMpFontProperties].sort();
+  if (JSON.stringify(generatedPropertyNames) !== JSON.stringify(expectedPropertyNames)) {
+    throw new Error('Generated font-face must contain exactly the five approved properties.');
+  }
+
+  return declarations;
+}
+
+/**
+ * <lang><zh-CN>计算字体字节的 SHA-256 小写十六进制摘要。</zh-CN><en>Computes the lowercase hexadecimal SHA-256 digest of font bytes.</en></lang>
+ * @param {Buffer} fontBytes <lang><zh-CN>从 canonical Data URL 解码的 WOFF 字节。</zh-CN><en>WOFF bytes decoded from a canonical Data URL.</en></lang>
+ * @returns {string} <lang><zh-CN>64 字符摘要。</zh-CN><en>A 64-character digest.</en></lang>
+ * @lang zh-CN 纯函数不读文件、不连接网络，也不改变输入 Buffer。
+ * @lang en The pure function reads no file, connects to no network, and does not mutate the input Buffer.
+ */
+function sha256FontBytes(fontBytes) {
+  return createHash('sha256').update(fontBytes).digest('hex');
+}
+
+/**
+ * <lang><zh-CN>严格验证微信 `app.wxss` 中三张字体 face 与 manifest 三张记录逐字节一致。</zh-CN><en>Strictly verifies that the three font faces in WeChat `app.wxss` match the three manifest records byte for byte.</en></lang>
+ * @param {string} stylesheet <lang><zh-CN>生成的 `dist/build/mp-weixin/app.wxss` 全文或测试 fixture。</zh-CN><en>Complete generated `dist/build/mp-weixin/app.wxss` text or a test fixture.</en></lang>
+ * @param {object} fontManifest <lang><zh-CN>解析后的项目字体 manifest 或测试 fixture。</zh-CN><en>Parsed project font manifest or a test fixture.</en></lang>
+ * @returns {void} <lang><zh-CN>全部 identity、locator 与字节合同成立时无返回值。</zh-CN><en>Returns nothing when all identity, locator, and byte contracts hold.</en></lang>
+ * @lang zh-CN 此导出纯函数不读取真实 dist，供独立正负 fixture 复用；调用方负责提供固定文件内容。
+ * @lang en This exported pure function reads no real dist and supports independent positive and negative fixtures; its caller supplies fixed file content.
+ */
+export function verifyMpRuntimeFontFaces(stylesheet, fontManifest) {
+  // <lang><zh-CN>manifest 必须且只能包含 allowlist 的三张 face。</zh-CN><en>The manifest must contain exactly—and only—the three allowlisted faces.</en></lang>
+  if (!fontManifest || !Array.isArray(fontManifest.faces) || fontManifest.faces.length !== expectedMpFontFaces.length) {
+    throw new Error('Font manifest must contain exactly three faces.');
+  }
+
+  // <lang><zh-CN>以 id 建立唯一映射；重复 id 不得用后项静默覆盖前项。</zh-CN><en>Build a unique map by ID; a later duplicate must not silently overwrite an earlier entry.</en></lang>
+  const manifestFacesById = new Map();
+  for (const manifestFace of fontManifest.faces) {
+    if (!manifestFace || typeof manifestFace.id !== 'string' || manifestFacesById.has(manifestFace.id)) {
+      throw new Error('Font manifest contains a missing or duplicate face ID.');
+    }
+    manifestFacesById.set(manifestFace.id, manifestFace);
+  }
+
+  // <lang><zh-CN>提取结果严格保持生成顺序，使 identity 调换也不能仅凭相同 family/weight 集合通过。</zh-CN><en>Keep extraction in strict generation order so swapped identities cannot pass merely by preserving a family/weight set.</en></lang>
+  const generatedRules = extractMpFontFaceRules(stylesheet);
+
+  for (const [faceIndex, expectedFace] of expectedMpFontFaces.entries()) {
+    // <lang><zh-CN>manifest face 先与独立 allowlist 核对，再作为成品 bytes/size/SHA 的权威记录。</zh-CN><en>Check the manifest face against the independent allowlist before treating it as authoritative for artifact bytes, size, and SHA.</en></lang>
+    const manifestFace = manifestFacesById.get(expectedFace.id);
+    if (!manifestFace) throw new Error(`Font manifest is missing ${expectedFace.id}.`);
+    if (manifestFace.cssFamily !== expectedFace.family || manifestFace.fontStyle !== expectedFace.style || manifestFace.fontWeight !== expectedFace.weight || manifestFace.format !== expectedFace.format || manifestFace.mimeType !== expectedFace.mimeType) {
+      throw new Error(`Font manifest identity drifted for ${expectedFace.id}.`);
+    }
+    if (!Number.isSafeInteger(manifestFace.outputBytes) || manifestFace.outputBytes <= 0 || !/^[a-f0-9]{64}$/u.test(manifestFace.outputSha256)) {
+      throw new Error(`Font manifest byte contract is invalid for ${expectedFace.id}.`);
+    }
+
+    // <lang><zh-CN>解析对应顺序的生成规则，并逐 property 锁定当前 DCloud CSS serializer 的精确输出；Sans 的合法多 identifier family 会去引号，含 generic `Serif` token 的项目 family 保留引号。</zh-CN><en>Parse the generated rule at the corresponding position and lock every property to the current DCloud CSS serializer output; the valid multi-identifier Sans family loses quotes, while the project family containing the generic `Serif` token retains them.</en></lang>
+    const declarations = parseMpFontFaceDeclarations(generatedRules[faceIndex]);
+    if (declarations.get('font-family') !== expectedFace.compiledFamily || declarations.get('font-style') !== expectedFace.style || declarations.get('font-weight') !== String(expectedFace.weight) || declarations.get('font-display') !== expectedFace.display) {
+      throw new Error(`Generated font-face identity drifted for ${expectedFace.id}.`);
+    }
+
+    // <lang><zh-CN>src 只接受当前编译器序列化的一条无引号 canonical WOFF Data URL 与双引号 WOFF format，不接受远程、fallback、错误 MIME 或额外空白结构。</zh-CN><en>The src accepts only the current compiler's one unquoted canonical WOFF Data URL plus double-quoted WOFF format, rejecting remote sources, fallbacks, wrong MIME types, or extra whitespace structure.</en></lang>
+    const sourceValue = declarations.get('src');
+    const sourceMatch = /^url\(data:font\/woff;base64,([A-Za-z0-9+/]+={0,2})\) format\("woff"\)$/u.exec(sourceValue);
+    if (!sourceMatch) throw new Error(`Generated font-face locator is not canonical WOFF data for ${expectedFace.id}.`);
+
+    // <lang><zh-CN>严格 base64 round trip 排除非 canonical padding 或解码器宽容输入。</zh-CN><en>A strict base64 round trip excludes noncanonical padding or decoder-tolerated input.</en></lang>
+    const decodedFontBytes = Buffer.from(sourceMatch[1], 'base64');
+    if (decodedFontBytes.toString('base64') !== sourceMatch[1]) {
+      throw new Error(`Generated font-face base64 is not canonical for ${expectedFace.id}.`);
+    }
+
+    // <lang><zh-CN>size 与 SHA 独立核对 manifest；任一差异都说明 app.wxss 未嵌入被审计的 WOFF 原字节。</zh-CN><en>Check size and SHA independently against the manifest; either difference means app.wxss did not embed the audited original WOFF bytes.</en></lang>
+    if (decodedFontBytes.length !== manifestFace.outputBytes) {
+      throw new Error(`Generated font-face byte size drifted for ${expectedFace.id}.`);
+    }
+    if (sha256FontBytes(decodedFontBytes) !== manifestFace.outputSha256) {
+      throw new Error(`Generated font-face SHA-256 drifted for ${expectedFace.id}.`);
+    }
+  }
+}
 
 /**
  * <lang><zh-CN>标准 PNG signature 用于证明构建产物是真实位图而不是只改后缀的 SVG。</zh-CN><en>The standard PNG signature proves the built artifact is a real bitmap rather than an SVG with only its suffix changed.</en></lang>
@@ -104,6 +347,16 @@ async function verifyGeneratedRuntimeShell() {
     throw new Error('Generated app.json is missing the fixed official custom tabBar declaration.');
   }
 
+  // <lang><zh-CN>并行读取固定源码 manifest 与固定微信根样式；manifest 提供审计字节合同，app.wxss 提供实际交付字节。</zh-CN><en>Read the fixed source manifest and fixed WeChat root stylesheet in parallel; the manifest provides the audited byte contract and app.wxss provides the actually delivered bytes.</en></lang>
+  const [fontManifestText, applicationStyle] = await Promise.all([
+    readFile(resolve(projectRoot, 'src/assets/fonts/font-subsets.manifest.json'), 'utf8'),
+    readFile(resolve(outputRoot, 'app.wxss'), 'utf8')
+  ]);
+
+  // <lang><zh-CN>JSON 解析或纯成品门禁任一失败都直接阻断微信构建，不回退到 host 或网络字体。</zh-CN><en>Any JSON parse or pure artifact-gate failure blocks the WeChat build directly, with no fallback to host or network fonts.</en></lang>
+  const fontManifest = JSON.parse(fontManifestText);
+  verifyMpRuntimeFontFaces(applicationStyle, fontManifest);
+
   // <lang><zh-CN>按四个主页面的声明顺序展开普通/选中图标，让格式、顺序和状态配对一次性进入精确门禁。</zh-CN><en>Flatten normal/selected icons in the four-primary-page declaration order so format, order, and state pairing enter one exact gate.</en></lang>
   const generatedTabIconPaths = appConfiguration.tabBar.list.flatMap((item) => [item.iconPath, item.selectedIconPath]);
   if (JSON.stringify(generatedTabIconPaths) !== JSON.stringify(expectedTabIconPaths)) {
@@ -114,11 +367,11 @@ async function verifyGeneratedRuntimeShell() {
     // <lang><zh-CN>路径来自脚本内冻结 allowlist，只读取对应构建资产，不枚举目录或接受配置生成任意文件系统目标。</zh-CN><en>The path comes from the script-frozen allowlist and reads only the corresponding built asset without enumerating directories or letting configuration produce an arbitrary file-system target.</en></lang>
     const iconBytes = await readFile(resolve(outputRoot, expectedIconPath));
 
-    // <lang><zh-CN>签名、IHDR 几何和大小共同锁定微信兼容的 81×81 透明 PNG 交付轮廓；透明像素本身留给人工视觉与源码资产测试。</zh-CN><en>Signature, IHDR geometry, and size together lock the WeChat-compatible 81×81 PNG delivery shape; transparency itself remains covered by visual review and the source-asset test.</en></lang>
+    // <lang><zh-CN>签名、IHDR 几何和大小共同锁定与 27px 展示框同尺寸的微信兼容 PNG，禁止构建产物重新引入 81→27 运行时缩小；透明像素本身留给人工视觉与源码资产测试。</zh-CN><en>Signature, IHDR geometry, and size lock a WeChat-compatible PNG whose intrinsic size matches the 27px presentation box, preventing the built artifact from reintroducing 81→27 runtime downscaling; visual review and the source-asset test continue to cover transparent pixels.</en></lang>
     const hasPngSignature = iconBytes.subarray(0, pngSignature.length).equals(pngSignature);
-    const hasExpectedGeometry = iconBytes.length >= 24 && iconBytes.readUInt32BE(16) === 81 && iconBytes.readUInt32BE(20) === 81;
-    if (!hasPngSignature || !hasExpectedGeometry || iconBytes.length >= 40 * 1024) {
-      throw new Error(`Generated tab icon is not a bounded 81x81 PNG: ${expectedIconPath}.`);
+    const hasExpectedGeometry = iconBytes.length >= 24 && iconBytes.readUInt32BE(16) === 27 && iconBytes.readUInt32BE(20) === 27;
+    if (!hasPngSignature || !hasExpectedGeometry || iconBytes.length >= 10 * 1024) {
+      throw new Error(`Generated tab icon is not a bounded 27x27 PNG: ${expectedIconPath}.`);
     }
   }
 
@@ -132,9 +385,24 @@ async function verifyGeneratedRuntimeShell() {
 
   // <lang><zh-CN>页面壳的组件清单必须解析 HIA-uView navbar，且不得再把页面局部 u-tabbar 编入微信端。</zh-CN><en>The page shell's component manifest must resolve HIA-uView navbar and must no longer compile a page-local u-tabbar into WeChat.</en></lang>
   const shellConfiguration = await readOutputJson('components/RuntimePageShell.json');
-  if (!shellConfiguration.usingComponents?.['u-navbar'] || shellConfiguration.usingComponents?.['u-tabbar']) {
-    throw new Error('Generated RuntimePageShell must contain HIA-uView navbar without page-local tabbar.');
+  if (!shellConfiguration.usingComponents?.['u-navbar'] || shellConfiguration.usingComponents?.['u-tabbar'] || shellConfiguration.usingComponents?.['primary-tab-bar']) {
+    throw new Error('Generated RuntimePageShell must contain HIA-uView navbar without H5 or page-local tabbar.');
   }
+
+  // <lang><zh-CN>H5 专用 PrimaryTabBar 不能作为孤立 component 泄入微信产物；只检查该固定编译目标路径，不枚举输出目录。</zh-CN><en>The H5-only PrimaryTabBar cannot leak into the WeChat artifact as an orphan component; inspect only its fixed compilation path without enumerating the output directory.</en></lang>
+  let h5PrimaryTabLeaked = false;
+  try {
+    // <lang><zh-CN>若固定 JSON 存在，说明条件编译未完整剔除 H5 adapter。</zh-CN><en>If the fixed JSON exists, conditional compilation failed to remove the H5 adapter completely.</en></lang>
+    await access(resolve(outputRoot, 'components/PrimaryTabBar.json'));
+    h5PrimaryTabLeaked = true;
+  } catch (error) {
+    // <lang><zh-CN>只有固定路径不存在是预期结果；权限、I/O 或其他异常必须阻断，不能被误判为“未泄入”。</zh-CN><en>Only absence of the fixed path is expected; permission, I/O, and other failures must block instead of masquerading as "not leaked."</en></lang>
+    if (error?.code !== 'ENOENT') throw error;
+
+    // <lang><zh-CN>确认 ENOENT 后保持 false；其他构建文件仍由后续固定读取逐项验证。</zh-CN><en>Keep false only after confirming ENOENT; later fixed reads continue validating every other build file.</en></lang>
+    h5PrimaryTabLeaked = false;
+  }
+  if (h5PrimaryTabLeaked) throw new Error('Generated WeChat artifact contains the H5-only PrimaryTabBar.');
 
   // <lang><zh-CN>检查固定 compiler 产物显式显示 navbar，防止依赖 Mini Program 首帧中的组件默认 Boolean 值。</zh-CN><en>Check that the pinned compiler artifact explicitly shows navbar, preventing reliance on the component-default Boolean value during the Mini Program first render.</en></lang>
   const shellRuntime = await readFile(resolve(outputRoot, 'components/RuntimePageShell.js'), 'utf8');
@@ -262,8 +530,21 @@ async function verifyGeneratedBizProjectConsumer() {
   }
 }
 
-// <lang><zh-CN>以顶层 await 执行唯一只读构建后门禁。</zh-CN><en>Execute the sole read-only post-build gate with top-level await.</en></lang>
-await verifyGeneratedRuntimeShell();
+/**
+ * <lang><zh-CN>按既有顺序运行微信壳与 Biz consumer 两组只读成品门禁。</zh-CN><en>Runs the WeChat-shell and Biz-consumer read-only artifact gates in their established order.</en></lang>
+ * @returns {Promise<void>} <lang><zh-CN>两组门禁均通过后 resolve。</zh-CN><en>Resolves after both gate groups pass.</en></lang>
+ * @lang zh-CN 此函数只由 CLI main path 调用；测试导入纯字体函数时不会读取真实 dist。
+ * @lang en This function is called only by the CLI main path; importing the pure font function in tests does not read the real dist.
+ */
+async function runMpRuntimeShellGate() {
+  // <lang><zh-CN>先验证页面壳、字体与导航，再验证依赖这些入口的 Biz project consumer。</zh-CN><en>Verify the page shell, fonts, and navigation before the Biz project consumer that depends on those entry points.</en></lang>
+  await verifyGeneratedRuntimeShell();
+  await verifyGeneratedBizProjectConsumer();
+}
 
-// <lang><zh-CN>页面壳验证后再验证 Biz project consumer，保持失败定位与职责边界清晰。</zh-CN><en>Verify the Biz project consumer after the page shell, keeping failure localization and responsibility boundary clear.</en></lang>
-await verifyGeneratedBizProjectConsumer();
+// <lang><zh-CN>只有当前模块是 Node CLI 入口时才触发真实构建读取；测试 import 保持无副作用。</zh-CN><en>Read the real build only when this module is the Node CLI entry point; test imports remain side-effect free.</en></lang>
+const isMainModule = typeof process.argv[1] === 'string' && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  // <lang><zh-CN>顶层 await 保持原命令的失败码与未捕获错误语义。</zh-CN><en>Top-level await preserves the existing command's failure code and uncaught-error semantics.</en></lang>
+  await runMpRuntimeShellGate();
+}

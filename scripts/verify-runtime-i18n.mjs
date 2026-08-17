@@ -33,6 +33,7 @@ const expectedTabIconPaths = Object.freeze([
 
 // <lang><zh-CN>共用展示组件同样受模板直取/裸文案 gate 约束，但不要求各自拥有页面级 provider。</zh-CN><en>Shared presentation components are also subject to template direct-access/unbound-copy gates, but are not required to own a page-level provider.</en></lang>
 const componentPaths = Object.freeze([
+  'src/components/PrimaryTabBar.vue',
   'src/components/ResourceCard.vue',
   'src/components/RuntimePageShell.vue',
   'src/components/SourceBadge.vue'
@@ -132,7 +133,7 @@ async function verifyRuntimeI18n() {
   const pagesConfiguration = JSON.parse(await readFile(resolve(projectRoot, pagesConfigurationPath), 'utf8'));
   const pagePaths = getDeclaredPageSources(pagesConfiguration);
 
-  // <lang><zh-CN>先检查全部已声明页面，再检查三个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check every declared page first then three shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
+  // <lang><zh-CN>先检查全部已声明页面，再检查四个共用展示组件，避免因异步顺序使诊断不稳定。</zh-CN><en>Check every declared page first then four shared presentation components, avoiding unstable diagnostics from asynchronous order.</en></lang>
   for (const relativePath of pagePaths) await verifySfc(relativePath, true);
   for (const relativePath of componentPaths) await verifySfc(relativePath, false);
 
@@ -160,12 +161,33 @@ async function verifyRuntimeI18n() {
     throw new Error('Runtime page shell must render HIA-uView navbar without a page-local tabbar.');
   }
 
+  // <lang><zh-CN>H5 专用适配器必须真实组合 HIA-uView UTabbar、八张登记图标和固定应用导航 helper；它不得包含 pagePath、任意 URL 或微信 lifecycle。</zh-CN><en>The H5-only adapter must genuinely compose HIA-uView UTabbar, the eight registered icons, and the fixed application-navigation helper; it must contain no pagePath, arbitrary URL, or WeChat lifecycle.</en></lang>
+  const primaryTabSource = await readFile(resolve(projectRoot, 'src/components/PrimaryTabBar.vue'), 'utf8');
+  const registeredTabIconImports = expectedTabIconPaths.filter((iconPath) => primaryTabSource.includes(`../${iconPath}`));
+  if (!primaryTabSource.includes('<u-tabbar') || !primaryTabSource.includes('createPrimaryTabItems') || !primaryTabSource.includes('openPrimaryPage') || registeredTabIconImports.length !== expectedTabIconPaths.length || primaryTabSource.includes('pagePath') || primaryTabSource.includes('wx.switchTab')) {
+    throw new Error('H5 primary-tab adapter does not satisfy the bounded HIA-uView composition contract.');
+  }
+
+  // <lang><zh-CN>应用入口必须在 H5 编译分支最早隐藏 native tab surface，且 RuntimePageShell 只能在同一 H5 分支装配 adapter，防止 H5 双底栏或微信重复底栏。</zh-CN><en>The application entry must hide the native tab surface in the earliest H5 compile branch, and RuntimePageShell may compose the adapter only in that same H5 branch, preventing dual H5 bars or a duplicate WeChat bar.</en></lang>
+  const appSource = await readFile(resolve(projectRoot, 'src/App.vue'), 'utf8');
+  const hasH5ShellBoundary = runtimeShellSource.includes('<!-- #ifdef H5 -->') && runtimeShellSource.includes('<primary-tab-bar') && runtimeShellSource.includes('<!-- #endif -->');
+  if (!appSource.includes('uni.hideTabBar({ animation: false') || !appSource.includes('// #ifdef H5') || !hasH5ShellBoundary) {
+    throw new Error('H5 native/custom primary-tab boundary is incomplete.');
+  }
+
   // <lang><zh-CN>字体入口必须同时声明思源黑体、思源宋体和思源等宽三类受控角色；generic fallback 不能取代显式家族选择。</zh-CN><en>The font entry must declare the three controlled Source Han Sans, Source Han Serif, and Source Han Mono roles; generic fallbacks cannot replace explicit family selection.</en></lang>
   const globalStyleSource = await readFile(resolve(projectRoot, 'src/uni.scss'), 'utf8');
   const expectedSourceHanFamilies = Object.freeze(['"Source Han Sans SC"', '"Source Han Serif SC"', '"Source Han Mono SC"']);
   if (expectedSourceHanFamilies.some((familyName) => !globalStyleSource.includes(familyName))) {
     throw new Error('Global typography must retain the three declared Source Han font roles.');
   }
+
+  // <lang><zh-CN>H5 静态 CSS 必须在任何 lifecycle 前隐藏 native tab DOM、清零窗口底部变量并移除 wrapper 占位；App/onShow API 只能作为后续重申。</zh-CN><en>Static H5 CSS must hide the native tab DOM, reset the window-bottom variable, and remove wrapper reservation before any lifecycle; App/onShow APIs can only reaffirm it later.</en></lang>
+  const hasH5NativeTabSuppression = globalStyleSource.includes('.uni-tabbar-bottom')
+    && globalStyleSource.includes('display: none !important')
+    && globalStyleSource.includes('--window-bottom: 0px !important')
+    && globalStyleSource.includes('.uni-app--showtabbar uni-page-wrapper::after');
+  if (!hasH5NativeTabSuppression) throw new Error('H5 native tab prepaint suppression is incomplete.');
 
   // <lang><zh-CN>首页必须同时保留通用变量 fallback 与微信字面 gutter；任一缺失都可能让一条无效 shorthand 再次抹掉整页边距。</zh-CN><en>Home must retain both generic variable fallbacks and the literal WeChat gutter; either omission could let one invalid shorthand erase the entire page inset again.</en></lang>
   const homePageSource = await readFile(resolve(projectRoot, 'src/pages/home/index.vue'), 'utf8');
@@ -183,6 +205,18 @@ async function verifyRuntimeI18n() {
   // <lang><zh-CN>按受控 pages 配置建立路径映射，使 tab 合约不依赖页面在数组中的偶然排列。</zh-CN><en>Build a path map from controlled pages configuration so the tab contract does not depend on incidental array ordering.</en></lang>
   const pageSourcesByRoute = new Map(pagesConfiguration.pages.map((page) => [page.path, `src/${page.path}.vue`]));
 
+  /**
+   * <lang><zh-CN>每个主 route 必须在页面壳上声明的固定 page value。</zh-CN><en>Fixed page value that each primary route must declare on the page shell.</en></lang>
+   * @lang zh-CN 该表只连接同一 pages allowlist 的静态 route/value，不创建导航配置来源。
+   * @lang en This map only connects static route/value entries from the same pages allowlist and creates no navigation-configuration source.
+   */
+  const primaryValueByPath = Object.freeze({
+    'pages/home/index': 'home',
+    'pages/discover/index': 'discover',
+    'pages/reservations/index': 'reservations',
+    'pages/profile/index': 'profile'
+  });
+
   // <lang><zh-CN>四个主页面必须在 onShow 通过受限 bridge 同步当前 custom tab 实例，避免首次进入时选中态或语言漂移。</zh-CN><en>All four primary pages must synchronize their current custom-tab instance through the bounded bridge on show, avoiding selection or locale drift on first entry.</en></lang>
   for (const primaryPath of expectedPrimaryPaths) {
     // <lang><zh-CN>tabBar 声明的每一主页面都必须实际存在于受检 pages 集合。</zh-CN><en>Every primary page declared by tabBar must exist in the inspected pages set.</en></lang>
@@ -191,7 +225,10 @@ async function verifyRuntimeI18n() {
 
     // <lang><zh-CN>已验证的相对路径只用于读取该固定主页面，不接收运行时导航输入。</zh-CN><en>The verified relative path is used only to read that fixed primary page and accepts no runtime navigation input.</en></lang>
     const sourceText = await readFile(resolve(projectRoot, relativePath), 'utf8');
-    if (!sourceText.includes('syncPrimaryTabChrome')) throw new Error(`Missing persistent tab chrome synchronization in ${relativePath}.`);
+    const primaryValue = primaryValueByPath[primaryPath];
+    if (!sourceText.includes('syncPrimaryTabChrome') || !sourceText.includes(`primary-page="${primaryValue}"`)) {
+      throw new Error(`Missing persistent tab chrome synchronization in ${relativePath}.`);
+    }
   }
 
   // <lang><zh-CN>微信 raw custom-tab-bar 必须保持静态 allowlist、双语选择、无业务输入和固定 switchTab；样式根必须常驻 fixed，并以无外边距白底、1px 上边框及四等分 tab 呈现。</zh-CN><en>The raw WeChat custom tab bar must retain a static allowlist, bilingual selection, no business input, and fixed switchTab; its fixed root must render as a marginless white surface with a 1px top border and four equal tabs.</en></lang>

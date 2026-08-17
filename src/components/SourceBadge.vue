@@ -7,7 +7,7 @@
   <!-- <lang><zh-CN>badge 只显示有限 authority 文案；降级时追加明确提示，不隐藏 source 状态。</zh-CN><en>Badge displays only finite authority copy and adds an explicit notice when degraded rather than hiding source state.</en></lang> -->
   <view class="source-badge">
     <!-- <lang><zh-CN>authority 复用 HIA-uView 的有限 tag 视觉，不在 BP 创建第二套 source 色板；文字始终是主语义。</zh-CN><en>Authority reuses the finite HIA-uView tag treatment and creates no second source color palette in the BP; text always carries the primary meaning.</en></lang> -->
-    <u-tag :text="label" :tone="badgeTone" appearance="outline" size="small" shape="pill" />
+    <u-tag :text="label" :tone="badgeTone" appearance="outline" size="small" shape="pill" :clickable="false" />
     <text v-if="props.source.degradedReason" class="source-badge__detail">{{ runtimeLocale.t('source.degraded') }}</text>
   </view>
 </template>

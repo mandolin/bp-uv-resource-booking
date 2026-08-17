@@ -1,6 +1,6 @@
 <!--
 @lang zh-CN 首页“浏览场馆”按钮使用的第一方原创钴蓝线性公共建筑图标；仅作本地可见装饰，不承载操作名称。
-@lang en First-party original cobalt line public-building icon for Home's “Browse venues” button; it is local visible decoration and does not carry the action name.
+@lang en First-party original cobalt line public-building icon for Home's “View venues” button; it is local visible decoration and does not carry the action name.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <title>Venue / 场馆</title>

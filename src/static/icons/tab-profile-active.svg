@@ -1,4 +1,4 @@
-<!-- <lang><zh-CN>本仓原创的个人信息选中实心图标；27 单位网格上的 24 单位钴蓝人像剪影直接生成整数 3x 资产，只表达当前 tab。</zh-CN><en>Repository-original selected Profile solid icon; the 24-unit cobalt person silhouette on a 27-unit grid directly produces an integer 3x asset and expresses only the current tab.</en></lang> -->
+<!-- <lang><zh-CN>本仓原创的个人信息选中实心图标；27 单位网格上的钴蓝人像剪影直接栅格为 27×27 运行时 PNG，不经历预放大后缩小，只表达当前 tab。</zh-CN><en>Repository-original selected Profile solid icon; the cobalt person silhouette on a 27-unit grid rasterizes directly into a 27×27 runtime PNG without enlargement followed by downscaling and expresses only the current tab.</en></lang> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected Profile</title>
   <desc>Solid cobalt person silhouette for the selected Profile tab.</desc>

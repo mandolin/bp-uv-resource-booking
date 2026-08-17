@@ -1,4 +1,4 @@
-<!-- <lang><zh-CN>本仓原创的预约选中实心图标；27 单位网格上的 24 单位钴蓝日历与留白日期格直接生成整数 3x 资产，只表达当前主页。</zh-CN><en>Repository-original selected bookings solid icon; the 24-unit cobalt calendar and white date cells on a 27-unit grid directly produce an integer 3x asset and express only the current primary page.</en></lang> -->
+<!-- <lang><zh-CN>本仓原创的预约选中实心图标；27 单位网格上的钴蓝日历与留白日期格直接栅格为 27×27 运行时 PNG，不经历预放大后缩小，只表达当前主页。</zh-CN><en>Repository-original selected bookings solid icon; the cobalt calendar and white date cells on a 27-unit grid rasterize directly into a 27×27 runtime PNG without enlargement followed by downscaling and express only the current primary page.</en></lang> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none">
   <title>Selected My bookings</title>
   <desc>Solid cobalt calendar with white date cells for the selected My bookings tab.</desc>

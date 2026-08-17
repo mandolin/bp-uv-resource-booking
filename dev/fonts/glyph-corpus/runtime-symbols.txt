@@ -1,0 +1,11 @@
+# zh-CN：所有字体子集共享的基础标点、数字、拉丁文本和经审阅的界面符号。
+# en: Shared punctuation, digits, Latin text, and reviewed interface symbols for every font subset.
+U+0020-U+007E
+U+00A0
+U+00B7
+U+25CB
+U+25CF
+U+2713
+U+00D7
+U+2039
+U+203A

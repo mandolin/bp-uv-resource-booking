@@ -5,3 +5,8 @@ dist/
 .vscode/
 .DS_Store
 *.local
+# <lang><zh-CN>Playwright CLI 的会话截图、trace 与 snapshot 是可重建的本地视觉检查输出；正式接受证据另存私有 WorkZone。</zh-CN><en>Playwright CLI session screenshots, traces, and snapshots are reproducible local visual-check output; formal acceptance evidence is retained separately in the private WorkZone.</en></lang>
+/output/playwright/
+# <lang><zh-CN>字体维护脚本产生的 Python bytecode 可由锁定解释器重建，不进入源码或发布资产。</zh-CN><en>Python bytecode emitted by the font-maintenance script is reproducible from the pinned interpreter and enters neither source nor release assets.</en></lang>
+__pycache__/
+*.py[cod]

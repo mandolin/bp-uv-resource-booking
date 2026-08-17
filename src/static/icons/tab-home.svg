@@ -1,4 +1,4 @@
-<!-- <lang><zh-CN>本仓原创的首页未选中线性图标；27 单位网格与 7/3 单位描边在 3x 栅格中落到整数物理像素，不包含第三方字体、商标或可读文字。</zh-CN><en>Repository-original unselected Home line icon; its 27-unit grid and 7/3-unit stroke land on integer physical pixels in the 3x raster and contain no third-party font, trademark, or readable text.</en></lang> -->
+<!-- <lang><zh-CN>本仓原创的首页未选中线性图标；27 单位网格与明确的 7/3 单位描边直接栅格为 27×27 运行时 PNG，不经历 3x 预放大或运行时缩小，也不包含第三方字体、商标或可读文字。</zh-CN><en>Repository-original unselected Home line icon; its 27-unit grid and explicit 7/3-unit stroke rasterize directly into a 27×27 runtime PNG without 3x preraster enlargement or runtime downscaling, and contain no third-party font, trademark, or readable text.</en></lang> -->
 <svg xmlns="http://www.w3.org/2000/svg" width="27" height="27" viewBox="0 0 27 27" fill="none" stroke="#172536" stroke-width="2.333333" stroke-linecap="round" stroke-linejoin="round">
   <title>Home</title>
   <desc>Outline of a house for the Home tab.</desc>

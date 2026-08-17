@@ -1,0 +1,2 @@
+# <lang><zh-CN>固定 FontTools 4.63.0 的上游通用 wheel 与 PyPI SHA-256；该维护依赖只生成和审计字体，不进入 BP runtime。</zh-CN><en>Pin the upstream universal FontTools 4.63.0 wheel and its PyPI SHA-256; this maintenance dependency only generates and audits fonts and never enters the BP runtime.</en></lang>
+fonttools @ https://files.pythonhosted.org/packages/2c/47/c99d5268f354002ce80f8d029cd9d7d872969da1de8b93d32de4dc56d6f4/fonttools-4.63.0-py3-none-any.whl#sha256=445af2eab030a16b9171ea8bdda7ebf7d96bda2df88ee182a464252f6e05e20d
