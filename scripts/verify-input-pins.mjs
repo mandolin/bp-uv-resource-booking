@@ -15,7 +15,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 // <lang><zh-CN>所有公开 source 输入均以路径、远端 URL 与精确 commit 三元组显式声明。</zh-CN><en>Every public source input is explicitly declared as a path, remote URL, and exact commit triple.</en></lang>
 const expectedInputs = Object.freeze([
-  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: '91e4a98442fb61f2047fc510b4dab2af063c2841' }),
+  Object.freeze({ path: 'src/vendor/HIA-uView', remote: 'https://github.com/mandolin/HIA-uView.git', commit: 'a1803392b6317e9e0b6a83606d06ce47de5639ba' }),
   Object.freeze({ path: 'src/vendor/HIA-uView-Biz', remote: 'https://github.com/mandolin/HIA-uView-Biz.git', commit: '838e0344adb4177327ced50792c2e5b5744b86f7' })
 ]);
 

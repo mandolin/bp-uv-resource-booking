@@ -31,9 +31,9 @@ project doctor 会在不启动 adapter 的情况下验证 profile、capability c
 
 The project doctor validates the profile, capability closure, operation-to-adapter coverage, source modes, and session/port declarations without starting the adapter. It is a configuration-readiness check, not a live inventory, backend, or device-health probe.
 
-目录使用 `page` / `pageSize`。下拉刷新或搜索替换第一页；触底才追加下一页；页脚显示“已加载 / 总数 / 当前页”，并在追加失败时保留已显示内容和重试入口。
+目录使用 `page` / `pageSize`。下拉刷新或搜索替换第一页；触底才追加下一页；页脚显示“已加载 / 总数 / 当前页 / 总页数”，总页数只由本次 facade terminal 的 `total` 与 `pageSize` 推导，并在追加失败时保留已显示内容和重试入口。
 
-The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; only reach-bottom appends the next page; the footer shows loaded / total / current-page facts and retains displayed content plus a retry entry when append fails.
+The catalog uses `page` / `pageSize`. Pull refresh or search replaces page one; only reach-bottom appends the next page. The footer shows loaded / total / current-page / total-page facts, derives total pages only from the current facade terminal's `total` and `pageSize`, and retains displayed content plus a retry entry when append fails.
 
 目录筛选仅接受当前本地 JSON 已声明的场馆 ID、资源类型 ID 和可用日期；它们与关键词共同在分页之前计算。页面不会传入任意字段、表达式、URL 参数或实时排班，空筛选只表示“不限制”。
 

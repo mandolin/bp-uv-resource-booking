@@ -10,12 +10,12 @@
       <view class="discover-page">
       <!-- <lang><zh-CN>发现页只保留 navbar 的单一标题层；搜索紧随其后，不重复营销标题或 eyebrow。</zh-CN><en>Discover retains only the navbar's single title layer; search follows immediately with no duplicate marketing heading or eyebrow.</en></lang> -->
       <!-- <lang><zh-CN>原生键盘确认与可选搜索动作汇聚到同一显式提交；handler 只读取受控 keyword，不把原始事件当作查询。</zh-CN><en>Native keyboard confirmation and the optional search action converge on the same explicit submission; the handler reads only the controlled keyword and never treats the raw event as a query.</en></lang> -->
-      <u-search v-model="keyword" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @confirm="handleSearch" @search="handleSearch" @clear="handleClear" />
+      <u-search v-model="keyword" search-icon="search" :placeholder="runtimeLocale.t('discover.searchPlaceholder')" @confirm="handleSearch" @search="handleSearch" @clear="handleClear" />
       <!-- <lang><zh-CN>三项紧凑触发器复用 HIA-uView button 与 action-sheet：按钮只打开有限本地选项，选择面板提交后替换 page=1，追加页不会混入草稿。</zh-CN><en>Three compact triggers reuse HIA-uView buttons and action sheet: a button only opens finite local options, while selection replaces page one and appended pages never mix a draft.</en></lang> -->
       <view class="discover-page__filters">
         <view class="discover-page__filter-actions">
           <!-- <lang><zh-CN>每个动作只传固定筛选类别，不把标签、事件或页面对象当作查询输入。</zh-CN><en>Each action passes only a fixed filter kind and never treats a label, event, or page object as query input.</en></lang> -->
-          <u-button :label="venueTriggerLabel" size="sm" block @click="openFilterSheet('venue')" />
+          <u-button :label="venueTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('venue')" />
           <u-button :label="resourceTypeTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('resourceType')" />
           <u-button :label="dateTriggerLabel" variant="secondary" size="sm" block @click="openFilterSheet('date')" />
         </view>
@@ -42,6 +42,11 @@
         @action="handleClear"
       />
       <u-list v-else>
+        <!-- <lang><zh-CN>主态结果行只在真实 ready 且非空时披露当前查询总数与本次 facade terminal 的 source；它不猜测 loading/failure/empty 的来源。</zh-CN><en>The main-state result row discloses the current query total and this facade terminal's source only when genuinely ready and nonempty; it does not guess a source for loading, failure, or empty states.</en></lang> -->
+        <view v-if="demo.catalogPhase.value === 'ready' && demo.catalogEntries.value.length > 0" class="discover-page__result-summary">
+          <text class="discover-page__result-total">{{ resultTotal }}</text>
+          <source-badge :source="demo.catalogSource.value" />
+        </view>
         <!-- <lang><zh-CN>原生 view 在 UList slot 内拥有卡片间距；这避免页面 scoped 样式落在隔离的自定义组件 host 上而失效。</zh-CN><en>A native view owns card spacing inside the UList slot, preventing page-scoped styling from landing on an isolated custom-component host and becoming ineffective.</en></lang> -->
         <view class="discover-page__list">
           <!-- <lang><zh-CN>每张卡片由页面 view 建立独立列表项边界，并只将查看意图返回给页面。</zh-CN><en>Each card receives a distinct list-item boundary from a page-owned view and returns only a view intent to the page.</en></lang> -->
@@ -66,6 +71,7 @@ import { computed, onMounted, ref } from 'vue';
 import { onPullDownRefresh, onReachBottom, onShow } from '@dcloudio/uni-app';
 import ResourceCard from '../../components/ResourceCard.vue';
 import RuntimePageShell from '../../components/RuntimePageShell.vue';
+import SourceBadge from '../../components/SourceBadge.vue';
 import { syncPrimaryTabChrome } from '../../localization/runtime-chrome.mjs';
 import { useRuntimeLocale } from '../../localization/runtime-locale.mjs';
 import { useBookingDemo } from '../../state/booking-demo.mjs';
@@ -186,11 +192,28 @@ const footerStatus = computed(() => {
   return demo.catalogPaging.value.hasNext ? 'more' : 'nomore';
 });
 
-// <lang><zh-CN>页脚只显示安全 pagination result 中的事实。</zh-CN><en>Footer displays facts from safe pagination results only.</en></lang>
+// <lang><zh-CN>非空结果总数直接来自当前 facade terminal 的安全 paging snapshot；页面不枚举 dataset 或把已加载数当作总数。</zh-CN><en>The nonempty result total comes directly from the current facade terminal's safe paging snapshot; the page neither enumerates the dataset nor treats loaded count as total.</en></lang>
+const resultTotal = computed(() => runtimeLocale.t('discover.resultTotal', {
+  total: demo.catalogPaging.value.total
+}));
+
+// <lang><zh-CN>总页数只由当前 terminal 的正整数 total/pageSize 向上取整；空或无效 snapshot 显式保持零页。</zh-CN><en>Total pages are derived only by rounding up the current terminal's positive integer total/pageSize; an empty or invalid snapshot explicitly remains zero pages.</en></lang>
+const totalPages = computed(() => {
+  // <lang><zh-CN>分页字段由 Biz facade 映射，但页面仍限制为正整数后才用于除法，避免 NaN/Infinity 进入可见文案。</zh-CN><en>Paging fields are mapped by the Biz facade, but the page still requires positive integers before division so NaN/Infinity cannot enter visible copy.</en></lang>
+  const total = demo.catalogPaging.value.total;
+  const pageSize = demo.catalogPaging.value.pageSize;
+  // <lang><zh-CN>零结果属于零页；非法字段同样回退零而不臆造一页。</zh-CN><en>Zero results mean zero pages; invalid fields likewise fall back to zero instead of inventing one page.</en></lang>
+  if (!Number.isInteger(total) || total <= 0 || !Number.isInteger(pageSize) || pageSize <= 0) return 0;
+  // <lang><zh-CN>标准向上取整保留最后不足 pageSize 的有限本地页。</zh-CN><en>Standard ceiling retains the final finite local page when it contains fewer than pageSize entries.</en></lang>
+  return Math.ceil(total / pageSize);
+});
+
+// <lang><zh-CN>页脚只显示安全 pagination result 中的 loaded/total/current/totalPages 事实。</zh-CN><en>Footer displays only loaded/total/current/totalPages facts from the safe pagination result.</en></lang>
 const pageFacts = computed(() => runtimeLocale.t('common.pageFacts', {
   loaded: demo.catalogEntries.value.length,
   total: demo.catalogPaging.value.total,
-  page: demo.catalogPaging.value.page
+  page: demo.catalogPaging.value.page,
+  totalPages: totalPages.value
 }));
 
 // <lang><zh-CN>只有已有结果上的追加失败才显示这条恢复提示；首屏失败使用完整 `u-empty`，避免两个错误层级同时出现。</zh-CN><en>Show this recovery hint only for an append failure with existing results; an initial failure uses complete `u-empty`, avoiding two error hierarchies at once.</en></lang>
@@ -364,6 +387,8 @@ onReachBottom(handleLoadMore);
 .discover-page__filters { display: flex; gap: 8px; flex-direction: column; margin-top: 14px; }
 .discover-page__filter-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .discover-page__state { display: flex; gap: 12px; flex-direction: column; margin-top: 20px; }
+.discover-page__result-summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 14px; min-height: 26px; }
+.discover-page__result-total { color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.4; }
 .discover-page__list { display: flex; gap: 14px; flex-direction: column; margin-top: 16px; }
 .discover-page__list-item { min-width: 0; }
 .discover-page__footer { display: flex; gap: 8px; flex-direction: column; align-items: center; padding: 8px 0 20px; color: var(--u-sys-color-text-secondary); font-size: 12px; }

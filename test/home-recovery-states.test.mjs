@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>锁定 W-uv-P70 Board D 首页恢复态、审阅夹具和构建模式的有限合同；本测试只读取仓内固定源码并调用公开纯函数。</zh-CN><en>Locks the finite W-uv-P70 Board D contracts for Home recovery states, the review fixture, and build modes; this test reads only fixed in-repository sources and calls public pure functions.</en></lang>
+ * <lang><zh-CN>锁定首页恢复态、审阅夹具和构建模式的有限合同；本测试只读取仓内固定源码并调用公开纯函数。</zh-CN><en>Locks the finite contracts for Home recovery states, the review fixture, and build modes; this test reads only fixed in-repository sources and calls public pure functions.</en></lang>
  * @lang zh-CN 门禁覆盖公开 HIA-uView 投影、冻结双语文案、保留快照语义、无旁路页面边界、精确夹具 options 与失败关闭的 Vite mode。
  * @lang en The gate covers public HIA-uView projections, frozen bilingual copy, retained-snapshot semantics, a bypass-free page boundary, exact fixture options, and fail-closed Vite modes.
  */
@@ -18,11 +18,11 @@ import {
 } from '../src/review/home-catalog-review.mjs';
 
 /**
- * <lang><zh-CN>Board D 静态门禁允许读取的完整固定源码集合。</zh-CN><en>Complete fixed source set that the Board D static gate may read.</en></lang>
+ * <lang><zh-CN>首页恢复态静态门禁允许读取的完整固定源码集合。</zh-CN><en>Complete fixed source set that the Home recovery-state static gate may read.</en></lang>
  * @lang zh-CN URL 全部相对于当前测试文件确定，不接受 cwd、CLI、环境、route 或 storage 输入。
  * @lang en Every URL is determined relative to this test file and accepts no cwd, CLI, environment, route, or storage input.
  */
-const BOARD_D_SOURCE_URLS = Object.freeze({
+const HOME_RECOVERY_SOURCE_URLS = Object.freeze({
   home: new URL('../src/pages/home/index.vue', import.meta.url),
   messages: new URL('../src/locales/messages.mjs', import.meta.url),
   review: new URL('../src/review/home-catalog-review.mjs', import.meta.url),
@@ -30,13 +30,13 @@ const BOARD_D_SOURCE_URLS = Object.freeze({
 });
 
 /**
- * @lang zh-CN 并行读取 Board D 的四项固定源码输入。
- * @lang en Reads the four fixed Board D source inputs in parallel.
+ * @lang zh-CN 并行读取首页恢复态的四项固定源码输入。
+ * @lang en Reads the four fixed Home recovery-state source inputs in parallel.
  * @returns {Promise<{home: string, messages: string, review: string, vite: string}>} <lang><zh-CN>按稳定逻辑名称索引的源码文本。</zh-CN><en>Source text indexed by stable logical names.</en></lang>
  */
-async function readBoardDSources() {
+async function readHomeRecoverySources() {
   // <lang><zh-CN>每个固定 URL 都必须成功读取；缺失文件直接失败，不能静默跳过对应合同。</zh-CN><en>Every fixed URL must be read successfully; a missing file fails directly and cannot silently skip its contract.</en></lang>
-  const sourceEntries = await Promise.all(Object.entries(BOARD_D_SOURCE_URLS).map(async ([sourceName, sourceUrl]) => [sourceName, await readFile(sourceUrl, 'utf8')]));
+  const sourceEntries = await Promise.all(Object.entries(HOME_RECOVERY_SOURCE_URLS).map(async ([sourceName, sourceUrl]) => [sourceName, await readFile(sourceUrl, 'utf8')]));
 
   // <lang><zh-CN>只把已知固定条目转换成局部 record，不执行或改写源码。</zh-CN><en>Convert only known fixed entries into a local record without executing or rewriting source.</en></lang>
   return Object.fromEntries(sourceEntries);
@@ -67,9 +67,9 @@ function withoutJavaScriptComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/^\s*\/\/.*$/gmu, '');
 }
 
-test('Board D keeps one common featured section and projects initial idle/loading through a local USkeleton', async function verifyBoardDLoadingProjection() {
+test('Home recovery states keep one common featured section and project initial idle/loading through a local USkeleton', async function verifyHomeRecoveryLoadingProjection() {
   // <lang><zh-CN>首页结构与双语文案来自同一次固定快照读取。</zh-CN><en>Home structure and bilingual copy come from the same fixed snapshot read.</en></lang>
-  const { home, messages } = await readBoardDSources();
+  const { home, messages } = await readHomeRecoverySources();
 
   // <lang><zh-CN>唯一 USection 位于所有互斥状态之前，使标题与“查看全部”在 ready、loading、failure、empty 中保持共同层级。</zh-CN><en>The sole USection precedes every mutually exclusive state so its title and View all action keep one shared hierarchy in ready, loading, failure, and empty.</en></lang>
   assert.equal(countMatches(home, /<u-section\b/gu), 1);
@@ -90,9 +90,9 @@ test('Board D keeps one common featured section and projects initial idle/loadin
   assert.equal(messages.includes("'home.loading': 'Preparing featured venues'"), true);
 });
 
-test('Board D initial failure and successful whole-catalog empty states use UEmpty with frozen copy and one recovery intent', async function verifyBoardDEmptyProjections() {
+test('Home initial failure and successful whole-catalog empty states use UEmpty with frozen copy and one recovery intent', async function verifyHomeRecoveryEmptyProjections() {
   // <lang><zh-CN>固定源码用于确认 D-2、D-3 与统一恢复 action 的静态连接。</zh-CN><en>Fixed sources confirm the static wiring of D-2, D-3, and the shared recovery action.</en></lang>
-  const { home, messages } = await readBoardDSources();
+  const { home, messages } = await readHomeRecoverySources();
 
   // <lang><zh-CN>首次 failure 仅在无快照时成立，并使用 Retry；canonical retryable 严格为 true 才暴露 action。</zh-CN><en>Initial failure exists only without a snapshot and uses Retry; the action is exposed only when canonical retryable is strictly true.</en></lang>
   assert.match(home, /const isInitialCatalogFailure = computed\(\(\) => demo\.catalogPhase\.value === 'failure' && featuredEntry\.value === null\);/u);
@@ -118,9 +118,9 @@ test('Board D initial failure and successful whole-catalog empty states use UEmp
   assert.equal(messages.includes("'home.emptyDescription': 'The current local demo has no venues or services to display.'"), true);
 });
 
-test('Board D retains a featured snapshot during refresh loading/failure and keeps the data notice unconditional', async function verifyBoardDRetainedSnapshotProjection() {
+test('Home retains a featured snapshot during refresh loading/failure and keeps the data notice unconditional', async function verifyHomeRecoveryRetainedSnapshotProjection() {
   // <lang><zh-CN>本门禁只读取首页投影，证明已有 canonical entry 时不会退回首次恢复面。</zh-CN><en>This gate reads only the Home projection, proving an existing canonical entry cannot fall back to an initial-recovery surface.</en></lang>
-  const { home } = await readBoardDSources();
+  const { home } = await readHomeRecoverySources();
 
   // <lang><zh-CN>loading 与 failure 的首次状态均显式要求空快照，因此已有 featuredEntry 会继续进入卡片分支。</zh-CN><en>Both initial loading and initial failure explicitly require an empty snapshot, so an existing featuredEntry continues into the card branch.</en></lang>
   assert.match(home, /const isCatalogPreparing = computed\(\(\) =>[\s\S]*?&& featuredEntry\.value === null\);/u);
@@ -136,9 +136,9 @@ test('Board D retains a featured snapshot during refresh loading/failure and kee
   assert.match(home, /<view v-else-if="featuredEntry" class="home-page__featured-card">[\s\S]*?<\/view>\s*<\/view>[\s\S]*?<view class="home-page__data-notice">\s*<u-alert-tips show type="primary">/u);
 });
 
-test('Home owns no fixture, build-mode, route, or storage recovery bypass', async function verifyBoardDPageBoundary() {
+test('Home owns no fixture, build-mode, route, or storage recovery bypass', async function verifyHomeRecoveryPageBoundary() {
   // <lang><zh-CN>页面源码是旁路检查的唯一输入；review 模块和 Vite 配置拥有各自独立边界。</zh-CN><en>Page source is the sole bypass-check input; the review module and Vite configuration own separate boundaries.</en></lang>
-  const { home } = await readBoardDSources();
+  const { home } = await readHomeRecoverySources();
 
   /**
    * <lang><zh-CN>首页禁止出现的 fixture、编译配置、route 状态与 storage API 入口。</zh-CN><en>Fixture, compile-configuration, route-state, and storage API entries forbidden from Home.</en></lang>
@@ -257,7 +257,7 @@ test('home catalog review fixture rejects every non-exact or behavior-bearing op
 
 test('review source has no runtime selection bypass and Vite modes are exact, default-safe, and fail closed', async function verifyViteReviewModeContract() {
   // <lang><zh-CN>同时读取静态源码并加载配置模块，分别锁定无旁路文本边界与可执行映射行为。</zh-CN><en>Read static sources and load the configuration module together, locking both the bypass-free textual boundary and executable mapping behavior.</en></lang>
-  const { review, vite } = await readBoardDSources();
+  const { review, vite } = await readHomeRecoverySources();
   const viteModule = await import('../vite.config.mjs');
 
   // <lang><zh-CN>移除双语说明后只检查可执行 review 代码，避免把“不得读取 process.env”等约束文本误报为实现。</zh-CN><en>Check only executable review code after removing bilingual explanations so constraints such as “must not read process.env” are not misreported as implementation.</en></lang>

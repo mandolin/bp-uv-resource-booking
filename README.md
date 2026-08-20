@@ -39,7 +39,7 @@ git submodule update --init --recursive
 
 | 输入 / Input | 固定提交 / Pinned commit | 用途 / Use |
 | --- | --- | --- |
-| `src/vendor/HIA-uView` | `91e4a98442fb61f2047fc510b4dab2af063c2841` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、被动标签、信息提示面、图标型 tabBar 与其他已审公共组件 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, passive tags, the information-alert surface, icon-capable tabBar, and other reviewed public components |
+| `src/vendor/HIA-uView` | `a1803392b6317e9e0b6a83606d06ce47de5639ba` | HIA-uView UI 源码、完整样式入口、默认主题、locale provider bridge、package-owned types、受限 Easycom、小程序条件编译回退、受控流式图片布局、被动标签、信息提示面、搜索装饰、图标型 tabBar 与其他已审公共组件 / UI source, complete style entry, default theme, locale-provider bridge, package-owned types, bounded Easycom, Mini Program conditional fallbacks, bounded fluid-image layout, passive tags, the information-alert surface, search decoration, icon-capable tabBar, and other reviewed public components |
 | `src/vendor/HIA-uView-Biz` | `838e0344adb4177327ced50792c2e5b5744b86f7` | 版本化 project/solution profile、capability/operation gate、确定性 source selection、统一 facade/doctor 与底层异步生命周期 / Versioned project/solution profiles, capability/operation gate, deterministic source selection, unified facade/doctor, and lower asynchronous lifecycle |
 
 上游关系、原始图片来源和许可证说明见 [docs/upstream-and-assets.md](docs/upstream-and-assets.md)。

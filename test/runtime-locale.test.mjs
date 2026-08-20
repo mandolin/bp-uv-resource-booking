@@ -16,6 +16,7 @@ import {
   normalizeSystemLanguage,
   resolveRuntimeUniApi,
   resolveRuntimeLocale,
+  translate,
   useRuntimeLocale
 } from '../src/localization/runtime-locale.mjs';
 import { createPrimaryTabItems, navigateBackOrOpenPrimaryPage, openPrimaryPage, syncPrimaryTabChrome } from '../src/localization/runtime-chrome.mjs';
@@ -125,6 +126,17 @@ test('domain projection and fixed date labels never produce bilingual concatenat
   assert.equal(formatDemoDate('2026-08-08', 'zh-Hans'), '8 月 8 日');
   assert.equal(formatDemoDate('2026-08-08', 'en'), 'Aug 8');
   assert.equal(formatDemoDate('not-a-date', 'en'), '');
+});
+
+test('Discover pagination and result totals interpolate the real bounded catalog facts in both locales', () => {
+  // <lang><zh-CN>页脚同时显示已加载/总数与当前/总页数；这些值来自真实 paging snapshot，不由译文推断。</zh-CN><en>The footer displays loaded/total and current/total-pages together; the values come from a real paging snapshot and are not inferred by copy.</en></lang>
+  const pageValues = Object.freeze({ loaded: 2, total: 10, page: 1, totalPages: 5 });
+  assert.equal(translate('zh-Hans', 'common.pageFacts', pageValues), '已加载 2 / 10 · 第 1 / 5 页');
+  assert.equal(translate('en', 'common.pageFacts', pageValues), '2 / 10 loaded · Page 1 / 5');
+
+  // <lang><zh-CN>主态紧凑结果行只替换受控 total 数字，不执行复数 DSL 或读取数据集。</zh-CN><en>The compact main-state result row replaces only the bounded total number and executes no plural DSL or dataset read.</en></lang>
+  assert.equal(translate('zh-Hans', 'discover.resultTotal', { total: 10 }), '共 10 项资源');
+  assert.equal(translate('en', 'discover.resultTotal', { total: 10 }), '10 resources');
 });
 
 test('runtime chrome creates localized primary-tab items without dynamic input', () => {

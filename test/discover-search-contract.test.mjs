@@ -44,6 +44,8 @@ test('Discover submits the controlled keyword from native confirm and optional s
   // <lang><zh-CN>唯一搜索组件必须保留受控草稿及 clear，并把 confirm/search 两种意图汇聚到同一 handler。</zh-CN><en>The sole search component must retain its controlled draft and clear action while converging confirm/search intents on one handler.</en></lang>
   const discoverSearchTag = discoverSearchTags[0][0];
   assert.equal(discoverSearchTag.includes('v-model="keyword"'), true);
+  // <lang><zh-CN>页面只通过 pin 的公开 searchIcon 迁移接口请求纯呈现装饰，不复制图标资产或私有结构。</zh-CN><en>The page requests its presentation-only decoration solely through the pin's public searchIcon migration surface and copies no icon asset or private structure.</en></lang>
+  assert.equal(discoverSearchTag.includes('search-icon="search"'), true);
   assert.equal(discoverSearchTag.includes('@confirm="handleSearch"'), true);
   assert.equal(discoverSearchTag.includes('@search="handleSearch"'), true);
   assert.equal(discoverSearchTag.includes('@clear="handleClear"'), true);
@@ -51,6 +53,10 @@ test('Discover submits the controlled keyword from native confirm and optional s
   // <lang><zh-CN>HIA-uView-UI 必须继续把原生 input 确认转发为 confirm；页面不得假设编译器会合成 search。</zh-CN><en>HIA-uView-UI must continue forwarding native input confirmation as confirm; the page must not assume the compiler synthesizes search.</en></lang>
   assert.match(searchComponentSource, /<input[\s\S]*?@confirm="handleConfirm"[\s\S]*?\/>/u);
   assert.equal(searchComponentSource.includes("emit('confirm', event);"), true);
+
+  // <lang><zh-CN>pin 必须只在精确 `search` 值下建立 aria-hidden 装饰；该装饰没有事件或文字。</zh-CN><en>The pin must create its aria-hidden decoration only for the exact `search` value; that decoration has no event or copy.</en></lang>
+  assert.match(searchComponentSource, /<view v-if="searchIcon === 'search'" class="u-search__leading-icon" aria-hidden="true">/u);
+  assert.match(searchComponentSource, /searchIcon:\s*\{ type: String, default: '' \}/u);
 
   // <lang><zh-CN>可选动作按钮停止 click 冒泡后独立发出 search；这既防止父级重复提交，也验证两种 intent 的差异是组件契约。</zh-CN><en>The optional action button stops click propagation before emitting search independently, preventing parent-level duplicate submission while proving that the two intents differ by component contract.</en></lang>
   assert.match(searchComponentSource, /<button\s+v-if="showAction && actionText\.length > 0"[\s\S]*?@click\.stop="search"/u);

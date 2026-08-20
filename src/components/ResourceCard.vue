@@ -103,10 +103,10 @@ function handleView() {
 .resource-card__title { display: -webkit-box; overflow: hidden; color: var(--u-sys-color-text); font-size: 16px; font-weight: 600; line-height: 1.35; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .resource-card__venue { overflow: hidden; color: var(--u-sys-color-text-secondary); font-size: 13px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .resource-card__facts { display: flex; flex-direction: column; gap: 2px; margin-top: auto; min-width: 0; }
-/* <lang><zh-CN>发现目录版采用全宽封面和下置正文；与首页共用同一事实与点击语义。</zh-CN><en>The Discover-catalog variant uses a full-width cover and body below while sharing the same facts and click meaning with Home.</en></lang> */
+/* <lang><zh-CN>发现目录版采用 132px 全宽封面与 96px 紧凑正文；它与首页共用同一 canonical 事实和点击语义，但不改变首页的 128px 横向几何。</zh-CN><en>The Discover-catalog variant uses a 132px full-width cover and a compact 96px body; it shares the same canonical facts and click meaning with Home without changing Home's 128px horizontal geometry.</en></lang> */
 .resource-card--catalog .resource-card__control { flex-direction: column; }
-.resource-card--catalog .resource-card__image-shell { flex: 0 0 auto; height: 172px; width: 100%; }
-.resource-card--catalog .resource-card__body { gap: 6px; min-height: 126px; padding: 13px 14px 14px; }
+.resource-card--catalog .resource-card__image-shell { flex: 0 0 auto; height: 132px; width: 100%; }
+.resource-card--catalog .resource-card__body { gap: 4px; min-height: 96px; padding: 10px 12px; }
 .resource-card--catalog .resource-card__facts { flex-direction: row; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; }
 /* #ifdef MP-WEIXIN */
 .resource-card__title { color: #001b2e; }

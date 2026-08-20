@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>验证已生成微信小程序的应用自管 title、项目内嵌字体与平台常驻 custom tab 壳：全部应用页面必须关闭原生导航并引用 HIA-uView navbar 页面壳，三张字体必须与 manifest 逐字节一致，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定输入。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title, project-embedded fonts, and platform-persistent custom-tab shell: every application page must disable native navigation and reference the HIA-uView-navbar page shell, all three fonts must match the manifest byte for byte, and four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed inputs.</en></lang>
+ * <lang><zh-CN>验证已生成微信小程序的应用自管 title、项目内嵌字体、发现页搜索/筛选样式与平台常驻 custom tab 壳：全部应用页面必须关闭原生导航并引用 HIA-uView navbar 页面壳，三张字体必须与 manifest 逐字节一致，发现页必须保留公开搜索装饰且 action sheet 不得产生 disabled attribute selector，四个主页面必须进入 official custom-tab-bar/switchTab 生命周期；脚本只读固定输入。</zh-CN><en>Verifies the generated WeChat Mini Program's application-owned title, project-embedded fonts, Discover search/filter styles, and platform-persistent custom-tab shell: every application page must disable native navigation and reference the HIA-uView-navbar page shell, all three fonts must match the manifest byte for byte, Discover must retain the public search decoration while the action sheet emits no disabled attribute selector, and four primary pages must enter the official custom-tab-bar/switchTab lifecycle; the script reads only fixed inputs.</en></lang>
  * @lang zh-CN 本门禁验证编译产物契约，不替代开发者工具中的实际布局、点击、语言切换和安全区视觉检查。
  * @lang en This gate verifies the compiled-artifact contract and does not replace actual layout, clicks, language switching, and safe-area visual inspection in Developer Tools.
  */
@@ -435,6 +435,28 @@ async function verifyGeneratedRuntimeShell() {
   const discoverStyle = await readFile(resolve(outputRoot, 'pages/discover/index.wxss'), 'utf8');
   if (!/<view[^>]*class="discover-page__list(?:\s|")/u.test(discoverTemplate) || /<u-list[^>]*class="discover-page__list(?:\s|")/u.test(discoverTemplate) || !/\.discover-page__list(?:\.[a-z0-9-]+)?\{[^}]*gap:14px/u.test(discoverStyle)) {
     throw new Error('Generated Discover list is missing native-wrapper card spacing.');
+  }
+
+  // <lang><zh-CN>发现页 runtime 必须把公开 search-icon 字面值传给已锁组件，组件生成物则同时保留装饰节点及其圆环/手柄样式；这里不把 CSS 几何复制回 BP 页面。</zh-CN><en>The Discover runtime must pass the public search-icon literal to the pinned component, whose artifact must retain both the decoration nodes and ring/handle styles; this gate does not copy CSS geometry back into the BP page.</en></lang>
+  const discoverRuntime = await readFile(resolve(outputRoot, 'pages/discover/index.js'), 'utf8');
+  const searchTemplate = await readFile(resolve(outputRoot, 'vendor/HIA-uView/HIA-uView-UI/src/components/u-search/u-search.wxml'), 'utf8');
+  const searchStyle = await readFile(resolve(outputRoot, 'vendor/HIA-uView/HIA-uView-UI/src/components/u-search/u-search.wxss'), 'utf8');
+  const hasGeneratedSearchDecoration = discoverRuntime.includes('"search-icon":"search"')
+    && searchTemplate.includes('u-search__leading-icon')
+    && searchTemplate.includes('u-search__leading-icon-ring')
+    && searchTemplate.includes('u-search__leading-icon-handle')
+    && searchStyle.includes('.u-search__leading-icon-ring')
+    && searchStyle.includes('.u-search__leading-icon-handle');
+  if (!hasGeneratedSearchDecoration) {
+    throw new Error('Generated Discover search is missing the pinned public leading decoration.');
+  }
+
+  // <lang><zh-CN>action sheet 生成样式必须采用显式状态类，且任何含 disabled 的 attribute selector 都会重现微信 WXSS 告警并阻断构建。</zh-CN><en>The generated action-sheet style must use its explicit state class, and any attribute selector containing disabled would reintroduce the WeChat WXSS warning and block the build.</en></lang>
+  const actionSheetTemplate = await readFile(resolve(outputRoot, 'vendor/HIA-uView/HIA-uView-UI/src/components/u-action-sheet/u-action-sheet.wxml'), 'utf8');
+  const actionSheetStyle = await readFile(resolve(outputRoot, 'vendor/HIA-uView/HIA-uView-UI/src/components/u-action-sheet/u-action-sheet.wxss'), 'utf8');
+  const hasGeneratedDisabledStateClass = actionSheetTemplate.includes('u-action-sheet__item--disabled') && actionSheetStyle.includes('.u-action-sheet__item--disabled');
+  if (!hasGeneratedDisabledStateClass || /\[[^\]]*disabled[^\]]*\]/u.test(actionSheetStyle)) {
+    throw new Error('Generated action sheet contains an unsupported disabled attribute selector.');
   }
 
   // <lang><zh-CN>官方 custom-tab-bar 四件套必须被编译器原样复制，并保留 fixed 根、双语选择、固定 switchTab、无外边距白底和四项等分几何。</zh-CN><en>The official custom-tab-bar quartet must be copied verbatim by the compiler and retain a fixed root, bilingual selection, fixed switchTab, a marginless white surface, and equal four-item geometry.</en></lang>

@@ -18,7 +18,9 @@ test('booking state obtains catalog, reservation cards, and all writes through p
   // <lang><zh-CN>目录首次读取同时交付 entries、筛选项与 actual local source。</zh-CN><en>The first catalog read jointly delivers entries, filter options, and actual local source.</en></lang>
   await demo.refreshCatalog('', { venueId: '', resourceTypeId: '', date: '' });
   assert.equal(demo.catalogPhase.value, 'ready');
-  assert.equal(demo.catalogEntries.value.length > 0, true);
+  // <lang><zh-CN>首个真实 facade terminal 固定为 2/10、page 1/5 的可追加 snapshot，供发现页呈现真实页次而不是 fixture 常量。</zh-CN><en>The first real facade terminal is a fixed appendable 2/10, page 1/5 snapshot so Discover presents real page facts rather than fixture constants.</en></lang>
+  assert.equal(demo.catalogEntries.value.length, 2);
+  assert.deepEqual({ ...demo.catalogPaging.value }, { page: 1, pageSize: 2, total: 10, hasNext: true });
   assert.equal(demo.catalogFilterOptions.value.venues.length > 0, true);
   assert.equal(demo.catalogSource.value.authority, 'local');
 
@@ -38,7 +40,7 @@ test('booking state obtains catalog, reservation cards, and all writes through p
   assert.deepEqual(demo.catalogEntries.value.map((entry) => entry.id), retainedEntryIds);
 
   // <lang><zh-CN>切换到确定无匹配项的新关键字 scope 后，loading 必须立即撤下旧卡片、分页与 source，而不是把 Discover 的旧结果带回其他页面。</zh-CN><en>After switching to a new keyword scope guaranteed to match nothing, loading must immediately withdraw stale cards, pagination, and source rather than carry Discover's old results into another page.</en></lang>
-  const emptyCatalogRead = demo.refreshCatalog('p70-no-such-local-resource', { venueId: '', resourceTypeId: '', date: '' });
+  const emptyCatalogRead = demo.refreshCatalog('missing-local-resource', { venueId: '', resourceTypeId: '', date: '' });
   assert.equal(demo.catalogPhase.value, 'loading');
   assert.deepEqual(demo.catalogEntries.value, []);
   assert.deepEqual({ ...demo.catalogPaging.value }, { page: 0, pageSize: 2, total: 0, hasNext: false });

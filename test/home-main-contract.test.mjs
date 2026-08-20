@@ -1,5 +1,5 @@
 /**
- * <lang><zh-CN>锁定 W-uv-P70 首页主态的独立 Hero、紧凑英文 chrome、H5 HIA-uView 主导航与两项无障碍 touch-improve；测试只读取固定源码，不运行页面、平台 API、路由或业务操作。</zh-CN><en>Locks W-uv-P70 Home main state's independent hero, compact English chrome, H5 HIA-uView primary navigation, and two accessibility touch-improvements; the test reads only fixed source and runs no page, platform API, route, or business operation.</en></lang>
+ * <lang><zh-CN>锁定首页主态的独立 Hero、紧凑英文 chrome、H5 HIA-uView 主导航与两项无障碍 touch-improve；测试只读取固定源码，不运行页面、平台 API、路由或业务操作。</zh-CN><en>Locks the Home main state's independent hero, compact English chrome, H5 HIA-uView primary navigation, and two accessibility touch-improvements; the test reads only fixed source and runs no page, platform API, route, or business operation.</en></lang>
  * @lang zh-CN 本文件验证实施边界而非像素等价；H5/微信截图与维护者逐页决定仍是视觉接受依据。
  * @lang en This file verifies the implementation boundary rather than pixel equivalence; H5/WeChat screenshots and page-by-page maintainer decisions remain the visual-acceptance evidence.
  */
@@ -65,12 +65,12 @@ test('Home main state keeps the approved presentation, navigation, and accessibi
   assert.match(sources.home, /\.home-page__title--zh-hans\s*\{\s*max-width:\s*280px;/u);
   assert.match(sources.home, /\.home-page\s*\{[^}]*background:\s*var\(--u-sys-color-surface\);/u);
 
-  // <lang><zh-CN>首页最终验收几何锁定 8px 精选区外距、24px 底栏额外预留与 128px 精选图；目录卡的 172px 覆盖仍保持独立。</zh-CN><en>Final Home acceptance geometry locks an 8px featured-section margin, 24px extra tab-bar reservation, and a 128px featured image while the catalog card's 172px override remains independent.</en></lang>
+  // <lang><zh-CN>首页最终验收几何锁定 8px 精选区外距、24px 底栏额外预留与 128px 精选图；发现目录的 132px 紧凑封面仍保持独立。</zh-CN><en>Final Home acceptance geometry locks an 8px featured-section margin, 24px extra tab-bar reservation, and a 128px featured image while Discover's compact 132px catalog cover remains independent.</en></lang>
   assert.match(sources.home, /\.home-page__featured\s*\{\s*margin-top:\s*8px;/u);
   assert.match(sources.home, /calc\(var\(--bp-shell-tabbar-height,\s*64px\)\s*\+\s*24px\s*\+\s*env\(safe-area-inset-bottom\)\)/u);
   assert.match(sources.home, /padding:\s*20px 16px calc\(88px \+ env\(safe-area-inset-bottom\)\)/u);
   assert.match(sources.resourceCard, /\.resource-card__image-shell\s*\{[^}]*height:\s*128px;/u);
-  assert.match(sources.resourceCard, /\.resource-card--catalog \.resource-card__image-shell\s*\{[^}]*height:\s*172px;/u);
+  assert.match(sources.resourceCard, /\.resource-card--catalog \.resource-card__image-shell\s*\{[^}]*height:\s*132px;/u);
 
   // <lang><zh-CN>自定义首页 header 必须在首帧使用现代微信窗口/胶囊 API，并让品牌栏填满壳拥有的实测高度；严禁重新引入废弃系统信息 API。</zh-CN><en>The custom Home header must use modern WeChat window/capsule APIs on the first render and let the brand bar fill the shell-owned measured height; deprecated system-information APIs must never return.</en></lang>
   assert.match(sources.runtimeShell, /resolveWeChatHeaderLayout\(wx\)/u);

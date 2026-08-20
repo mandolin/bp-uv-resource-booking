@@ -236,10 +236,10 @@ test('checked-in declarations expose the exact six-operation local project', asy
 });
 
 test('visible source badges retain operation-specific facade facts', async () => {
-  // <lang><zh-CN>逐页期望值只锁定已审产品中的 source badge，不向没有 badge 的发现页新增展示责任。</zh-CN><en>Per-page expectations lock only source badges in the reviewed product and add no display responsibility to Discover, which has no badge.</en></lang>
+  // <lang><zh-CN>逐页期望值锁定已审产品中的 source badge；发现页主态现在只采用 catalog terminal 自有 source。</zh-CN><en>Per-page expectations lock source badges in the reviewed product; Discover's main state now adopts only its catalog terminal's own source.</en></lang>
   const expectedSourceBindings = Object.freeze([
     Object.freeze({ path: 'src/pages/home/index.vue', bindings: ['demo.catalogSource.value'] }),
-    Object.freeze({ path: 'src/pages/discover/index.vue', bindings: [] }),
+    Object.freeze({ path: 'src/pages/discover/index.vue', bindings: ['demo.catalogSource.value'] }),
     Object.freeze({ path: 'src/pages/resource-detail/index.vue', bindings: ['demo.detailSource.value', 'detail.source'] }),
     Object.freeze({ path: 'src/pages/reservations/index.vue', bindings: ['demo.reservationSource.value'] }),
     Object.freeze({ path: 'src/pages/reservation-detail/index.vue', bindings: ['demo.reservationSource.value'] }),

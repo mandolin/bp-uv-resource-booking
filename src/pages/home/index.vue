@@ -238,7 +238,7 @@ onPullDownRefresh(async () => {
 .home-page__state { box-sizing: border-box; display: flex; width: 100%; flex-direction: column; gap: 12px; margin-top: 10px; }
 /* <lang><zh-CN>D-1 的页面自有卡面为 USkeleton 提供与精选卡一致的局部表面；它不改变 USkeleton 的公开 token 或内部节点。</zh-CN><en>D-1's page-owned card surface gives USkeleton a local surface aligned with the featured card without changing USkeleton's public tokens or internals.</en></lang> */
 .home-page__state--loading { gap: 12px; height: 128px; min-height: 128px; overflow: hidden; padding: 0; border: 1px solid #f7f9fc; border-radius: 14px; background: var(--u-sys-color-surface-elevated, #ffffff); box-shadow: var(--bp-card-shadow, 0 2px 8px rgb(0 27 46 / 12%)); }
-/* <lang><zh-CN>loading 文案从 40px avatar、12px 左内距与 12px gap 推导为 64px 左起点，并使用 Board D 冻结的 13/20 字体节奏。</zh-CN><en>Loading copy derives its 64px left origin from the 40px avatar, 12px inset, and 12px gap and uses Board D's frozen 13/20 type rhythm.</en></lang> */
+/* <lang><zh-CN>loading 文案从 40px avatar、12px 左内距与 12px gap 推导为 64px 左起点，并使用已审恢复态冻结的 13/20 字体节奏。</zh-CN><en>Loading copy derives its 64px left origin from the 40px avatar, 12px inset, and 12px gap and uses the reviewed recovery state's frozen 13/20 type rhythm.</en></lang> */
 .home-page__loading-copy { display: block; margin: 0 12px 0 64px; color: var(--u-sys-color-text-secondary, #27364a); font-size: 13px; font-weight: 400; line-height: 20px; }
 /* <lang><zh-CN>页面 wrapper 冻结 D-2/D-3 的最小纵向占位；UEmpty 自身继续拥有实际 padding、边界、文案和 action 视觉。</zh-CN><en>The page wrapper freezes the minimum vertical footprint for D-2 and D-3 while UEmpty continues owning actual padding, border, copy, and action visuals.</en></lang> */
 .home-page__state--terminal { min-height: 160px; }

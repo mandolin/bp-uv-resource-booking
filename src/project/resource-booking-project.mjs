@@ -101,7 +101,7 @@ function mapTerminalEnvelope(envelope, operationKind, retainProviderRetryable = 
     );
   }
 
-  // <lang><zh-CN>其他 runtime failure 统一为 provider failure；只有获准的 catalog read 且 envelope 明确标记可重试时才保留该能力，不把 P70 语义扩散到其他读取，也不回显 lower code/message。</zh-CN><en>Other runtime failures become provider failures; retryability is retained only for the authorized catalog read when the envelope marks it explicitly, avoiding propagation of the P70 semantic to other reads and echoing no lower code or message.</en></lang>
+  // <lang><zh-CN>其他 runtime failure 统一为 provider failure；只有获准的 catalog read 且 envelope 明确标记可重试时才保留该能力，不把目录审阅夹具语义扩散到其他读取，也不回显 lower code/message。</zh-CN><en>Other runtime failures become provider failures; retryability is retained only for the authorized catalog read when the envelope marks it explicitly, avoiding propagation of the catalog-review-fixture semantic to other reads and echoing no lower code or message.</en></lang>
   return createProviderFailure(
     'provider-unavailable',
     '示例数据暂时不可用，请稍后重试。',
